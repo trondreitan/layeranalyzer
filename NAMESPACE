@@ -1,0 +1,8 @@
+## C code
+importFrom(Rcpp, evalCpp)
+importFrom("utils", "read.csv", "read.table")
+useDynLib("layeranalyzer")
+
+exportPattern("^[^\\.]")
+
+

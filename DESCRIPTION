@@ -1,0 +1,19 @@
+Package: layeranalyzer
+Type: Package
+Title: Time series analysis tool using linear layered SDEs
+Version: 0.1
+Date: 2016-09-22
+Author:  Trond Reitan
+Maintainer: Trond Reitan <trond.reitan@ibv.uio.no>
+Description: Time series analysis tool using linear layered SDEs. Allows
+ for multiple time series with correlative or causal links between them.
+ In case of causal feedback loops, the matrix operations (including 
+ eigenvalue decompositions) allows for complex numbers. In this case,
+ cyclic behavior can be expected.
+License: LGPL-3
+Imports: Rcpp
+LinkingTo: Rcpp
+URL: http://folk.uio.no/trondr/R
+ByteCompile: yes
+Biarch: no
+NeedsCompilation: yes
