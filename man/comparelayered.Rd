@@ -87,7 +87,7 @@ See also layer.analyzer.
 }
 \examples{
 pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt")
+X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
 # Calculate Bayesian model likelihood for an OU model:
 #res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
 

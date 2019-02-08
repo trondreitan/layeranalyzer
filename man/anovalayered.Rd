@@ -45,7 +45,7 @@ See also layer.analyzer.
 }
 \examples{
 pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt")
+X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
 # Calculate Bayesian model likelihood for an OU model, a 2 layered model
 # and a 3 layered model. Test the number of layers. The dataset itself
 # is simulated using 2 layers:
