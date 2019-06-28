@@ -7,9 +7,9 @@
 # install_github(repo="trondreitan/layeranalyzer")
 
 
-# Normalize original data (found in "hare.txt" and "lynx.txt")
-# Send to files "hare_norm.txt" and "lynx_norm.txt":
-source("normalize_harelynx.R")
+# Script for normalizing original data (found in "hare.txt" and "lynx.txt")
+# Sends to files "hare_norm.txt" and "lynx_norm.txt":
+# source("normalize_harelynx.R")
 # This also provides us with functions for transforming back:
 # "invtrans.hare" and "invtrans.lynx"
 
@@ -20,8 +20,10 @@ library(layeranalyzer)
 # Read data and define prior:
 ##################################
 
-hare.norm=read.layer.data.series("http://folk.uio.no/trondr/layered/hare_norm.txt",sep=" ",name="hare")
-lynx.norm=read.layer.data.series("http://folk.uio.no/trondr/layered/lynx_norm.txt",sep=" ",name="lynx")
+# How to read data from files, if available:
+# (These are however pre-defined in the 'layeranalyzer' package).
+#hare.norm=read.layer.data.series("hare_norm.txt",sep=" ",name="hare")
+#lynx.norm=read.layer.data.series("lynx_norm.txt",sep=" ",name="lynx")
 
 # Plot data:
 #plot(hare.norm$time,hare.norm$value,type="b",ylim=c(-3,3))
