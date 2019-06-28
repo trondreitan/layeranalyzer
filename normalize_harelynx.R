@@ -6,22 +6,22 @@ lynx.orig=read.table("lynx.txt",sep=" ")
 names(hare.orig)=c("year","val")
 names(lynx.orig)=c("year","val")
 
-hare=hare.orig
-lynx=lynx.orig
+hare.norm=hare.orig
+lynx.norm=lynx.orig
 
 # Log-transform:
-hare$val=log(hare.orig$val)
-lynx$val=log(lynx.orig$val)
+hare.norm$val=log(hare.orig$val)
+lynx.norm$val=log(lynx.orig$val)
 
 # Test normality
-shapiro.test(hare$val)
+shapiro.test(hare.norm$val)
 #no
-shapiro.test(lynx$val)
+shapiro.test(lynx.norm$val)
 #maybe?
 
 
 # Transform hare data:
-y=hare$val
+y=hare.norm$val
 
 # Make cumulative density approximation:
 # First, determine accuracy from the range of the data.
@@ -44,7 +44,7 @@ x=0*y
 for(i in 1:length(x))
   x[i]=trans.hare(y[i])
 # Put into table:
-hare[,2]=x
+hare.norm[,2]=x
 
 
 # Try transforming back:
@@ -54,12 +54,12 @@ for(i in 1:length(x))
 # Comparison with x goes well...
 
 # Write transformed hare data to file:
-write(t(as.matrix(hare)),file="hare_norm.txt",ncolumns=2)
+write(t(as.matrix(hare.norm)),file="hare_norm.txt",ncolumns=2)
 
 
 
 # Transform lynx data:
-y=lynx$val
+y=lynx.norm$val
 
 # Make cumulative density approximation:
 # First, determine accuracy from the range of the data.
@@ -82,8 +82,8 @@ x=0*y
 for(i in 1:length(x))
   x[i]=trans.lynx(y[i])
 # Put into table:
-lynx[,2]=x
+lynx.norm[,2]=x
 
 # Write transformed lynx data to file:
-write(t(as.matrix(lynx)),file="lynx_norm.txt",ncolumns=2)
+write(t(as.matrix(lynx.norm)),file="lynx_norm.txt",ncolumns=2)
 
