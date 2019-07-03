@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Connection analysis of bivale extinction rates + brachipod extinction and origination rates</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+<!-- Styles for R syntax highlighter -->
+<style type="text/css">
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: #990073
+   }
+
+   pre .number {
+     color: #099;
+   }
+
+   pre .comment {
+     color: #998;
+     font-style: italic
+   }
+
+   pre .keyword {
+     color: #900;
+     font-weight: bold
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: #d14;
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<h1>Connection analysis of bivale extinction rates + brachipod extinction and origination rates</h1>
+
+<p>There is too manu connection models to go through here, so only
+connection models &#39;around&#39; the model considered best is considered here.</p>
+
+<p>First install the <em>layeranalyzer</em> package. If you have <em>devtools</em> installed,
+this can be achived by the command:</p>
+
+<blockquote>
+<p>install_github(repo=&ldquo;trondreitan/layeranalyzer&rdquo;)</p>
+</blockquote>
+
+<p>If devtools is not available, you need to reference the correct version:</p>
+
+<blockquote>
+<p>install.packages(&ldquo;<a href="https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz%22,type=%22source%22,verbose=T">https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz&rdquo;,type=&ldquo;source&rdquo;,verbose=T</a>)</p>
+</blockquote>
+
+<p>The personal web page has newer &ldquo;bleeding edge&rdquo; versions of the package:</p>
+
+<blockquote>
+<p>install.packages(&ldquo;<a href="https://folk.uio.no/trondr/R/layeranalyzer_0.1.0.tar.gz%22,type=%22source%22,verbose=T">https://folk.uio.no/trondr/R/layeranalyzer_0.1.0.tar.gz&rdquo;,type=&ldquo;source&rdquo;,verbose=T</a>)</p>
+</blockquote>
+
+<h2>If the package is installed, load it:</h2>
+
+<pre><code class="r">library(layeranalyzer)
+</code></pre>
+
+<h2>Read data:</h2>
+
+<p>The data structures &#39;bi.lext&#39;, &#39;br.lext&#39; and &#39;br.lorig&#39; are
+already in the package and do not need tobe read.
+If you so wanted however, this is how you would do it.
+(Commented out so that an automated run would not perform this.)</p>
+
+<pre><code class="r">#bi.lext=read.layer.data.series(&quot;bivalve_lext.txt&quot;,name=&quot;bivalve_lext&quot;,
+#   column.type=c(&quot;time&quot;,&quot;value&quot;,&quot;std.dev&quot;))
+#br.lext=read.layer.data.series(&quot;brach_lext.txt&quot;,name=&quot;brach_lext&quot;,
+#   column.type=c(&quot;time&quot;,&quot;value&quot;,&quot;std.dev&quot;))
+#br.lorig=read.layer.data.series(&quot;brach_lspec.txt&quot;,name=&quot;brach_lorig&quot;,
+#   column.type=c(&quot;time&quot;,&quot;value&quot;,&quot;std.dev&quot;))
+</code></pre>
+
+<h3>Prior:</h3>
+
+<p>Prior taken from Reitan&amp;Liow 2017 work area. This is find in the
+structure &#39;lrate.pr&#39; in the package. Here is how it would be read,
+originally:</p>
+
+<pre><code class="r"># lrate.pr=layer.load.prior(&quot;lrate_prior.txt&quot;)
+</code></pre>
+
+<h3>Set structure as in the previous analysis:</h3>
+
+<p>2-layers for extinction rates, 1 layer for brachipod origination rate:</p>
+
+<pre><code class="r">bi.lext.struct2=layer.series.structure(bi.lext, numlayers=2,prior=lrate.pr)
+br.lext.struct2=layer.series.structure(br.lext, numlayers=2,prior=lrate.pr)
+br.lorig.struct1=layer.series.structure(br.lorig, numlayers=1,prior=lrate.pr)
+</code></pre>
+
+<h2>Run best model accoring to Reitan&amp;Liow 2017:</h2>
+
+<pre><code class="r">res1=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1)),
+  use.half.lives = TRUE,use.stationary.stdev = TRUE,
+  id.strategy=4, num.MCMC=1000, burnin=10000, spacing=20,num.temp=1)
+</code></pre>
+
+<p>Show parameter estimates:</p>
+
+<pre><code class="r">summary(res1)
+#Coefficients:
+#                                        Mean    Median Lower 95%   Upper 95%
+#mu_bivalve_lext                    -3.931377 -3.925454 -4.251513   -3.618493
+#dt_bivalve_lext_1                   0.945811  0.534617  0.000537    3.488160
+#sd_bivalve_lext_1                   0.429385  0.306571  0.001653    1.066686
+#dt_bivalve_lext_2                  41.081101  2.324459  0.803862  213.039004
+#sd_bivalve_lext_2                   0.725230  0.867102  0.018118    1.272027
+#mu_brach_lext                      -3.197016 -3.157338 -5.556519   -1.853327
+#dt_brach_lext_1                     0.065006  0.028888  0.000229    0.284622
+#sd_brach_lext_1                     0.082091  0.042955  0.000519    0.329365
+#dt_brach_lext_2                   539.566741 47.900687  1.883028 3593.267783
+#sd_brach_lext_2                     0.858529  0.534871  0.224426    3.580408
+#mu_brach_lorig                     -3.161368 -3.167983 -3.472933   -2.830841
+#dt_brach_lorig_1                    3.393715  3.179215  1.492998    6.559050
+#sd_brach_lorig_1                    0.151878  0.119108  0.004710    0.443508
+#beta_bivalve_lext,1_brach_lext,1    0.842496  0.844089  0.656697    1.010209
+#beta_bivalve_lext,1_brach_lorig,1   1.197954  1.163697  0.716228    1.883574
+#
+#Model log-likelihood:  -394.375
+</code></pre>
+
+<h2>Traverse the 24 neighbouring models:</h2>
+
+<pre><code class="r">res2=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res3=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,2,2,1),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res4=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,2),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res5=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,2,2,2),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res6=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(2,1,1,1),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res7=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(2,1,1,2),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res8=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(2,2,1,1),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res9=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(2,2,1,2),c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res10=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,3,1)),corr=cbind(c(1,1,2,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res11=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,3,1)),corr=cbind(c(1,1,2,2)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res12=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,3,1)),corr=cbind(c(1,2,2,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res13=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,3,1)),corr=cbind(c(1,2,2,2)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res14=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res15=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,2,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res16=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(3,1,1,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res17=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(3,1,1,2)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res18=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1)),corr=cbind(c(1,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res19=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1)),corr=cbind(c(1,2,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res20=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1),c(2,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res21=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1),c(2,2,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res22=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1),c(3,1,2,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res23=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1),c(3,1,2,2)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res24=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1)),corr=cbind(c(2,1,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+res25=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+  causal=cbind(c(1,1,2,1),c(1,1,3,1)),corr=cbind(c(2,2,3,1)),
+  id.strategy=4, num.MCMC=100, burnin=1000, spacing=10,num.temp=1)
+
+date()
+t2=Sys.time()
+t2-t1
+</code></pre>
+
+<h3>Show comparison of models:</h3>
+
+<p>compare.layered(res1,res2,res3,res4,res5,res6,res7,res8,res9,res10,res11,
+  res12,res13,res14,res15,res16,res17,res18,res19,res20,res21,res22,res23,
+  res24,res25)</p>
+
+<pre><code class="r">#               log(lik) Post. Prob.(%)
+#Model   1 -398.8481       24.41074
+#Model   2 -420.7084        0.00000
+#Model   3 -400.4024        5.15850
+#Model   4 -421.9462        0.00000
+#Model   5 -401.1084        2.54642
+#Model   6 -400.2710        5.88341
+#Model   7 -416.3637        0.00000
+#Model   8 -400.9774        2.90287
+#Model   9 -401.4153        1.87350
+#Model  10 -399.3313       15.05546
+#Model  11 -401.7427        1.35044
+#Model  12 -400.6714        3.94179
+#Model  13 -401.4561        1.79846
+#Model  14 -421.8246        0.00000
+#Model  15 -421.7367        0.00000
+#Model  16 -411.6940        0.00006
+#Model  17 -408.6291        0.00138
+#Model  18 -405.1369        0.04533
+#Model  19 -406.9415        0.00746
+#Model  20 -401.6512        1.47971
+#Model  21 -400.3943        5.20065
+#Model  22 -402.3845        0.71075
+#Model  23 -403.2051        0.31286
+#Model  24 -399.0217       20.52077
+#Model  25 -400.1263        6.79942
+</code></pre>
+
+<p>Model 1 best among neighbouring models. Model 24 and model 10 second
+and third best respectively.</p>
+
+<h3>Save:</h3>
+
+<pre><code class="r">save.image(file=&quot;2lay_local_id4.RData&quot;)
+</code></pre>
+
+<h2>Residual analysis</h2>
+
+<h3>Re-run best model so that residuals can be fetched</h3>
+
+<pre><code class="r">res1=layer.analyzer(bi.lext.struct2,br.lext.struct2,br.lorig.struct1,
+   causal=cbind(c(1,1,2,1),c(1,1,3,1)),
+   use.half.lives = TRUE,use.stationary.stdev = TRUE,
+   id.strategy=4, num.MCMC=1000, burnin=10000, spacing=20,num.temp=1,
+   return.residuals=TRUE)
+
+resid1=res1$standardized.residuals[,1]
+resid2=res1$standardized.residuals[,2]
+resid3=res1$standardized.residuals[,3]
+t=res1$residuals.time
+
+resid1n=resid1[!is.na(resid1)]
+t1=t[!is.na(resid1)]
+
+resid2n=resid2[!is.na(resid2)]
+t2=t[!is.na(resid2)]
+
+resid3n=resid3[!is.na(resid3)]
+t3=t[!is.na(resid3)]
+</code></pre>
+
+<h3>Look for auto-correlation:</h3>
+
+<pre><code class="r"># Raw plot:
+plot(t, resid1,type=&quot;b&quot;,xlab=&quot;Time&quot;, ylab=&quot;Bivalve extinction resididuals&quot;)
+plot(t, resid2,type=&quot;b&quot;,xlab=&quot;Time&quot;, ylab=&quot;Brachiopod extinction resididuals&quot;)
+plot(t, resid3,type=&quot;b&quot;,xlab=&quot;Time&quot;, ylab=&quot;Brachiopod origination resididual&quot;)
+
+# Partial auto-correlation plot:
+pacf(resid1n)
+pacf(resid2n)
+pacf(resid3n)
+# Indication of auto-correlation in lynx resididuals
+
+# test for autocorrelation as linear regression analysis:
+n1=length(t1)
+summary(lm(resid1n[2:n1]~resid1n[1:(n1-1)]))
+#resid1n[1:(n1 - 1)] -0.03567    0.12564  -0.284    0.777
+n2=length(t2)
+summary(lm(resid2n[2:n2]~resid2n[1:(n2-1)]))
+#resid2n[1:(n2 - 1)] -0.03370    0.12987  -0.260    0.796
+n3=length(t3)
+summary(lm(resid3n[2:n3]~resid3n[1:(n3-1)]))
+#resid3n[1:(n3 - 1)]  -0.1353     0.1131  -1.196  0.23527
+
+summary(lm(resid1n~t1))
+#t1          -0.0001138  0.0008549  -0.133    0.894
+summary(lm(resid2n~t2))
+#t2           0.0001776  0.0008439   0.210    0.834
+summary(lm(resid3n~t3))
+#t3          -0.0004969  0.0007264  -0.684   0.4960  
+
+library(mgcv)
+summary(gam(resid1n~s(t1)))
+#        edf Ref.df    F p-value
+# s(t1) 4.313  5.312 1.697   0.142
+summary(gam(resid2n~s(t2)))
+#        edf Ref.df    F p-value
+#s(t2) 5.004  6.106 1.61   0.151
+summary(gam(resid3n~s(t3)))
+#        edf Ref.df    F p-value
+#s(t3)   1      1 0.468   0.496
+</code></pre>
+
+<p>No sign of auto-correlation or time trend</p>
+
+<h3>Look for whether the distribution is normal:</h3>
+
+<pre><code class="r">qqnorm(resid1n)
+qqline(resid1n)
+shapiro.test(resid1n)
+# p-value = 8.49e-07
+qqnorm(resid2n)
+qqline(resid2n)
+shapiro.test(resid2n)
+#p-value = 1.203e-06
+qqnorm(resid3n)
+qqline(resid3n)
+shapiro.test(resid3n)
+#p-value = 0.0115
+</code></pre>
+
+<p>Extinction rates very clearly not normal,
+origination rate also not normal</p>
+
+<p>Non-normality of process or non-normality of measurement noise?</p>
+
+<p>Too few measurements 1.5 standard deviations below prediction,
+Too many measurements 2 standard eviation or more above prediction</p>
+
+<p>This could perhaps suggest sampling bias?</p>
+
+<h3>Look at prior expected values vs residuals for each series:</h3>
+
+<pre><code class="r">x1=res1$prior.expected.values[,1]
+x1=x1[!is.na(resid1)]
+
+plot(x1, resid1n, xlab=&quot;Prior expected value, bivalve extinction&quot;,
+  ylab=&quot;Residuals, bivalve extinction&quot;)
+summary(lm(resid1n~x1))
+#           Estimate Std. Error t value Pr(&gt;|t|)
+#(Intercept)  -0.9596     1.3776  -0.697    0.488
+#x1           -0.2037     0.3564  -0.572    0.569
+
+summary(gam(resid1n~s(x1)))
+#                edf Ref.df     F p-value  
+#s(x1)         4.268  5.127 2.178  0.0648 .
+
+
+
+x2=res1$prior.expected.values[,2]
+x2=x2[!is.na(resid2)]
+
+plot(x2, resid2n, xlab=&quot;Prior expected value, brachiopod extinction&quot;,
+  ylab=&quot;Residuals, brachiopod extinction&quot;)
+
+summary(lm(resid2n~x2))
+#           Estimate Std. Error t value Pr(&gt;|t|)
+#(Intercept)  -0.6857     0.7972  -0.860    0.393
+#x2           -0.2024     0.2559  -0.791    0.431
+
+summary(gam(resid2n~s(x2)))
+#        edf Ref.df     F p-value
+#s(x2) 1.001  1.002 0.625   0.432
+
+
+x3=res1$prior.expected.values[,3]
+x3=x3[!is.na(resid3)]
+
+plot(x3, resid3n)
+summary(lm(resid3n~x3))
+#            Estimate Std. Error t value Pr(&gt;|t|)
+#(Intercept)  -0.8259     0.7783  -1.061    0.292
+#x3           -0.1765     0.2533  -0.697    0.488
+
+summary(gam(resid3n~s(x3)))
+#        edf Ref.df     F p-value
+#s(x3) 5.202  6.319 1.419    0.21
+</code></pre>
+
+<p>No discernable dependency between prior expected values and residuals</p>
+
+<h3>Time points for top extinction residual events</h3>
+
+<pre><code class="r">index1=order(resid1n,decreasing=TRUE)
+t1[index1][1:5]
+# -252.1700   -0.0117   -2.5800  -66.0000 -445.2000
+resid1n[index1][1:5]
+# 4.126867 3.737644 2.173538 2.032815 1.646106
+
+index2=order(resid2n,decreasing=TRUE)
+t2[index2][1:5]
+# -252.1700   -0.0117 -168.3000 -201.3000 -443.4000
+resid2n[index2][1:5]
+# 4.268964 3.726002 1.685901 1.509380 1.472323
+</code></pre>
+
+<h3>Look at remaining residuals:</h3>
+
+<pre><code class="r">shapiro.test(resid1n[index1[6:length(resid1n)]])
+
+shapiro.test(resid2n[index2[6:length(resid2n)]])
+
+
+bi.lext2=bi.lext
+index.use=rep(0,0)
+t1.1=t1[index1]
+for(j in 1:length(t1.1))
+ {
+   i=which(t1.1[j]==bi.lext$time)
+   if(length(i)==1)
+     index.use=c(index.use, i)
+}
+bi.lext2$time=bi.lext$time[index.use]
+bi.lext2$value=bi.lext$value[index.use]
+bi.lext2$std.dev=bi.lext$std.dev[index.use]
+
+bi.lext2$std.dev
+</code></pre>
+
+</body>
+
+</html>
