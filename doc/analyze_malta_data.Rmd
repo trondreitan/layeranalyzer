@@ -1,8 +1,9 @@
 ---
-title: "Stuctural analyzis of Malta reed warbler data"
+title: "analyze_malta_data"
 output: rmarkdown::html_vignette
+author: Trond Reitan
 vignette: >
-  %\VignetteIndexEntry{Stuctural analyzis of Malta reed warbler data}
+  %\VignetteIndexEntry{analyze_malta_data}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---

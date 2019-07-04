@@ -1,8 +1,9 @@
 ---
-title: "Connection analysis of bivale extinction rates + brachipod extinction and origination rates"
+title: "brachbivalve_2layer_local_id4"
 output: rmarkdown::html_vignette
+author: Trond Reitan
 vignette: >
-  %\VignetteIndexEntry{Connection analysis of bivale extinction rates + brachipod extinction and origination rates}
+  %\VignetteIndexEntry{brachbivalve_2layer_local_id4}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
