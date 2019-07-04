@@ -8,7 +8,7 @@ Originally, this was used for modelling phenotypic evolution towards a optima th
 
 Code:
 
-* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz"type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed.
+* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed.
 
 * layeranalyzer.cpp. This is the current source version of the program. This version does not depend on any library but the Lapack library (for linear algebra operations), which typically can be found in an R installation. The program can then typically be compiled on a Linux machine like this: "g++ -DMAIN -DENGLISH_LANGUAGE -I/usr/include/R -I/usr/include/R/R_ext -o layeranalyzer layeranalyzer.cpp -lm -llapack". If the Lapack library files or header files are somewhere else on your computer, you should change the "-I" (which tells the compiler where to look for header files) and "-L" (which tells the compiler where to search for library files other than in the /usr/lib directory). This has already been tested on multiple platforms. See "help" texts for more on usage. See below in this text for some examples. 
 
