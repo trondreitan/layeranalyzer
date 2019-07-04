@@ -10,7 +10,6 @@
 \details{
 
 The DESCRIPTION file:
-\packageDESCRIPTION{layeranalyzer}
 \packageIndices{layeranalyzer}
 Time series analysis tool using linear layered SDEs. 
  Allows for multiple time series with correlative or causal links between them.

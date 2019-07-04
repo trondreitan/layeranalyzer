@@ -1,8 +1,14 @@
-\name{layer.analyzer}
-\alias{layer.analyzer}
+\name{layer.analyzer.timeseries.list}
+\alias{layer.analyzer.timeseries.list}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{  Time series analysis tool using linear layered SDEs. }
 \description{
+ This is a version of the analysis function, "layer.analyzer" that
+ takes a list of "layer.series.structure" objects
+ as input, instead of a set of specified "layer.series.structure" objects,
+ as "layer.analyzer" do. The "layer.analyzer" function calls this function,
+ which again calls a C++ library to get the work done.
+ 
  Linear SDE analysis allowing for hidden layers and multiple data series
  with correlative or causal links between them. Returns parameter estimates
  and Bayesian model likelihoods or information criteria, depending
@@ -12,7 +18,7 @@
  cyclic behavior can be expected.
 }
 \usage{
-layer.analyzer(... ,
+layer.analyzer.timeseries.list(data.structure ,
   num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
   do.model.likelihood=TRUE,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
@@ -30,8 +36,8 @@ layer.analyzer(... ,
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{...}{
- A set of 'layer.series.structure' objects that represents the set of 
+  \item{data.structure}{
+ A list containing 'layer.series.structure' objects that represents the set of 
  time series that are to be analyzed and how the underlying processes of
  each such series is to be modelles. (See 'layer.series.structure'). At
  least one such object must be given. 
@@ -410,7 +416,7 @@ y=(x+rnorm(length(x),0,0.1))[t]
 # Create the data series object from the time points and "measurements":
 X=layer.data.series(time.points=t, value.points=y,name="X")
 
-#res=layer.analyzer(layer.series.structure(X,numlayers=1))
+#res=layer.analyzer.timeseries.list(list(x1=layer.series.structure(X,numlayers=1)))
 #summary(res)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

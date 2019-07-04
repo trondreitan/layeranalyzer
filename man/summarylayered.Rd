@@ -8,14 +8,14 @@ The function summarizes a model analysis, as performed by
 parameter estimates and uncertainties, plus indicators of model fit.
 }
 \usage{
-summary.layered(object, ...)
+\method{summary}{layered}(object, \dots)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{object}{
  An 'layered' object, as returned from 'layer.analyzer'. 
  }
-  \item{...}{
+  \item{\dots}{
  Not used. Only included for compatibility with other other 'summary' methods.
  }
 }
@@ -51,10 +51,10 @@ See also layer.analyzer.
 }
 \examples{
 pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt")
+X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
 # Calculate Bayesian model likelihood for an OU model:
 #res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
-#summary.layered(res1)
+#summary(res1)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

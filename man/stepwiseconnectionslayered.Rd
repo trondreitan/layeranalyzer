@@ -1,22 +1,25 @@
-\name{traverse.connections.layered}
-\alias{traverse.connections.layered}
+\name{stepwise.connections.layered}
+\alias{stepwise.connections.layered}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{  Time series analysis tool using linear layered SDEs. }
 \description{
-Traverse all possible connections between time series. Return an array
-of analyses in the form of 'layered' objects, which can be used as input
-in the function 'compare.layered' (or 'anova.layered' of ML estimated
-analyses).
+Traverse locally around a given connection model in a step-wise fashion,
+starting locally around the null model (no connections). Can perform
+larger model selections, but may not be robust enough still. Parallel
+runs using the standalone program 'layeranalyzer' should be preferred
+for larger model selection tasks.
 }
 \usage{
-traverse.connections.layered(... ,  
-  num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
-  do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
-  silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-  talkative.traversal=TRUE, test.mode=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
-  use.half.lives=FALSE, mcmc=FALSE, 
-  allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE)
+stepwise.connections.layered(..., num.MCMC = 1000, spacing = 10, burnin = 10000,
+                 num.temp = 1, do.maximum.likelihood = FALSE,
+                 maximum.likelihood.numstart = 10, silent.mode = TRUE,
+                 talkative.burnin = FALSE, talkative.likelihood =
+                 FALSE, talkative.traversal = TRUE, test.mode = FALSE,
+                 id.strategy = 2, use.stationary.stdev = FALSE,
+                 T.ground = 1.5, use.half.lives = FALSE, mcmc = FALSE,
+                 allow.causal = TRUE, allow.correlation = TRUE,
+                 allow.direct.feedback = TRUE, first.is.nullhypothesis
+                 = FALSE, ML.IC = "AIC")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -182,11 +185,25 @@ traverse.connections.layered(... ,
  correlative ones.}
  \item{allow.correlation}{
  If set to 'FALSE', no correlative conneciton models will be analyzed, only
- causal ones. (Incompatible with 'allow.causal=FALSE'. }
+ causal ones. (Incompatible with 'allow.causal=FALSE'). }
  \item{allow.direct.feedback}{
  If set to 'FALSE', no direct causal loops will be examined, i.e. causal
  links from series 1, layer 1 to series 2, layer 2 and another liunk back again.
  (Does not rule out more elaborate causal loops.)}
+ \item{first.is.nullhypothesis}{
+  If prior probabilities (item 'p0') is not given, the prior probabilities
+  are default equal for all models. However, if first.is.nullhypothesis
+  is set to 'TRUE', the first model is given 50\% of the prior probability, while
+  the rest of the models shares the remaining 50\% equally.
+  This variable is sent to 'compared.layered' for model comparison. 
+ }
+ \item{ML.IC}{
+  If classic ML analysis is performed instead of Bayesian analysis, 
+  "AIC","BIC" or "AICc" will be used for model comparison instead of 
+  the Bayesian marginal likelihood. The item 'ML.IC' determines which of these 
+  three model comparison criteria are to be used.
+  This variable is sent to 'compared.layered' for model comparison. 
+ }
 }
 \details{
 Traverses all causal and correlative link combinations between a set of
@@ -228,7 +245,7 @@ X1struct=layer.series.structure(X1, numlayers=1)
 X2struct=layer.series.structure(X2, numlayers=1)
 
 # Perform traversal of analyses:
-#res=traverse.connections.layered(X1struct,X2struct, num.MCMC=100, burnin=1000)
+#res=stepwise.connections.layered(X1struct,X2struct, num.MCMC=100, burnin=1000)
 
 # Compare analyses:
 #compare.layered(res)
@@ -236,5 +253,3 @@ X2struct=layer.series.structure(X2, numlayers=1)
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, model traversal, connections }
-
-

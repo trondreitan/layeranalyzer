@@ -6,8 +6,8 @@
 This class function represents a measurement time series. Can include multiple sites. Individual measurement error can be added. 
 }
 \usage{
-layer.data.series(time.points, value.points, std.dev=NULL, 
-                  num.meas.per.value=NULL, site=NULL, name=NULL)
+layer.data.series(time.points, value.points, name, std.dev=NULL, 
+                  num.meas.per.value=NULL, site=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -17,6 +17,9 @@ layer.data.series(time.points, value.points, std.dev=NULL,
   \item{value.points}{
  The corresponding measurements of the time series (or the average measurement if more than one goes into the value, if 'num.meas.per.value' is given and larger than 1). Must necessarily be the same size as 'time.points'.
  }
+  \item{name}{
+ The name of the time series. Will be used in assigning parameter names for parameters associated with this series.
+ }
   \item{std.dev}{
  The individual measurement standard deviations of each measurement (if applicable). If this does not exist, the model will estimate an overall measurement standard deviation belonging to all measurements. If 'num.meas.per.value', these are the standard deviations of of the individual measurements going into each value. Must necessarily be the same size as 'time.points', if given.
  }
@@ -25,9 +28,6 @@ layer.data.series(time.points, value.points, std.dev=NULL,
  }
   \item{site}{
  The site number of each measurement, if applicable. Should be labelled from 0 to <number of sites>-1. Must necessarily be the same size as 'time.points', if given.
- }
-  \item{name}{
- The name of the time series. Will be used in assigning parameter names for parameters associated with this series.
  }
 }
 \details{
@@ -66,7 +66,7 @@ t=sort(sample(1:n,300))
 y=(x+rnorm(length(x),0,0.1))[t]
 
 # Create the data series object from the time points and "measurements":
-X=layer.data.series(time.points=t, value.points=y,name="X")
+X=layer.data.series(time.points=t, value.points=y, name="X")
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

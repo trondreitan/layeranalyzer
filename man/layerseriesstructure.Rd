@@ -10,19 +10,19 @@ bottom layer is an Ornstein-Uhlenbeck (OU) process, a Wiener process or an
 OU with linear trend, but other options do also exists.
 }
 \usage{
-layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
-                              time.integral=NULL, no.pull=FALSE, no.sigma=NULL,
-                              regional.mu=FALSE, regional.lin.time=FALSE,
-                              regional.pull=NULL, regional.sigma=NULL,
-                              correlated.sigma=NULL, pairwise.correlated.sigma=NULL,
-                              one.dim.sigma=NULL, grouping.sigma=NULL,
-			      remove.sigma=NULL, differentiate.sigma=NULL,
-			      differentiate.pull=NULL, differentiate.mu=FALSE,
-                              differentiate.lin.time=FALSE,
-                              init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
-			      init.same.layers=FALSE, init.specified=NULL,
-			      allow.pos.pull=FALSE, period=NULL, 
-                              prior=layer.standard.prior)
+layer.series.structure(timeseries, numlayers=1, lin.time=FALSE,
+                       time.integral=NULL, no.pull=FALSE, no.sigma=NULL,
+                       regional.mu=FALSE, regional.lin.time=FALSE,
+                       regional.pull=NULL, regional.sigma=NULL,
+                       correlated.sigma=NULL, pairwise.correlated.sigma=NULL,
+                       one.dim.sigma=NULL, grouping.sigma=NULL,
+		       remove.sigma=NULL, differentiate.sigma=NULL,
+		       differentiate.pull=NULL, differentiate.mu=FALSE,
+                       differentiate.lin.time=FALSE,
+                       init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
+		       init.same.layers=FALSE, init.specified=NULL,
+		       allow.pos.pull=FALSE, period=NULL, 
+                       prior=layer.standard.prior)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -200,7 +200,7 @@ See also layer.analyzer and layer.data.series.
 }
 \examples{
 pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt")
+X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
 # Calculate Bayesian model likelihood for an OU model:
 #res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
 

@@ -7,7 +7,7 @@ Traverses all models for a single standalone time series, up to a
 given model complexity, as given by the maximum number of layers.
 }
 \usage{
-traverse.standalone.layered=function(timeseries,
+traverse.standalone.layered(timeseries,
   max.layers=3, 
   talkative=FALSE, allow.one.feedback.loop=FALSE, 
   just.stationary=FALSE, no.rw=FALSE, regional.options=FALSE,    
@@ -235,7 +235,7 @@ summary.layered and compare.layered.
 \examples{
 
 p=layer.prior(mu=c(-5,5),init=c(-100,100),dt=c(0.5,200),sigma=c(0.01,2),obs=c(0.01,1))
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt")
+X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
 
 #models=traverse.standalone.layered(X, max.layers=2, 
 #  talkative=TRUE, allow.one.feedback.loop=FALSE, 
