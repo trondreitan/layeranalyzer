@@ -1,8 +1,9 @@
 ---
-title: "Stuctural analyzis of Malta reed warbler data"
+title: "analyze_malta_data"
 output: rmarkdown::html_vignette
+author: Trond Reitan
 vignette: >
-  %\VignetteIndexEntry{Stuctural analyzis of Malta reed warbler data}
+  %\VignetteIndexEntry{analyze_malta_data}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
@@ -10,13 +11,13 @@ vignette: >
 
 First install the *layeranalyzer* package. If you have *devtools* installed,
 this can be achived by the command:
-> install_github(repo="trondreitan/layeranalyzer")
+> install_github(repo="trondreitan/layeranalyzer", build_vignettes=TRUE)
 
 If devtools is not available, you need to reference the correct version:
-> install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T)
+> install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T, build_vignettes=TRUE)
 
 The personal web page has newer "bleeding edge" versions of the package:
-> install.packages("https://folk.uio.no/trondr/R/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T)
+> install.packages("https://folk.uio.no/trondr/R/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T, build_vignettes=TRUE)
 
 # If the package is installed, load it:
 ```r
@@ -76,7 +77,7 @@ ML-based estimation in stead of Bayesian inference, while
 maximum.likelihood.numstart = 1000 sets the number of ML
 optimizations performed (starting at different MCMC samples).
 
-Note that initial value treatment is atuomatically used when
+Note that initial value treatment is automatically used when
 non-stationary models are among the possible candidates.
 This is because the likelihood of the first measurement would
 otherwise be determined by the stationary distribution of
@@ -221,7 +222,7 @@ plot(mod3$residuals.time,
   mod3$standardized.residuals,type="b",xlab="Time", ylab="Residuals")
 ```
 
-Partial ato-correlation plot:
+Partial auto-correlation plot:
 ```r
 pacf(mod3$standardized.residuals)
 ```

@@ -1,8 +1,9 @@
 ---
-title: "Connection analysis of hare/lynx capture data"
+title: "analyze_normalized_harelynx"
 output: rmarkdown::html_vignette
+author: Trond Reitan
 vignette: >
-  %\VignetteIndexEntry{Connection analysis of hare/lynx capture data}
+  %\VignetteIndexEntry{analyze_normalized_harelynx}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---

@@ -1,8 +1,9 @@
 ---
-title: "Connection analysis of bivale extinction rates + brachipod extinction and origination rates"
+title: "brachbivalve_2layer_local_id4"
 output: rmarkdown::html_vignette
+author: Trond Reitan
 vignette: >
-  %\VignetteIndexEntry{Connection analysis of bivale extinction rates + brachipod extinction and origination rates}
+  %\VignetteIndexEntry{brachbivalve_2layer_local_id4}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
@@ -12,13 +13,13 @@ connection models 'around' the model considered best is considered here.
 
 First install the *layeranalyzer* package. If you have *devtools* installed,
 this can be achived by the command:
-> install_github(repo="trondreitan/layeranalyzer")
+> install_github(repo="trondreitan/layeranalyzer", build_vignettes=TRUE)
 
 If devtools is not available, you need to reference the correct version:
-> install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T)
+> install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T, build_vignettes=TRUE)
 
 The personal web page has newer "bleeding edge" versions of the package:
-> install.packages("https://folk.uio.no/trondr/R/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T)
+> install.packages("https://folk.uio.no/trondr/R/layeranalyzer_0.1.0.tar.gz",type="source",verbose=T, build_vignettes=TRUE)
 
 ## If the package is installed, load it:
 ```r
