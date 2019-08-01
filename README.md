@@ -44,11 +44,14 @@ Papers on theory and application:
     Link: https://www.cambridge.org/core/journals/paleobiology/article/an-unknown-phanerozoic-driver-of-brachiopod-extinction-rates-unveiled-by-multivariate-linear-stochastic-differential-equations/0EAB1A42D58CCD17012D9CF3020D57EA.
 
 Examples
-R example code:
+R example code and vignettes as html files:
 
-    analyze_malta.R: Analyzis of reed warbler body size, provided by Camilla Lo Cascio Sætre, published in Nature Communications.
-    analyze_normalized_harelynx.R and normalize_harelynx.R: Analyzis for hare/lynx data from the Hudson Bay Company. The data is first normalized (using normalize_harelynx.R) before analysis is performed. The code does a brief foray into the process structure of each time series separately, before doing a "simple" connection analysis with the simplest process structure available. Some residual analysis is then performed, which reveals that changes in the process structure may be warranted. The process structure for lynx is then expanded and a new connection analysis is performed.
-    brachbivalve_2layer_local_id4.R . Analysis of bivalve+brachiopod diversifications rates. This analysis seeks to check the model deemed best in Reitan & Liow (2017), using the R package. Some extra residual analysis is also done. 
+    analyze_malta.R/analyze_malta_data.html: Analyzis of reed warbler body size, provided by Camilla Lo Cascio Sætre, published in Nature Communications.
+    analyze_normalized_harelynx.R and normalize_harelynx.R/analyze_normalized_harelynx.html: Analyzis for hare/lynx data from the Hudson Bay Company. The data is first normalized (using normalize_harelynx.R) before analysis is performed. The code does a brief foray into the process structure of each time series separately, before doing a "simple" connection analysis with the simplest process structure available. Some residual analysis is then performed, which reveals that changes in the process structure may be warranted. The process structure for lynx is then expanded and a new connection analysis is performed.
+    brachbivalve_2layer_local_id4.R/brachbivalve_2layer_local_id4.html: Analysis of bivalve+brachiopod diversifications rates. This analysis seeks to check the model deemed best in Reitan & Liow (2017), using the R package. Some extra residual analysis is also done. 
+
+Vignettes as html pages:
+   analyze_malta_data.html: Analyzis of reed warbler body size, provided by Camilla Lo Cascio Sætre, published in Nature Communications.
 
 PS: All example datasets are provided in the package, so that the file reading is not necessary.
 
