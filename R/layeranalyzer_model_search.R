@@ -14,7 +14,8 @@
 
 # Gives a matrix of all combinations of 0's and 1'
 # (or another base number), counting up from
-# 0 to base number^length. Used by 'traverse.standalone.layered'.
+# 0 to base number^length. Used by "traverse.standalone.layered"
+# and "traverse.connections.layered".
 
 n.combinations=function(length, base.number=2)
 {
@@ -337,15 +338,15 @@ traverse.standalone.layered=function(timeseries,
    time.integral=list(first=NULL)
    if(time.integrals.possible & numlayers>1)
    {
-     show(time.integral)
+     methods::show(time.integral)
      #Find the ways to combine integral/no integral layers:
-     timeint=bincombinations(numlayers-1)
+     timeint=n.combinations(numlayers-1,base.number=2)
      timeint.list=list(first=timeint[1,])
      for(i in 2:(2^(numlayers-1)))
        timeint.list[[i]]=timeint[i,]
      whichone=function(x) which(x==1)
      time.integral=lapply(timeint.list, whichone)
-     show(time.integral)
+     methods::show(time.integral)
      num.time.int=length(time.integral)
    }
    
@@ -591,7 +592,7 @@ traverse.connections.layered=function(... ,
  if(talkative.traversal)
  {
    print.srcref("Connection pairs:") 
-   show(cbind(series1,layer1,series2,layer2))
+   methods::show(cbind(series1,layer1,series2,layer2))
    print.srcref("") 
   }
 
@@ -625,14 +626,6 @@ traverse.connections.layered=function(... ,
    dont=F
    for(j in 1:dim(combis)[2])
    {
-     #show("abc")
-     #show(combis[i,j])
-     #show(types[combis[i,j]+1])
-     #show(layer2[j])
-     #show(series2[j])
-     #show(numlayers[series2[j]])
-     #show(data.structure[[series2[j]]]$no.pull)
-     
      if(types[combis[i,j]+1]=="F12")
      {
        if(layer2[j]==numlayers[series2[j]] &
@@ -764,7 +757,6 @@ stepwise.connections.layered=function(... ,
   id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE, 
   allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE,
-  allow.replace=FALSE,
   first.is.nullhypothesis=FALSE,ML.IC="AIC")
 {
  data.structure=list(...)
@@ -906,7 +898,7 @@ stepwise.connections.layered=function(... ,
  if(talkative.traversal)
  {
    print.srcref("Connection pairs:") 
-   show(cbind(series1,layer1,series2,layer2))
+   methods::show(cbind(series1,layer1,series2,layer2))
    print.srcref("") 
   }
 
@@ -1053,7 +1045,7 @@ stepwise.connections.layered=function(... ,
    comp=compare.layered(models, ML.IC=ML.IC,
          first.is.nullhypothesis=first.is.nullhypothesis)
    if(talkative.traversal)
-     show(comp)
+     methods::show(comp)
      
    best.prob=max(comp[,2])
    best.model.index=which(comp[,2]==max(comp[,2]))

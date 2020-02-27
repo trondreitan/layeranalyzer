@@ -109,7 +109,7 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
       critname="weight=-0.5*BIC"
   }
   
-  show("compare called")
+  #  show("compare called")
 
   dimnames(outmatrix)=list(names(input),c(critname,"Post. Prob.(%)"))
   
@@ -120,26 +120,26 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
 
 # Returns number of observations for an output object from the analysis:
 
-nobs.layered=function(obj1,...)
+nobs.layered=function(object,...)
 {
-  if(class(obj1)!="layered")
+  if(class(object)!="layered")
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
   
- n=length(obj1$data.structure)
+ n=length(object$data.structure)
  len=0
 
  for(i in 1:n)
  {
-  if(typeof(obj1$data.structure[[i]])!="list")
+  if(typeof(object$data.structure[[i]])!="list")
     stop("data.structure[[i]] must be a list, preferrably belonging to the 'layer.series.structure' class (as this class has the right elements).")
   
-  if(is.null(obj1$data.structure[[i]]$timeseries))
+  if(is.null(object$data.structure[[i]]$timeseries))
     stop("data.structure[[i]] does not contain a time series (of type layer.data.series)!")
   
-  if(is.null(obj1$data.structure[[i]]$timeseries$time))
+  if(is.null(object$data.structure[[i]]$timeseries$time))
     stop("No time points found in data material!")
 
-  len=len+length(obj1$data.structure[[i]]$timeseries$time)
+  len=len+length(object$data.structure[[i]]$timeseries$time)
  }
 
  return(len)
@@ -148,19 +148,19 @@ nobs.layered=function(obj1,...)
 
 # Returns the ML log-likelihood for an object returned from an analysis:
 
-logLik.layered=function(obj1,...)
+logLik.layered=function(object,...)
 {
-  if(class(obj1)!="layered")
+  if(class(object)!="layered")
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
-  if(is.null(obj1$ML.loglik))
+  if(is.null(object$ML.loglik))
     stop("The 'layered' object need to be classically (ML) estimated!") 
 
-  ll=obj1$ML.loglik
+  ll=object$ML.loglik
 
-  df=length(obj1$parameter.names)
+  df=length(object$parameter.names)
   attr(ll,"class")="logLik"
   attr(ll,"df")=df
-  attr(ll,"nobs")=nobs.layered(obj1)
+  attr(ll,"nobs")=nobs.layered(object)
 
   return(ll)
 }
@@ -170,15 +170,15 @@ logLik.layered=function(obj1,...)
 # objects from analyses, representing different models.
 # Returns p-value with more, as other 'anova' methods in R do.
 
-anova.layered=function(obj1,...)
+anova.layered=function(object,...)
 {
-  if(class(obj1)!="layered")
+  if(class(object)!="layered")
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
   
   input=list(...)
   n=length(input)
   
-  if(is.null(obj1$ML.loglik))
+  if(is.null(object$ML.loglik))
     stop("All objects need to be classically (ML) estimated!") 
   for(i in 1:n)
   {
@@ -188,8 +188,8 @@ anova.layered=function(obj1,...)
       stop("All objects need to be classically (ML) estimated!") 
   }
   
-  prev.df=length(obj1$parameter.names)
-  prev.deviance=-2*obj1$ML.loglik
+  prev.df=length(object$parameter.names)
+  prev.deviance=-2*object$ML.loglik
   
   res.df=rep(NA,n+1)
   res.dev=rep(NA,n+1)
@@ -197,8 +197,8 @@ anova.layered=function(obj1,...)
   dev=rep(NA,n+1)
   pr=rep(NA,n+1)
   
-  res.df[1]=nobs(obj1)-attr(logLik(obj1),"df")
-  res.dev[1]=-2*as.numeric(logLik(obj1))
+  res.df[1]=nobs.layered(object)-attr(logLik.layered(object),"df")
+  res.dev[1]=-2*as.numeric(logLik.layered(object))
   
   if(n>0)
    for(i in 1:n)
@@ -206,13 +206,13 @@ anova.layered=function(obj1,...)
     if(class(input[[i]])!="layered")
      stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.") 
     
-    res.df[1+i]=nobs(input[[i]])-attr(logLik(input[[i]]),"df")
-    res.dev[1+i]=-2*as.numeric(logLik(input[[i]]))
+    res.df[1+i]=nobs.layered(input[[i]])-attr(logLik.layered(input[[i]]),"df")
+    res.dev[1+i]=-2*as.numeric(logLik.layered(input[[i]]))
     
     df[i+1]=res.df[i]-res.df[i+1]
     dev[i+1]=res.dev[i]-res.dev[i+1]
     if(df[i+1]>0)
-      pr[i+1]=pchisq(dev[i+1],df[i+1],lower.tail=FALSE)
+      pr[i+1]=stats::pchisq(dev[i+1],df[i+1],lower.tail=FALSE)
    }
   
   ret=list(res.df=res.df, res.dev=res.dev, df=df, dev=dev, pr=pr)

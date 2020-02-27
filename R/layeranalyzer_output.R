@@ -15,7 +15,7 @@ summary.layered=function(object, ...)
 {
   input=list(...)
 
-  show("summary called")
+  #show("summary called")
 
   if(is.null(object$ML.loglik))
   {
