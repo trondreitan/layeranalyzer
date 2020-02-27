@@ -1,6 +1,9 @@
 #include <cmath>
 #include <sys/types.h>
+
+#ifdef MAIN
 #include <unistd.h>
+#endif // MAIN
 
 #ifndef MAIN // Only for when compiling as R package
 
@@ -147,7 +150,7 @@ int numit_realization=100, numit_realizations_made=0;
 
 bool nodata=false;
 
-// Extra-layer feedback specifications:
+// Extra-layer causal specifications:
 int num_series_feed=0;
 int *feed_from_series=NULL, *feed_to_series=NULL, 
   *feed_from_layer=NULL, *feed_to_layer=NULL;
@@ -191,7 +194,9 @@ void reset_global_variables(void);
 #include <cstdio>
 
 
+//#ifdef MAIN
 using namespace std;
+//#endif // MAIN
 
 typedef unsigned short hourType;
 typedef unsigned short minuteType;
@@ -692,7 +697,7 @@ ostream& operator<<(ostream& os, const CTime &t)
   static hourType hh = 0;  
   static minuteType mm = 0;  
   static secondType ss = 0;
-  static char buffer[10];
+  static char buffer[100];
   
   t.totSec2time(hh, mm, ss);
   sprintf(buffer, "%02d:%02d", hh, mm);
@@ -701,13 +706,15 @@ ostream& operator<<(ostream& os, const CTime &t)
   return os;
 }
 
-char *CTime::getChTime() const {
-    static char ctime[9];
-    static hourType h = 0;  static minuteType mn = 0;  static secondType s = 0;
-    
-    totSec2time(h, mn, s);
-    sprintf(ctime, "%02d:%02d", h, mn);
-    return ctime;
+
+char *CTime::getChTime() const
+{
+  static char ctime[100];
+  static hourType h = 0;  static minuteType mn = 0;  static secondType s = 0;
+  
+  totSec2time(h, mn, s);
+  sprintf(ctime, "%02d:%02d", h, mn);
+  return ctime;
  }
 
 hourType CTime::getHour() const {
@@ -975,7 +982,7 @@ ostream& operator<<(ostream& os,  HydDate &d)
       static dayType dd = 0; 
       static monthType mm = 0; 
       static yearType yyyy = 0;
-      static char buffer[15];
+      static char buffer[100];
 
       d.jday2date(dd, mm, yyyy);
       sprintf(buffer, "%02d.%02d.%d ", dd, mm, yyyy);
@@ -1099,7 +1106,7 @@ char *HydDate::getMonthString() const
 
 char *HydDate::getChHydDate() const 
 {
-  static char date[12];
+  static char date[100];
   
   for(register int i = 0; i < 12; i++) date[i] = 0;
   if (*this == NoHydDate)
@@ -1166,7 +1173,7 @@ int HydDate::noDaysInMonth() const
 
 char *HydDate::charHydDate() const 
 {
-  char *pt = new char[10];
+  char *pt = new char[100];
   if(*this == NoHydDate)
     sprintf(pt, "null");
   else
@@ -1636,7 +1643,7 @@ void HydDateTime::Print()
 #ifdef MAIN
   cout << pt << endl;
 #else
-  Rcout << pt << endl;
+  Rcout << pt << std::endl;
 #endif // MAIN
   delete pt;
 }
@@ -1662,7 +1669,7 @@ char *HydDateTime::getChHydDateTime() const
 
 char *HydDateTime::syCh(int form) const 
 {
-  char *pt = new char[22];
+  char *pt = new char[100];
 
 
   if(*this == NoHydDateTime)
@@ -1854,7 +1861,7 @@ char* HydDateTime::getRfc822Str(int UT_offset) const
 				(char *) "Apr", (char *) "May", (char *) "Jun", 
 				(char *) "Jul", (char *) "Aug", (char *) "Sep", 
 				(char *) "Oct", (char *) "Nov", (char *) "Dec"};
-  char* strPtr = new char[32];
+  char* strPtr = new char[100];
   
   sprintf(strPtr, "%02d %3s %04d %02d:%02d:%02d %c%02d00",
 	  getDay(), month_names_eng[getMonth()-1], getYear(),
@@ -3029,11 +3036,18 @@ int randify(bool reseed)
   HydDateTime now,then(1970,1,1); 
   now.now();
   
-  long int seed=(now-then)+getpid();
+  long int seed=(now-then);
   
   if(!visited || reseed)
-    srand(seed);
-  
+    {
+#ifdef MAIN
+      seed+=getpid();
+      srand(seed);
+#else
+      //set_seed(seed);
+#endif // MAIN
+    }
+      
   visited=true;
   
   return seed;
@@ -3046,11 +3060,17 @@ double drand(void)
 
   do
     {
+#ifdef MAIN
       int r=rand();
-      if(RAND_MAX<100000)
-	ret=double(r*RAND_MAX+rand())/double(RAND_MAX*RAND_MAX);
+      int rmax=RAND_MAX;
+      
+      if(rmax<100000)
+	ret=double(r*rmax+rand())/double(rmax*rmax);
       else
-	ret=double(r)/double(RAND_MAX);
+	ret=double(r)/double(rmax);
+#else
+      ret=unif_rand();
+#endif // MAIN      
     } while(ret==0.0 || ret==1.0);
   
   return ret;
@@ -3404,8 +3424,12 @@ double_2d *get_2d_data_file(char *filename, int *len, bool dosort)
   in.open(filename, ios::in);
   if(in.fail())
     {
-      printf("Couldn't open file \"%s\"", filename);
+#ifdef MAIN
+      cerr << "Couldn't open file \"" << filename << "\"" << endl;
       exit(0);
+#else
+      Rcout << "Couldn't open file \"" << filename << "\"" << std::endl;
+#endif // MAIN
     }
   
   in.getline(line,9999);
@@ -3457,7 +3481,9 @@ csv::csv(char *infile, char sep) : double_linked_list()
   in.open(infile, ios::in);
   if(in.fail())
     {
+#ifdef MAIN
       cerr << "Could not open the file " << infile << "!" << endl;
+#endif // MAIN
       return;
     }
   
@@ -3512,11 +3538,11 @@ csv::csv(char *infile, char sep) : double_linked_list()
 		    "! Too few values!" << endl;
 		  cerr << line << endl;
 #else // R context
-		  Rcout << i << " " << len << " " << endl; // (long int) ptr << endl;
+		  Rcout << i << " " << len << " " << std::endl; // (long int) ptr << endl;
 		  Rcout << "Error in line " << lineno << 
-		    "! Too few values!" << endl;
-		  Rcout << line << endl;
-#endif
+		    "! Too few values!" << std::endl;
+		  Rcout << line << std::endl;
+#endif // MAIN
 		  if(head)
 		    delete head;
 		  delete [] vals;
@@ -3597,7 +3623,9 @@ double csv::get_value(int number)
 {
   if(number<0 || number>len || val==NULL)
     {
+#ifdef MAIN
       cerr << "Programming error - number out of range in csv::get_value" << endl;
+#endif // MAIN
       return MISSING_VALUE;
     }
   return val[number];
@@ -3633,7 +3661,9 @@ char *csv::get_name(int number)
 {
   if(number<0 || number>len || names==NULL)
     {
+#ifdef MAIN
       cerr << "Programming error - number out of range in csv::get_name" << endl;
+#endif // MAIN
       return NULL;
     }
   return names[number];
@@ -3653,7 +3683,7 @@ void csv::show(ostream &out)
       if(i<(len-1))
 	out << ";";
     }
-  out << endl;
+  out << std::endl;
 
   for(csv *ptr=this;ptr;ptr=ptr->suc())
     {
@@ -3664,7 +3694,7 @@ void csv::show(ostream &out)
 	  if(i<(len-1))
 	    out << ";";
 	}
-      out << endl;
+      out << std::endl;
     }
 }
 
@@ -4176,7 +4206,8 @@ Complex **Make_Complex_matrix(int rows, int columns)
 void show_mat(const char *name, double **X, int n, int m)
 {
   int i,j;
-  
+
+#ifdef MAIN
   printf("%10s=(",name);
   for(i=0;i<n;i++)
     {
@@ -4187,12 +4218,25 @@ void show_mat(const char *name, double **X, int n, int m)
       else
 	printf(" )\n\n");
     }
+#else
+  Rcout << name << "=(";
+  for(i=0;i<n;i++)
+    {
+      for(j=0;j<m;j++)
+	Rcout << X[i][j] << " ";
+      if(i<(n-1))
+	Rcout << ")" << std::endl << "           (";
+      else
+	Rcout << " )" << std::endl << std::endl;
+    }
+#endif // MAIN
 }
 
 void show_Complex_mat(const char *name, Complex **X, int n, int m)
 {
   int i,j;
-  
+
+#ifdef MAIN
   printf("%10s=(",name);
   for(i=0;i<n;i++)
     {
@@ -4203,26 +4247,120 @@ void show_Complex_mat(const char *name, Complex **X, int n, int m)
       else
 	printf(" )\n\n");
     }
+#else
+  Rcout << name << "=(";
+  for(i=0;i<n;i++)
+    {
+      for(j=0;j<m;j++)
+	Rcout << X[i][j].Re() << "+" << X[i][j].Im() << "i ";
+      if(i<(n-1))
+	Rcout << ")" << std::endl << "           (";
+      else
+	Rcout << " )" << std::endl << std::endl;
+    }
+#endif // MAIN
+}
+
+void show_mat_R(const char *name, double **X, int n, int m)
+{
+  int i,j;
+  
+  char str[1000];
+  sprintf(str,"%10s=(",name);
+#ifdef MAIN
+  cout << str;
+#else
+  Rcout << str;
+#endif // MAIN
+  for(i=0;i<n;i++)
+    {
+      for(j=0;j<m;j++)
+	{
+	  sprintf(str,"%9.5f  ", X[i][j]);
+#ifdef MAIN
+	  cout << str;
+#else
+	  Rcout << str;
+#endif // MAIN
+	}
+      if(i<(n-1))
+        sprintf(str," )\n%11s("," ");
+      else
+	sprintf(str," )\n\n");
+#ifdef MAIN
+      cout << str;
+#else
+      Rcout << str;
+#endif // MAIN
+    }
+}
+
+void show_Complex_mat_R(const char *name, Complex **X, int n, int m)
+{
+  int i,j;
+  
+  char str[1000];
+  sprintf(str,"%10s=(",name);
+#ifdef MAIN
+  cout << str;
+#else
+  Rcout << str;
+#endif // MAIN
+  for(i=0;i<n;i++)
+    {
+      for(j=0;j<m;j++)
+	{
+	  sprintf(str,"%9.5f+%9.5fi  ", X[i][j].Re(),X[i][j].Im());
+#ifdef MAIN
+	  cout << str;
+#else
+	  Rcout << str;
+#endif // MAIN
+	}
+      if(i<(n-1))
+	sprintf(str," )\n%11s("," ");
+      else
+	sprintf(str," )\n\n");
+#ifdef MAIN
+      cout << str;
+#else
+      Rcout << str;
+#endif // MAIN
+    }
 }
 
 void show_vec(const char *name, double *X, int n)
 {
   int j;
   
+#ifdef MAIN
   printf("%10s=(",name);
   for(j=0;j<n;j++)
     printf("%9.5f  ", X[j]);
   printf(")\n");
+#else
+  Rcout << name << "=(";
+  for(j=0;j<n;j++)
+    Rcout << X[j] << "  ";
+  Rcout << ")" << std::endl;
+#endif // MAIN
 }
 
 void show_Complex_vec(const char *name, Complex *X, int n)
 {
   int j;
   
+#ifdef MAIN
   printf("%10s=(",name);
   for(j=0;j<n;j++)
     printf("%9.5f+%9.5fi  ", X[j].Re(),X[j].Im());
   printf(")\n");
+#else
+  Rcout << name << "=(";
+  for(j=0;j<n;j++)
+    Rcout << X[j].Re() << "+" << X[j].Im() << "i  ";
+  Rcout << ")" << std::endl;
+#endif // MAIN
 }
 
 #ifdef __cplusplus
@@ -4231,6 +4369,8 @@ extern "C" {
 
 double **matrix_inverse(double **X, int dimension)
 {
+  //Rcout << "matrix_inverse" << std::endl;
+
   int i,j,n=dimension;
   double *lapack_matrix=new double[n*n];
   double *I=new double[n*n];
@@ -4271,9 +4411,10 @@ double **matrix_inverse(double **X, int dimension)
 
 Complex **Complex_matrix_inverse(Complex **X, int dimension)
 {
+  //Rcout << "Complex_matrix_inverse" << std::endl;
+
   int i,j,k,n=dimension;
   Complex c(1,45.0,false);
-  //printf("c=%f+%fi\n",c.Re(),c.Im());
   Complex **cX=Make_Complex_matrix(n,n);
   Complex **invcX=Make_Complex_matrix(n,n);
   Complex **ret=Make_Complex_matrix(n,n);
@@ -4398,6 +4539,8 @@ Complex **matrix_eigenvectors(double **A, int size, Complex **eigen_values,
 {
   int i,j,n=size;
   
+  //Rcout << "matrix_eigenvectors" << std::endl;
+  
   int info;
   double *vl=new double[n*n];
   double *vr=new double[n*n];
@@ -4499,6 +4642,7 @@ Complex *Complex_eigenvalues(double **A, int size)
   return val;
   */
 
+  //Rcout << "Complex eigenvalues" << std::endl;
   
   Complex **V,**Vinv, *val;
   V=matrix_eigenvectors(A, size, &val, &Vinv);
@@ -4510,6 +4654,8 @@ Complex *Complex_eigenvalues(double **A, int size)
 
 double *double_eigenvalues(double **A, int size)
 {
+  //Rcout << "double_eigenvalues" << std::endl;
+
   double *ret=new double[size];
   Complex *val=Complex_eigenvalues(A,size);
   for(int i=0;i<size;i++)
@@ -4522,6 +4668,7 @@ double *double_eigenvalues(double **A, int size)
 // find the determinant of a given matrix using eigenvector analysis;
 double matrix_determinant(double **matrix_, int dimension)
 {
+  //Rcout << "matrix determinant" << std::endl;
   Complex *val=Complex_eigenvalues(matrix_,dimension);
   Complex det=1.0;
   
@@ -4535,6 +4682,7 @@ double matrix_determinant(double **matrix_, int dimension)
 
 Complex log_matrix_determinant(double **matrix_, int dimension)
 {
+  //Rcout << "log matrix determinant" << std::endl;
   Complex *val=Complex_eigenvalues(matrix_,dimension);
   Complex logdet=0.0;
   
@@ -4550,6 +4698,8 @@ Complex log_matrix_determinant(double **matrix_, int dimension)
 
 double **get_cholesky(double **matrix_, int dimension)
 {
+  //Rcout << "get_cholesky" << std::endl;
+  
   double **ret=Make_matrix(dimension,dimension);
   int i,j,n=dimension,lda=n,info;
   double *X=new double[n*n];
@@ -4585,6 +4735,8 @@ double **multinormal_sample(int number_of_samples, double *expectation,
 {
   // DEBUG static gsl_rng *rptr=gsl_rng_alloc(gsl_rng_rand48); 
 
+  //Rcout << "multinormal_sample" << std::endl;
+  
   if(dimension==1)
     {
       double **ret=new double*[number_of_samples];
@@ -4799,6 +4951,8 @@ double normal_invcdf(double p, double mean, double sigma)
 double pdf_multinormal(double *x, double *expectation, double **sigma, int dimension,
 		       bool logarithmic)
 {
+  //Rcout << "pdf_multinormal" << std::endl;
+
   double n=double(dimension);
   double ret=logarithmic ? -n/2.0*log(2.0*M_PI) : pow(2.0*M_PI, -n/2.0);
   double **inv_sigma=matrix_inverse(sigma, dimension);
@@ -4807,6 +4961,7 @@ double pdf_multinormal(double *x, double *expectation, double **sigma, int dimen
   
   int j,k,len=dimension;
   double SS=0.0;
+
   double det=logarithmic ? log_matrix_determinant(sigma,dimension).Re() : 
     matrix_determinant(sigma,dimension);
 
@@ -4872,6 +5027,8 @@ double pdf_multi_t(double *x, double *expectation, double **sigma, double nu,
   if(!logarithmic)
     ret=exp(ret);
 
+  //Rcout << "pdf_multi_t" << std::endl;
+  
   double **inv_sigma=matrix_inverse(sigma, dimension);
   int j,k,len=dimension;
   double det=logarithmic ? log_matrix_determinant(sigma,dimension).Re() : 
@@ -5100,9 +5257,9 @@ double *quasi_newton(double (*func)(double *),
       df=(*derivated)(x); // fetch the derivated vector
       f0=(*func)(x);
 
-      //cout << "#############" << endl;
-      //cout << "iteration " << i << endl;
-      //cout << df[0] << " " << f0 << endl;
+      //cout << "#############" << std::endl;
+      //cout << "iteration " << i << std::endl;
+      //cout << df[0] << " " << f0 << std::endl;
 
       // s=H*df;
       if(!hillclimb)
@@ -5374,6 +5531,7 @@ void show_mcmc_parameter(double *par, int N, char *parname,
 			 char *filestart=NULL);
 
 
+#ifdef MAIN
 // show_scatter: Shows scatterplots of the samples for
 // two parameter.
 // par1: parameter samples for parameter 1
@@ -5384,7 +5542,7 @@ void show_mcmc_parameter(double *par, int N, char *parname,
 void show_mcmc_scatter(double *par1, double *par2, int N, 
 		       char *parname1, char *parname2, 
 		       char *filestart=NULL);
-
+#endif // MAIN
 
 double log_prob(double **data, int numrows, int numcolumns,
 		int numparams, double *params,
@@ -5486,7 +5644,7 @@ void sample_once(double **data, int numrows, int numcolumns,
 #ifdef MAIN
 	    cout << " Swap chain " << index << " <-> chain " << index+1 << endl; 
 #else
-	    Rcout << " Swap chain " << index << " <-> chain " << index+1 << endl; 
+	    Rcout << " Swap chain " << index << " <-> chain " << index+1 << std::endl; 
 #endif // MAIN	  
 
 	  // cleanup
@@ -5582,8 +5740,13 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 {
   if(T[0]!=1.0)
     {
+#ifdef MAIN
       cerr << "Usage in routine 'mcmc': first tempering temperature "
 	"*must* be equal to 1!" << endl;
+#else
+      Rcout << "Usage in routine 'mcmc': first tempering temperature "
+	"*must* be equal to 1!" << std::endl;
+#endif // MAIN
       return NULL;
     }
   
@@ -5632,7 +5795,7 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 #ifdef MAIN
     cout << "done getting initial values" << endl;
 #else
-    Rcout << "done getting initial values" << endl;
+    Rcout << "done getting initial values" << std::endl;
 #endif // MAIN
 
   
@@ -5716,7 +5879,7 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 #ifdef MAIN
 		    cout << endl;
 #else
-		    Rcout << endl;
+		    Rcout << std::endl;
 #endif // MAIN
 		}
 	      else if(i==(burnin/4))
@@ -5743,7 +5906,7 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 #ifdef MAIN
 		    cout << endl;
 #else
-		    Rcout << endl;
+		    Rcout << std::endl;
 #endif // MAIN
 		}
 	    }
@@ -5783,19 +5946,6 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
       for(k=0;k<numparams;k++)
 	ret[i][k]=params[0][k];
    
-      /*
-      // Show debug info, if wanted:
-      if(i%10==0 && !silent)
-	{
-	  printf("i=%d: ", i);
-	  for(k=0;k<numparams;k++)
-	    if(param_names && param_names[k])
-	      printf("%s=%f ", param_names[k], ret[i][k]);
-	    else
-	      printf("par%03d=%f ", k, ret[i][k]);
-	  printf("logprob=%g\n", logprob[0]);
-	}
-      */
     }
 
   // Show tempering swapping info, if wanted:
@@ -5809,10 +5959,10 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 	  for(t=0;t<(numtemp-1);t++)
 	    printf("%d<->%d: %d\n", t, t+1, swaps[t]);
 #else
-	  Rcout << "Swaps:" << endl;
+	  Rcout << "Swaps:" << std::endl;
 	  for(t=0;t<(numtemp-1);t++)
-	    Rcout << t << "<->" << t+1 << ": " << swaps[t] << endl;
-#endif
+	    Rcout << t << "<->" << t+1 << ": " << swaps[t] << std::endl;
+#endif // MAIN
 	}
     }
 
@@ -5845,9 +5995,11 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 		theta1[i]=ret[i][j];
 		theta2[i]=ret[i][k];
 	      }
-	    
+
+#ifdef MAIN
 	    show_mcmc_scatter(theta1, theta2, numsamples, 
 			      param_names[j],param_names[k]);
+#endif // MAIN
 	    delete [] theta1;
 	    delete [] theta2;
 	  }
@@ -5885,6 +6037,8 @@ double log_model_likelihood_multinormal(int num_importance_samples,
 {
   int i, num_imp=num_importance_samples;
   
+  //Rcout << "log_model_likelihood_multinormal" << std::endl;
+
   // **************************************************************
   // Importance sampling for finding the marginal data probability
   // Get mean and correlation for the coefficients 
@@ -5970,9 +6124,9 @@ double log_model_likelihood_multinormal(int num_importance_samples,
       printf("lprobsum=%g\n", lprobsum);
       printf("Id stategy:%d\n",(int) id_strategy);
 #else
-      Rcout << "probsum_0=" << probsum << endl;
-      Rcout << "lprobsum =" << lprobsum << endl;
-      Rcout << "Id strategy =" << id_strategy << endl;
+      Rcout << "probsum_0=" << probsum << std::endl;
+      Rcout << "lprobsum =" << lprobsum << std::endl;
+      Rcout << "Id strategy =" << id_strategy << std::endl;
 #endif // MAIN
     }
   
@@ -6004,7 +6158,7 @@ void show_parameter_value(double *param, int numparam, char **parnames,
       Rcout << parnames[i] << "=" << param[i] << " ";
     else
       Rcout << "par" << i+1 << "=" << param[i] << " ";
-  Rcout << endl;
+  Rcout << std::endl;
 #endif // MAIN
 }
 
@@ -6023,9 +6177,7 @@ void show_mcmc_parameter(double *par, int N, char *parname,
 			 bool silent, 
 			 char *filestart)
 {
-  char cmd[1000], filename[1000]; // command string + file name string
-  FILE *p; // file pointer
-  int i, len=N; 
+  int len=N; 
   // calculate one-step autocorrelation:
   double rho=get_auto_correlation(par, len);
   // number of independent samples, using 
@@ -6045,7 +6197,7 @@ void show_mcmc_parameter(double *par, int N, char *parname,
   Rcout << " median=" << find_statistics(par,N,MEDIAN);
   Rcout << " 95% post.cred.int=(" << 
     find_statistics(par,N,PERCENTILE_2_5) << " , " <<
-    find_statistics(par,N,PERCENTILE_97_5) << ")" << endl;
+    find_statistics(par,N,PERCENTILE_97_5) << ")" << std::endl;
 #endif // MAIN
 
   // if silent, this is all that is to be done:
@@ -6058,9 +6210,14 @@ void show_mcmc_parameter(double *par, int N, char *parname,
     spacing << endl;
 #else
   Rcout << parname << " - spacing between independent samples:" << 
-    spacing << endl;
+    spacing << std::endl;
 #endif // MAIN
 
+#ifdef MAIN
+  char cmd[1000], filename[1000]; // command string + file name string
+  FILE *p; // file pointer
+  int i;
+  
   // show sampling history using 'vvgraph':
   if(!filestart || !*filestart)
     {
@@ -6099,9 +6256,11 @@ void show_mcmc_parameter(double *par, int N, char *parname,
     pclose(p);
   else
     fclose(p);
+#endif // MAIN
 }
 
 
+#ifdef MAIN
 // show_scatter: Shows scatterplots of the samples for
 // two parameter.
 // par1: parameter samples for parameter 1
@@ -6138,7 +6297,7 @@ void show_mcmc_scatter(double *par1, double *par2, int N,
   else
     fclose(p);
 }
-
+#endif // MAIN
 
 
 
@@ -6341,12 +6500,14 @@ public:
     indicator_pull[100], indicator_mu, indicator_lin_t;
   int time_integral[100];
   int serie_num;
-  
+
+#ifdef MAIN
   void read_series(char **&argv, int &argc, bool is_main_series, 
 		   int serie_number,
 		   bool *use_site,
 		   double start_time=MISSING_VALUE, 
 		   double end_time=MISSING_VALUE);
+#endif // MAIN
   
   void set_series(char *seriename, int serienum, 
 		  double *X_time, double *X_value, int n, int num_layers, 
@@ -6420,9 +6581,10 @@ double **make_sigma2(double *cor, int num_sites);
 double p_positive_correlations(int num_sites,int N);
 
 
+#ifdef MAIN
 // Print usage and exit:
 void usage(void);
-
+#endif // MAIN
 
 
 // get_measurements: read the measurement file and store it in
@@ -6470,7 +6632,11 @@ double loglik_real(double *pars, int dosmooth=0, int do_realize=0,
 		   int debug=0, char **simulation_files=NULL);
 double loglik(double *pars, int dosmooth=0, int do_realize=0, 
 	      int residual_analysis=0, char *res_filestart=NULL, 
-	      int debug=0, char **simulation_files=NULL);
+	      int debug=0, char **simulation_files=NULL,
+	      int return_residuals=0,
+	      double **residuals_time=NULL, double ***residuals=NULL,
+	      double ***prior_expected_values=NULL,
+	      int *resid_numcolumns=NULL, int *resid_len=NULL);
 // For ML purposes:
 double minusloglik(double *pars);
 
@@ -6540,6 +6706,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 void show_parameter(double *par, int N, char *parname, 
 		    int silent=0, char *filestart=NULL);
 
+#ifdef MAIN
 // show_scatter: Shows scatterplots of the samples for
 // two parameter.
 // par1: parameter samples for parameter 1
@@ -6549,7 +6716,7 @@ void show_parameter(double *par, int N, char *parname,
 // parname2: parameter name 2
 void show_scatter(double *par1, double *par2, int N, 
 		  char *parname1, char *parname2, char *filestart=NULL);
-
+#endif // MAIN
 
 
 
@@ -6777,6 +6944,8 @@ double loglik_site_corr(double ** /* data */,
     cor[i]=-1.0+2.0*exp(params[i])/(1.0+exp(params[i]));
   
   double **sigma2=make_site_sigma2(cor,num_sites);
+  //Rcout << "loglik_site_corr" << std::endl;
+  
   double *e=double_eigenvalues(sigma2, num_sites);
   int isok=1;
   for(j=0;j<num_sites && isok;j++)
@@ -6825,7 +6994,7 @@ double p_positive_sitecorr(int num_sites,int N)
 #ifdef MAIN
   cout << "lmbl_site=" << lbml << endl;
 #else
-  Rcout << "lmbl_site=" << lbml << endl;
+  Rcout << "lmbl_site=" << lbml << std::endl;
 #endif //U MAIN
   
 
@@ -6875,6 +7044,7 @@ double loglik_series_corr(double ** /* data */,
     cor[i]=-1.0+2.0*exp(params[i])/(1.0+exp(params[i]));
   
   double **sigma2=make_series_sigma2(cor);
+  //Rcout << "loglik_series_corr" << std::endl;
   double *e=double_eigenvalues(sigma2, num_tot_layers);
   int isok=1;
   for(j=0;j<num_tot_layers && isok;j++)
@@ -6927,7 +7097,7 @@ double p_positive_seriescorr(int N)
 #ifdef MAIN
   cout << "lmbl_series=" << lbml << endl;
 #else
-  Rcout << "lmbl_series=" << lbml << endl;
+  Rcout << "lmbl_series=" << lbml << std::endl;
 #endif // MAIN
 
   doubledelete(params,N);
@@ -7083,7 +7253,7 @@ void prior::show(void)
 #ifdef MAIN
   cout << str << endl;
 #else
-  Rcout << str << endl;
+  Rcout << str << std::endl;
 #endif // MAIN
 }
 
@@ -7136,7 +7306,7 @@ void prior::set(double mu1, double mu2, double dt1, double dt2,
 #ifdef MAIN
 	cout << os_1 << " " << os_2 << endl;
 #else
-        Rcout << os_1 << " " << os_2 << endl;
+        Rcout << os_1 << " " << os_2 << std::endl;
 #endif // MAIN
 	
       los_m=(log(os_1)+log(os_2))/2.0;
@@ -7195,8 +7365,12 @@ prior::prior(char *infile, double meanval)
     }
   else
     {
+#ifdef MAIN
       cerr << "Unknown format for prior file \"" << infile << "\"!" << endl;
       exit(0);
+#else
+      Rcout << "Unknown format for prior file \"" << infile << "\"!" << std::endl;
+#endif // MAIN
     }
 }
 
@@ -7228,6 +7402,7 @@ int compare_meas_cluster(const void *i, const void *j)
 
 void series_measurements::print(void)
 {
+#ifdef MAIN  
   if(sd!=MISSING_VALUE && n!=(int) MISSING_VALUE)
     printf("ser=%d site=%d tm=%9.5f val=%9.5f sd=%9.5f n=%d",
 	   serie_num,site,tm,meanval,sd,n);
@@ -7240,6 +7415,20 @@ void series_measurements::print(void)
   if(dt!=NoHydDateTime)
     printf(" dt=%s", dt.syCh(1));
   printf("\n");
+#else
+  if(sd!=MISSING_VALUE && n!=(int) MISSING_VALUE)
+    Rcout << "ser=" << serie_num << " site=" << site << " tm=" << tm <<
+      " val=" << meanval << " sd=" << sd << " n=" << n;
+  else if(sd!=MISSING_VALUE)
+    Rcout << "ser=" << serie_num << " site=" << site << " tm=" << tm <<
+      " val=" << meanval << " sd=" << sd;
+  else
+    Rcout << "ser=" << serie_num << " site=" << site << " tm=" << tm <<
+      " val=" << meanval;
+  if(dt!=NoHydDateTime)
+    Rcout << " dt=" << dt.syCh(1);
+  Rcout << std::endl;
+#endif //MAIN  
 }
 
 // ********************************************************
@@ -7421,19 +7610,28 @@ void measurement_cluster::add_measurement(series_measurements &m)
     {
       if(m.tm!=tm)
 	{
+#ifdef MAIN
 	  printf("Time mismatch, when adding measurement:\n");
 	  m.print();
 	  printf("...to a measurement cluster with time %lf\n", tm);
 	  exit(0);
+#else
+	  Rcout << "Time mismatch, when adding measurement!" << std::endl;
+#endif // MAIN
 	}
 
       for(i=0;i<num_measurements;i++)
 	if(m.site==site[i] && m.serie_num==serie_num[i])
 	  {
+#ifdef MAIN
 	    printf("Added a new measurement which was already included:\n");
 	    m.print();
 	    printf("%d measurement cluster with time %lf\n", i, tm);
 	    exit(0);
+#else
+	    Rcout << "Added a new measurement which was already included!"
+		  << std::endl;
+#endif // MAIN
 	  }
     }
 
@@ -7498,9 +7696,11 @@ void measurement_cluster::add_measurement(series_measurements &m)
   tm=m.tm;
   dt=m.dt;
 }
-  
+
+
 void measurement_cluster::print(void)
 {
+#ifdef MAIN
   printf("tm=%9.5f #measurements=%d\n", tm, num_measurements);
   for(int i=0;i<num_measurements;i++)
     {
@@ -7527,6 +7727,7 @@ void measurement_cluster::print(void)
   if(dt!=NoHydDateTime)
     printf(" dt=%s", dt.syCh(1));
   printf("\n");
+#endif // MAIN
 }
 
 
@@ -7556,8 +7757,12 @@ series_measurements *get_measurements(char *infile, int *len,
   in.open(infile, ios::in);
   if(in.fail())
     {
+#ifdef MAIN
       printf("Couldn't open file \"%s\"", infile);
       exit(0);
+#else
+      Rcout << "Couldn't open file \"" << infile << "\"!" << std::endl;
+#endif // MAIN
     }
   
   in.getline(str,9999);
@@ -7686,8 +7891,12 @@ series_measurements *get_measurements(char *infile, int *len,
   // if no lines were found, tell the user and exit:
   if(lines==0)
     {
-      printf("No lines read. Illegal format?\n");
+#ifdef MAIN
+      cerr << "No lines read. Illegal format?" << endl;
       exit(0);
+#else
+      Rcout << "No lines read. Illegal format?" << std::endl;
+#endif // MAIN
     }
   
   // Make the measurement array:
@@ -7698,8 +7907,12 @@ series_measurements *get_measurements(char *infile, int *len,
   i=0; // counter
   if(in.fail())
     {
+#ifdef MAIN
       printf("Couldn't open file \"%s\"", infile);
       exit(0);
+#else
+      Rcout << "Couldn't open file \"" << infile << "\"!" << std::endl;
+#endif // MAIN
     }
   
   in.getline(str,9999);
@@ -7931,7 +8144,7 @@ series_measurements *get_measurements(char *infile, int *len,
 #ifdef MAIN
 	cout << "Numsites=" << numsites << endl; 
 #else
-	Rcout << "Numsites=" << numsites << endl; 
+	Rcout << "Numsites=" << numsites << std::endl; 
 #endif // MAIN
 
       if(some_pairwise_correlations && numsites>2)
@@ -7952,10 +8165,10 @@ series_measurements *get_measurements(char *infile, int *len,
 	  long int t4=clock();
 	  cout << "Computing time=" << double(t4-t3)/
 	    double(CLOCKS_PER_SEC) << endl;
+	  //exit(0);
 #else 
 	  p_pos_site_sigma2=p_positive_sitecorr(numsites,10000);
 #endif // MAIN
-	  //exit(0);
 	}
       else
 	p_pos_site_sigma2=1.0;
@@ -7986,7 +8199,8 @@ double **get_correlations(char *infile, int *len, int **sites,
   // (time will be counted in minutes rather than m,illions of years)
   
   int i,lines=0; // index variables
-  
+
+  //Rcout << "get_correlations" << std::endl;
   
   ifstream in;
   char str[10000];
@@ -7994,8 +8208,12 @@ double **get_correlations(char *infile, int *len, int **sites,
   in.open(infile, ios::in);
   if(in.fail())
     {
+#ifdef MAIN
       printf("Couldn't open file \"%s\"", infile);
       exit(0);
+#else
+      Rcout << "Couldn't open file \"" << infile << "\"!" << std::endl;
+#endif // MAIN
     }
   
   in.getline(str,9999);
@@ -8047,8 +8265,13 @@ double **get_correlations(char *infile, int *len, int **sites,
   // if no lines were found, tell the user and exit:
   if(lines==0)
     {
+#ifdef MAIN
       printf("No lines read in the correlation file. Illegal format?\n");
       exit(0);
+#else
+      Rcout << "No lines read in the correlation file. Illegal format?"
+	    << std::endl;
+#endif // MAIN
     }
   
   // Make the correlation timeseries array of arrays:
@@ -8061,8 +8284,12 @@ double **get_correlations(char *infile, int *len, int **sites,
   int j=0; // counter
   if(in.fail())
     {
+#ifdef MAIN
       printf("Couldn't open file \"%s\"", infile);
       exit(0);
+#else
+      Rcout << "Couldn't open file \"" << infile << "\"!" << std::endl;
+#endif // MAIN
     }
   
   in.getline(str,9999);
@@ -8135,9 +8362,14 @@ double **get_correlations(char *infile, int *len, int **sites,
 	  for(i=0;i<S;i++)
 	    if(corr_lambda[i]<0.0 || !(corr_lambda[i]<1e+200))
 	      {
+#ifdef MAIN
 		cerr << "Non-positively definite correlation "
 		  "matrix at line \"" << str << "\"" << endl;
 		exit(0);
+#else
+		Rcout << "Non-positively definite correlation "
+		  "matrix at line \"" << str << "\"" << std::endl;
+#endif // MAIN
 	      }
 	  
 	  doubledelete(corr_matrix,S);
@@ -8243,203 +8475,6 @@ double invtransform_parameter(double val, transform_type type)
   return 0.0;
 }
 
-
-// ********************************************************
-// Usage: Print usage and exit
-// ********************************************************
-
-void usage(void)
-{
-  printf("Usage: layer_analyzer [run options] <series specificiations> "
-	 "<numsamples>\n"
-	 "<burnin> <indep> <numtemp> \n");
-  printf("or\n");
-  printf("layer_analyzer [run options] -S <simulation file start> "
-	 "<number of simulations> <parameter list>\n");
-  printf("\n");
-  printf("Series specfication syntax:\n");
-  printf("  -i [series options] <series name> <series file> <prior file>\n");
-  printf("Series options:\n");
-  printf("         -l <num of layers> : Specifies the number of layers used\n"
-	 "               (default three for the main series and one for the "
-	 "supplementary series)\n");
-  printf("               Should be specified before the other series options\n");
-  printf("         -t: linear time dependency\n");
-  printf("         -T <layer>: time integration of the layer below on the \n"
-	 "               specified layer (can't be the lowest layer)\n"
-	 "               PS: Automatically switches on identification\n"
-	 "               prior strategy 0 (no identification restriction).\n");
-  printf("         -ru : Regional mu\n");
-  printf("         -rt : Regional linear time dependency\n");
-  printf("         -rp <layer> : Regional pull for a given layer\n");
-  printf("         -rs <layer> : Regional diffusion for a given layer\n");
-  printf("         -C <layer> : Correlated diffusion for a given layer\n");
-  printf("         -rC <layer> : Correlated diffusion with pairwise "
-	 "correlation coefficient\n");
-  printf("               PS: Inefficient numerics means that #sites<=6\n");
-  printf("               PSS: Fairly unparsemoneous when #sites>=4\n");
-  printf("         -np : No pull in the lowest layer layer (random walk)\n");
-  printf("         -ns <layer> : No diffusion on a given layer "
-	 "(should not be the bottom layer)\n");
-  printf("         -1s <layer> : 1D diffusion (one dimensional noise)\n");
-  printf("         -SS <layer> : indicator flag gourping of correlation "
-	 "at a given layer\n");
-  printf("         -SC <layer> : indicator flag removal of correlation "
-	 "at a given layer\n");
-  printf("         -Ss <layer> : indicator flag differentiation of diffusion\n");
-  printf("         -Sp <layer> : indicator flag differentiation of pull\n");
-  printf("         -Su : indicator flag differentiation of mu\n");
-  printf("         -St : indicator flag differentiation of linear time dependency\n");
-  printf("         -i0 : initial state treatment, with initial time equal \n");
-  printf("               to the first measurement\n");
-  printf("               (The default is to use the stationary distribuition as\n");
-  printf("               the initial insight into the process).\n");
-  printf("         -it <time>: initial state treatment, with initial time specified\n");
-  printf("         -iT <datetime>: initial state treatment, with initial time \n");
-  printf("               specified using datetime specification.\n");
-  printf("         -is : if initial state treatment, the initial state \n");
-  printf("               is assumed to be the same for all sites.\n");
-  printf("         -il : if initial state treatment, the initial state \n");
-  printf("               is assumed to be the same for all layers in a site.\n");
-  printf("         -It <time> <init> : Initial value treatment\n");
-  printf("               with the same specified initial value for all sites.\n");
-  printf("         -IT <datetime> <init> : Initial value treatment\n");
-  printf("               with the same specified initial value for all sites.\n");
-  printf("         -U : Allows for positive (unstable) pull coefficients.\n");
-  printf("               Only alloweable with initial value treatment.\n");
-  printf("               The prior 95%% credibility interval for the untransformed\n");
-  printf("               pulls will be set to ±1/lower boundry for\n");
-  printf("               the characteristic time, using the normal distribution.\n");
-  printf("               Should only be used when the pull identificaiton restriciton "
-	 "is switched off.\n");
-  printf("          -P <period>: Substracts a trigonometric from the data with the\n"
-	 "               given period but with unknown constants before cos and sin\n"
-	 "               Multiple such periodic functions can be used\n"); 
-  printf("\n");
-  printf("The prior file should have the format "
-	 "is_log;mu1;mu2;dt1;dt2;s1;s2;lin1;lin2;beta1;beta2\n");
-  printf("  indicating prior lower and upper 95%% credibility limits for all "
-	 "parameter types.\n");
-  printf("  is_log=0 means the data should not be log-transformed\n");
-  printf("  is_log=1 means the data should be log-transformed\n");
-  printf("  is_log=2 means the data already has been log-transformed\n");
-  printf("  Parameter priors must relate to the log-transform series if is_log!=0\n");
-  printf("\n");
-  printf("Run options:\n");
-  printf("         -S <simulation file start> <number of realizations> <parameter list>\n"
-	 "            Simulates a set of realizations conditioned on the\n"
-	 "            parameter set, times, standard deviations (if applicable),\n"
-	 "            and number of observations (if applicable)\n"
-	 "            *but not the observations themselves*. Used for making\n"
-	 "            simulation datasets\n");
-  printf("         -n : null data - ignores the data file and assumes\n"
-	 "              no data. For debug purposes\n");
-  printf("         -e <external serie file> : Include external time serie\n");
-  printf("         -s  : Silent modus. Only shows marginal data density "
-	 "and parameter estimates\n");
-  printf("         -H <identification prior strategy>: Specifies how to \n"
-	 "              handle the identification restrictions in the prior.\n");
-  printf("              Options:\n"
-	 "               0 - No identification treatment. (Default) PS: Can and\n"
-	 "                   even should yield multimodal characteristic times\n"
-	 "               1 - Keep upper characteristic time prior. Add\n"
-	 "                   lognormally to beneath-lying characteristic times.\n"
-	 "               2 - Keep lower characteristic time prior. Substract\n"
-	 "                   lognormally to above-lying characteristic times.\n"
-	 "               3 - Keep lower characteristic time prior. Cut\n"
-	 "                   depending on that on the above-lying "
-	 "characteristic times. (Recommended option)\n"
-	 "               4 - Keep upper characteristic time prior. Cut\n"
-	 "                   depending on that on the below-lying "
-	 "characteristic times.\n");
-  printf("         -o <file start> <numit> <N/A/D>: Sends process realizations "
-	 "(Kalman smoother\n"
-	 "            results) to a set of output files starting with the\n"
-	 "            specified string, instead of showing on the screen.\n"
-	 "            <numit> determines the number of iterations before \n"
-	 "            giving up trying to make a realization.\n"
-	 "            \"N\" gives no censoring on the realizations\n"
-	 "            \"A\" censors realizations that anywhere ascends beyond the\n"
-	 "            value of the previous measurement point."
-	 "            \"D\" censors realizations that anywhere descends beyond the\n"
-	 "            value of the previous measurement point.\n"
-	 "            PS:  The last two options will affect the inference.\n"
-	 "            PSS: These options are only implemented for single "
-	 "data file analysis.\n");
-  printf("         -b: skip importance sampling estimation of BML\n");
-  printf("         -R <site> : remove site\n");
-  printf("         -O <site> : only use this site\n");
-  printf("         -B <age> : cut data before <age>\n");
-  printf("         -A <age> : cut data after <age>\n");
-  printf("         -p : pre show data\n");
-  printf("         -Pr : Plot re-parametrized parameters\n");
-  printf("         -Ps : Plot stationary standard deviations\n");
-  printf("         -d <time diff>: Toogle smoothing analysis with the given "
-	 "time resolution\n");
-  printf("         -D <time diff> <start time> <end time>: Toogle smoothing analysis\n");
-  printf("            with the given time resolution plus start and end time.\n");
-  printf("         -G <time diff> <start time> <end time>: Toogle smoothing analysis\n");
-  printf("            with the given time resolution plus start and end date-time.\n");
-  printf("         -F <filestart>: File start for smoothing output and parameter "
-	 "plots\n  "
-	 "            (toggles sending the smoothing output to files)\n");
-  printf("         -ML <number of optimizations> : "
-	 "Performs ML analysis (after the\n"
-	 "            Bayesian analysis) and residual dependency analysis\n");
-  printf("         -E : toggles showing population standard deviation vs \n"
-	 "            selection pressure (only appropriate for "
-	 "evoluationary data,\n"
-	 "            where the first layer is phenotype and the "
-	 "second is the optimum)\n"
-	 "            The difference between the inference on the "
-	 "first and second\n"
-	 "            layer is interpreted as selection pressure.\n");
-  printf("         -C <series1> <layer> <series 2> <layer>\n");
-  printf("               Injects a instantaneous correlation between one layer in\n");
-  printf("               series 1 and one layer in series 2\n");
-  printf("               Warning: Injecting more than one instantaneous series "
-	 "correlation\n");
-  printf("         -rC <series1> <layer> <series 2> <layer>\n");
-  printf("               Same as option -C but with site-specific "
-	 "correlation parameters\n");
-  printf("               may lead to incorrectly calculated BMLs\n");
-  printf("         -f <series1> <layer 1> <series 2> <layer 2>\n");
-  printf("               Feedback from a specific series and layer to another "
-	 "specific series and layer\n");
-  printf("               that doesn't go by the layering system.\n");
-  printf("               Treated with a regression parameter.\n");
-  printf("         -g <series1> <layer 1> <series 2> <layer 2>\n");
-  printf("               Symmetric feedback from between two specific series+layer\n");
-  printf("         -c <correlation file>: Specifies the series observational\n");
-  printf("               correlations for each combination of site and time. \n");
-  printf("               Each line should contain:\n");
-  printf("                site (unless number of sites is one), time, corr_1_2,\n"); 
-  printf("                corr_1_3,...,corr_1_S,corr_2_3,...corr_2_S,...,corr_S-1,S\n");
-  printf("                (a total of S*(S-1)/2 correlations) where S is the number\n");
-  printf("                of series. Time is specified by floating point numbers if\n");
-  printf("                that is used in the data files and date/time-format if\n");
-  printf("                that is used in the data files. Do not use this option\n");
-  printf("                until all input series have been specified!\n");
-  printf("               If some series do not have measurements for some site+time\n");
-  printf("               combinations then just put 0 there. If all but one serie\n");
-  printf("               lacks measurements for a site+time, that site+time can be\n");
-  printf("               omitted from the correlation file\n");
-  printf("         -T <T_ground>: Set ground temperature for tempering chains.\n");
-  printf("               Temperatures=T_ground^(i-1) for the i'th chain. "
-	 "Default ground temperature is 2.\n");
-  printf("         -tl : talkative likelihood\n");
-  printf("         -tb : talkative burnin\n");
-  printf("         -a <parameter list>: Set start parameters\n");
-  printf("         -h <number of smoothings per iteration>. Default 10\n");
-  printf("               Not meaningful without '-d', '-D' or '-G'.\n");
-  printf("         -N: Toggles no sites. Reads the first column in each file as time\n");
-  printf("             no matter what. Must be invoked before the options for "
-	 "reading.\n");
-  printf("         -2: Report half-times rather than characteristic times. Half-time="
-	 "log(2)*characteristic time.\n");
-  printf("         -q: Report stationary standard deivations.\n");
-  exit(0);
-}
 
 
 void series::init(void)
@@ -8628,6 +8663,8 @@ void series::set_series(double **X, int n, int num_layers)
 	       -10.0,10.0, 0.01,1.0, 1.0);
 }
 
+
+#ifdef MAIN
 void series::read_series(char **&argv, int &argc, bool is_main_series,  
 			 int serie_number,
 			 bool *use_site,double start_time,double end_time)
@@ -8657,7 +8694,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 	  {
 	    if(argc<3)
 	      {
-		printf("Time integral layer not given!\n");
+		cerr << "Time integral layer not given!" << endl;
 		usage();
 	      }
 	    
@@ -8678,7 +8715,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 	case 'l':
 	  if(argc<3)
 	    {
-	      printf("Number of layers not given!\n");
+	      cerr << "Number of layers not given!" << endl;
 	      usage();
 	    }
 	  numlayers=atoi(argv[2]);
@@ -8695,7 +8732,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 	    }
 	  else if(numlayers>=100)
 	    {
-	      cerr << "A hundred or more layers not possible" << endl;
+	      cerr << "A hundred or more layers not possible" << std::endl;
 	      exit(0);
 	    }
 	  argc--;
@@ -8728,7 +8765,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		  if(!dt.legal())
 		    {
 		      cerr << "Illegal date/time format!" << endl;
-		      exit(0);;
+		      exit(0);
 		    }
 		  
 		  init_treatment=1;
@@ -8744,7 +8781,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		layered_init=0;
 		break;
 	      default:
-		printf("Unknown initial state option!\n");
+		cerr << "Unknown initial state option!" << endl;
 		usage();
 		break;
 	      }
@@ -8768,7 +8805,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		  if(!dt.legal())
 		    {
 		      cerr << "Illegal date/time format!" << endl;
-		      exit(0);;
+		      exit(0);
 		    }
 
 		  init_treatment=1;
@@ -8781,7 +8818,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		}
 		break;
 	      default:
-		printf("Unknown initial state option!\n");
+		cerr << "Unknown initial state option!" << endl;
 		usage();
 		break;
 	      }
@@ -8834,7 +8871,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		linear_time_dep=true;
 		break;
 	      default:
-		printf("Unknown indicator option!\n");
+		cerr << "Unknown indicator option!" << endl;
 		usage();
 		break;
 	      }
@@ -8879,7 +8916,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		  break;
 		}
 	      default:
-		printf("Unknown regional option!\n");
+		cerr << "Unknown regional option!" << endl;
 		usage();
 		break;
 	      }
@@ -8910,7 +8947,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		  break;
 		}
 	      default:
-		printf("Unknown no noise option!\n");
+		cerr << "Unknown no noise option!" << endl;
 		usage();
 		break;
 	      }
@@ -8929,7 +8966,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		  break;
 		}
 	      default:
-		printf("Unknown 1D option!\n");
+		cerr << "Unknown 1D option!" << endl;
 		usage();
 		break;
 	      }
@@ -8937,7 +8974,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 	    break;
 	  }
 	default:
-	  printf("Unknown series option!\n");
+	  cerr << "Unknown series option!" << endl;
 	  usage();
 	  break;
 	}
@@ -9031,6 +9068,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
   argv+=2; // this is also done inside the main option loop,
   // which is why it's not -3.
 }
+#endif // MAIN
 
 
 
@@ -9137,13 +9175,24 @@ void test_ar1(double *residuals,  int len)
   double dev=2.0*(ml1-ml0);
   double p_value=1.0-chisq_deg1_cdf(dev);
   //double p_value=gsl_cdf_chisq_Q(dev,1.0);
-  
+
+#ifdef MAIN
   printf("Autocorrelation in the data: %f\n",
 	 get_auto_correlation(residuals, len));
   printf("Independence: mu=%f sd=%f      ML=%f\n", mu0,sd0, ml0);
   printf("AR(1):        mu=%f sd=%f a=%f ML=%f\n", mu1,sd1, a,ml1);
   printf("Deviance: %f\n", dev);
   printf("p-value : %g\n\n",p_value);
+#else
+  Rcout << "Autocorrelation in the data: " <<
+    get_auto_correlation(residuals, len) << std::endl;
+  Rcout << "Independence: mu=" << mu0 << " sd=" << sd0 << "      ML=" <<
+    ml0 << std::endl;
+  Rcout << "AR(1)         mu=" << mu1 << " sd=" << sd1 << " a=" << a <<
+    " ML=" << ml1 << std::endl;
+  Rcout << "Deviance: " << dev << std::endl;
+  Rcout << "p-value : " << p_value << std::endl << std::endl;
+#endif // MAIN
 }
 
 double *ou_res=NULL, *ou_tm=NULL;
@@ -9229,12 +9278,22 @@ void test_OU(double *residuals, double *tm,  int len)
   double dev=2.0*(ml1-ml0);
   double p_value=1.0-chisq_deg1_cdf(dev);
   //double p_value=gsl_cdf_chisq_Q(dev,1.0);
-  
+
+#ifdef MAIN
   printf("OU vs independence:\n");
   printf("Independence: mu=%f sd=%f      ML=%f\n", mu0,sd0, ml0);
   printf("AR(1):        mu=%f sd=%f dt1=%f ML=%f\n", mu1,sd1, dt1,ml1);
   printf("Deviance: %f\n", dev);
   printf("p-value : %g\n\n",p_value);
+#else
+  Rcout << "OU vs independence:" << std::endl;
+  Rcout << "Independence: mu=" << mu0 << " sd=" << sd0 << "      ML="
+	<< ml0 << std::endl;
+  Rcout << "AR(1):        mu=" << mu1 << " sd=" << sd1 << " dt1=" << dt1 <<
+    " ML=" << ml1 << std::endl;
+  Rcout << "Deviance: " << dev << std::endl;
+  Rcout << "p-value : " << p_value << std::endl;
+#endif // MAIN
 }
 
 void autocorr_analyzer(double *residuals, int len, 
@@ -9245,7 +9304,6 @@ void autocorr_analyzer(double *residuals, int len,
   double *autocorr=new double[max_corr_len+1];
   double corr_limit=1.96/sqrt(double(len));
   int i,k;
-  char filename[1000];
 
   autocorr[0]=MISSING_VALUE;
   for(k=1;k<=max_corr_len;k++)
@@ -9256,6 +9314,8 @@ void autocorr_analyzer(double *residuals, int len,
       autocorr[k]/=sd*sd*double(len-k);
     }
 
+#ifdef MAIN
+  char filename[1000];
   if(!silent)
     {
       FILE *p;
@@ -9283,13 +9343,20 @@ void autocorr_analyzer(double *residuals, int len,
       fprintf(p,"%d -10000000 %f\n", max_corr_len, -corr_limit);
       pclose(p);
     }
-
-  double p_value=2.0*(1.0-standard_normal_cdf(ABSVAL((autocorr[1]*sqrt(double(len))))));
+#endif // MAIN
   
+  double p_value=2.0*(1.0-standard_normal_cdf(ABSVAL((autocorr[1]*sqrt(double(len))))));
+
+#ifdef MAIN
   printf("Autocorrelation in the data: %f\n",
 	 autocorr[1]);
   printf("95%% confidence band: +/-%f\n", corr_limit);
   printf("p-value : %g\n\n",p_value);
+#else
+  Rcout << "Autocorrelation in the data: " << autocorr[1] << std::endl;
+  Rcout << "95% confidence band: +/-" << corr_limit << std::endl;
+  Rcout << "p-value : " << p_value << std::endl;
+#endif // MAIN
 }
 
 void runs_test(double *residuals, int len)
@@ -9337,6 +9404,7 @@ void runs_test(double *residuals, int len)
     ceil(+1.96*2.0*sqrt(n-1.0)*lambda2*(1.0-lambda2)+2.0*(n-1.0)*lambda2*(1.0-lambda2));
   */
 
+#ifdef MAIN
   printf("Runs test - median:\n");
   printf("Runs: %d of %d  statistics=%f\n",R1,len,R_stat1);
   printf("lambda=%f 1-lambda=%f\n", lambda1, 1.0-lambda1);
@@ -9351,21 +9419,40 @@ void runs_test(double *residuals, int len)
 	 lower_limit2,upper_limit2);
   printf("p-value: %g\n\n", p_value2);
   */
+#else
+  Rcout << "Runs test - median:" << std::endl;
+  Rcout << "Runs: " << R1 << " of " << len << "  statistics=" <<
+    R_stat1 << std::endl;
+  Rcout << "lambda=" << lambda1 << " 1-lambda=" << 1.0-lambda1 << std::endl;
+  Rcout << "95% confidence limit: runs:" << lower_limit1 << "-" <<
+    upper_limit1 << " , statistics=+/-1.96 " << std::endl; 
+  Rcout << "p-value : " << p_value1 << std::endl;
+#endif // MAIN
 }
 
 void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
 		       char *filestart)
 {
-  char cmd[1000], filename[1000];
   int i;
   double *abs_res=new double[len];
-  FILE *p,*p2;
 
+#ifdef MAIN
   printf("*******************\nResiduals:\n*******************\n\n");
-
+#else
+  Rcout << "*******************\nResiduals:\n*******************" << std::endl;
+#endif // MAIN
+  
   for(i=0;i<len;i++)
     abs_res[i]=ABSVAL((residuals[i]));
 
+  double *resid_ordered=new double[len];
+  for(i=0;i<len;i++)
+    resid_ordered[i]=residuals[i];
+  qsort(resid_ordered, size_t(len),sizeof(double),compare_double);
+
+#ifdef MAIN
+  FILE *p,*p2;
+  char cmd[1000], filename[1000];
   if(!silent)
     {
       if(!filestart || !*filestart)
@@ -9408,15 +9495,7 @@ void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
 	  fclose(p);
 	  fclose(p2);
 	}
-    }
-  
-  double *resid_ordered=new double[len];
-  for(i=0;i<len;i++)
-    resid_ordered[i]=residuals[i];
-  qsort(resid_ordered, size_t(len),sizeof(double),compare_double);
-
-  if(!silent)
-    {
+      
       if(!filestart || !*filestart)
 	{
 	  sprintf(cmd, "vvgraph -x \"normal quantiles\" -y \"residuals\"");
@@ -9455,14 +9534,20 @@ void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
       else
 	fclose(p);
     }
+#endif // MAIN
   
   test_ar1(residuals,len);
   autocorr_analyzer(residuals,len,20,filestart,false);
   test_OU(residuals,tm,len);
   runs_test(residuals,len);
-  
-  printf("*******************\nAbsolute value residuals:\n*******************\n\n");
 
+#ifdef MAIN
+  printf("*******************\nAbsolute value residuals:\n*******************\n\n");
+#else
+  Rcout << "*******************" << std::endl << "Absolute value residuals:" <<
+    std::endl << "*******************" << std::endl;
+#endif // MAIN
+  
   test_ar1(abs_res,len);
   autocorr_analyzer(abs_res,len,20,filestart,true);
   test_OU(abs_res,tm,len);
@@ -9530,11 +9615,19 @@ void cleanup_x_and_P(int len)
 
 double loglik(double *pars, int dosmooth, int do_realize,
 	      int residual_analysis, char *res_filestart, 
-	      int debug, char **simulation_files)
+	      int debug, char **simulation_files,
+	      int return_residuals,
+	      double **residuals_time,double ***residuals,
+	      double ***prior_expected_values, 
+	      int *resid_numcolumns, int *resid_len)
 {
   int s,i,j,k,l,/*l2,*/ t=0,t_0=0;
   numpar=0;
   bool pairwise_wrong=false;
+
+#ifndef MAIN
+  R_CheckUserInterrupt();
+#endif // MAIN
   
   /*
   static gsl_rng *rptr=NULL;
@@ -9555,11 +9648,23 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // enough for all purposes.)
   if(!pars)
     {
+      if(par_name)
+	doubledelete(par_name,LARGE_ENOUGH_ARRAY);
       par_name=new char*[LARGE_ENOUGH_ARRAY];
+      if(par_trans_type)
+	delete [] par_trans_type;
       par_trans_type=new transform_type[LARGE_ENOUGH_ARRAY];
+      if(par_type)
+	delete [] par_type;
       par_type=new param_type[LARGE_ENOUGH_ARRAY];
+      if(par_layer)
+	delete [] par_layer;
       par_layer=new int[LARGE_ENOUGH_ARRAY];
+      if(par_region)
+	delete [] par_region;
       par_region=new int[LARGE_ENOUGH_ARRAY];
+      if(par_series)
+	delete [] par_series;
       par_series=new int[LARGE_ENOUGH_ARRAY];
       for(i=0;i<LARGE_ENOUGH_ARRAY;i++)
 	par_name[i]=new char[100];
@@ -9617,6 +9722,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // **************************************************
   // Read the parameters while handling the model type:
 
+  //Rcout << "loglik start" << std::endl;
   for(s=0;s<num_series;s++)
     {
       if(ser[s].regional_mu) // regional expectancy?
@@ -9718,7 +9824,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  // fetch the parameter value
 		  for(i=0;i<numsites;i++) // traverse the sites
 		    if(!indicator_array[i])
-		  ser[s].lin_t[i]=pars[numpar];
+		      ser[s].lin_t[i]=pars[numpar];
 		    else
 		      ser[s].lin_t[i]=pars[numpar+1];
 		}
@@ -10079,9 +10185,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  if(ser[s].pr->los_m==MISSING_VALUE || 
 	     ser[s].pr->los_s==MISSING_VALUE)
 	    {
+#ifdef MAIN
 	      cerr << "Observational noise prior needed but not "
 		"given for serie \"" << ser[s].name << "\"!" << endl;
 	      exit(0);
+#else
+	      Rcout << "Observational noise prior needed but not "
+		"given for serie \"" << ser[s].name << "\"!" << std::endl;
+#endif // MAIN
 	    }
 	  
 	  if(pars)
@@ -10348,6 +10459,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(!(ser[0].beta>-1e+200 && ser[0].beta<1e+200))
     return -1e+200;
   
+  //Rcout << "loglik corrtest" << std::endl;
   if(num_series_corr>0)
     {
       // Test if explicite series+layer correlations are 
@@ -10377,7 +10489,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
   if(nodata)
     return 0.0;
-  
+
+#ifdef MAIN
   FILE **f=NULL;
   if(simulation_files)
     {
@@ -10385,6 +10498,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       for(s=0;s<num_series;s++)
 	f[s]=fopen(simulation_files[s],"w");
     }
+#endif // MAIN
   
 
   
@@ -10426,10 +10540,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    {
 	      if(A[i2+j][i1+j]!=0.0)
 		{
-		  printf("Feedback from %s, layer %d to %s, layer %d found twice!",
+#ifdef MAIN
+		  printf("Causal link from %s, layer %d to %s, layer %d found twice!",
 			 ser[feed_from_series[i]].name,feed_from_layer[i]+1,
 			 ser[feed_to_series[i]].name,feed_to_layer[i]+1);
 		  exit(0);
+#else
+		  Rcout << "Causal link from " << ser[feed_from_series[i]].name <<
+		    ", layer " << feed_from_layer[i]+1 << " to " <<
+		    ser[feed_to_series[i]].name << ", layer " <<
+		    feed_to_layer[i]+1 << " found twice!" << std::endl;
+#endif // MAIN
 		}
 	      
 	      A[i2+j][i1+j]=
@@ -10451,6 +10572,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   for(s=1;s<num_series;s++)
     allow_positive_pulls=allow_positive_pulls && ser[s].allow_positive_pulls;
   
+  //Rcout << "loglik init" << std::endl;
   if(num_series_feed>0)
     {
       //V=get_complex_eigenvector_matrix(A,num_states,&lambda,0,1000000);
@@ -10578,7 +10700,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #ifdef MAIN
 	    cout << "Positive pull:" << lambda_r[i] << endl;
 #else
-	    Rcout << "Positive pull:" << lambda_r[i] << endl;
+	    Rcout << "Positive pull:" << lambda_r[i] << std::endl;
 #endif // MAIN
 	    doubledelete(V_r,num_states);
 	    doubledelete(Vinv_r,num_states);
@@ -10617,7 +10739,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // lambda_k=eLambda_k*omega/(eigenvalues), eLambda_k=e^(lambda*timediff):
   Complex **Lambda_k=NULL, 
     *eLambda_k=NULL;  
-    // P_k_buffer=F_k*P_k_now:
+  // P_k_buffer=F_k*P_k_now:
   
   double **Omega_r=NULL,**Vvar_r=NULL,**Qbuffer_r=NULL; 
   double **Lambda_k_r=NULL,*eLambda_k_r=NULL;  
@@ -10660,8 +10782,28 @@ double loglik(double *pars, int dosmooth, int do_realize,
   HydDateTime *dt_k=NULL;
   if(ser[0].meas[0].dt!=NoHydDateTime)
     dt_k=new HydDateTime[len];
-  double *resids=new double[len];
 
+  // count number of observed series:
+  int numobs=num_series*numsites;
+  double **resids=new double*[numobs];
+  double **prior_expectancy=new double*[numobs];
+  double *resids_time=new double[meas_tot_len];
+  for(i=0;i<numobs;i++)
+    {
+      resids[i]=new double[len];
+      prior_expectancy[i]=new double[len];
+      for(k=0;k<len;k++)
+	{
+	  resids[i][k]=MISSING_VALUE;
+	  prior_expectancy[i][k]=MISSING_VALUE;
+	}
+    }
+  for(k=0;k<meas_tot_len;k++)
+    resids_time[k]=meas_tot[k].tm;
+  if(debug && return_residuals)
+    for(k=0;k<meas_tot_len;k++)
+      meas_tot[k].print();
+  
   // smoothing information
 
   // x_k_now=state expectancy given observations up until 
@@ -10735,6 +10877,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
     for(j=0;j<numsites;j++)
       corr_layer[i][j][j]=1.0;
   
+  //Rcout << "loglik init2" << endl;
+  
   // Fill out the off-diagonal terms of the
   // series+layer-wise correlation matrices:
   for(s=0;s<num_series;s++)
@@ -10788,17 +10932,23 @@ double loglik(double *pars, int dosmooth, int do_realize,
 							 &sigma_lambda,&sigma_V);
 		
 		/*
-		complex *sigma_lambda;
-		complex **sigma_V=get_complex_eigenvector_matrix(corr_layer[i],numsites,
-								 &sigma_lambda,0,1000000);
-		complex **sigma_Vinv=inverse_complex_matrix(sigma_V,numsites);
+		  complex *sigma_lambda;
+		  complex **sigma_V=get_complex_eigenvector_matrix(corr_layer[i],numsites,
+		  &sigma_lambda,0,1000000);
+		  complex **sigma_Vinv=inverse_complex_matrix(sigma_V,numsites);
 		*/
 		
 		if(!sigma_V)
 		  {
+#ifdef MAIN
 		    cerr << "Failed to find eigenvalue decomposition of "
 		      "correlation matrix for series " << s << " layer " << l << endl;
 		    exit(0);
+#else
+		    Rcerr << "Failed to find eigenvalue decomposition of "
+		      "correlation matrix for series " << s << " layer " <<
+		      l << std::endl;
+#endif // MAIN
 		  }
 		
 		Complex **sqrtbuffer=Make_Complex_matrix(numsites,numsites);
@@ -10814,10 +10964,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    {
 		      if(ABSVAL((sqrtbuffer[j][k].Im()))>0.001)
 			{
+#ifdef MAIN
 			  cerr << "Complex result when finding the square matrix of "
 			    "the correlation matrix for series " << s << 
 			    " layer " << l << endl;
 			  exit(0);
+#else
+			  Rcout << "Complex result when finding the square "
+			    "matrix of the correlation matrix for series " <<
+			    s << " layer " << l << std::endl;
+#endif // MAIN
 			}
 
 		      corr_sqrt_layer[i][j][k]=sqrtbuffer[j][k].Re();
@@ -10842,6 +10998,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  for(k=0;k<numsites;k++)
 	    corr[i*numsites+j][i*numsites+k]=corr_layer[i][j][k];
       }
+  //Rcout << "loglik init3" << std::endl;
   if(num_series_corr>0)
     {
       for(i=0;i<num_series_corr;i++)
@@ -10876,9 +11033,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
       if(corr_wrong)
 	{
+#ifdef MAIN
 	  cerr << "Series and site correlation matrices ok, yet total "
 	    "correlation matrix is not!" << endl;
 	  exit(0);
+#else
+	  Rcout << "Series and site correlation matrices ok, yet total "
+	    "correlation matrix is not!" << std::endl;
+#endif // MAIN
 	}
     }
   
@@ -11100,10 +11262,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  if(ABSVAL((u_k_buff[i].Im()))>0.001)
 	    {
+#ifdef MAIN
 	      cerr << "Complex expectancy! u_k[" << k << "][" << i << "]=" << 
 		u_k_buff[i].Re() << "+" << u_k_buff[i].Im() << "i" << endl;
 	      
-#ifdef MAIN
 	      cout << "A=matrix(c(";
 	      for(j=0;j<num_states;j++)
 		for(k=0;k<num_states;k++)
@@ -11161,8 +11323,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      cout << ",";
 		  }
 	      cout << "),nrow=" << num_states << ")" << endl;
+#else
+	      Rcout << "Complex expectancy! u_k[" << k << "][" << i << "]=" << 
+		u_k_buff[i].Re() << "+" << u_k_buff[i].Im() << "i" << std::endl;
+	      
 #endif // MAIN	      
 
+	      doubledelete(prior_expectancy, numobs);
+	      doubledelete(resids, numobs);
+	      delete [] resids_time;
 	      return(-1e+200);
 	      //exit(0);
 	    }
@@ -11210,7 +11379,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // If there is an external timeseries,
   // do numerical integration up until the first measurement time:
   //double t0=useext ? extdata[0].x : 0.0; // starting time 
-    // of the external timeseries
+  // of the external timeseries
   double t1; //time closest to the first measurement:
   if(useext)
     {
@@ -11285,8 +11454,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    
 	    if(ABSVAL((u_k_buff[i].Im()))>0.001)
 	      {
+#ifdef MAIN
 		cerr << "Complex expectancy! u_k[" << k << "][" << i << "]=" << 
 		  u_k_buff[i].Re() << "+" << u_k_buff[i].Im() << "i" << endl;
+#else
+		Rcout << "Complex expectancy! u_k[" << k << "][" <<
+		  i << "]=" << u_k_buff[i].Re() << "+" <<
+		  u_k_buff[i].Im() << "i" << std::endl;
+#endif // MAIN
+		doubledelete(prior_expectancy, numobs);
+		doubledelete(resids, numobs);
+		delete [] resids_time;
 		return(-1e+200);
 	      }
 	    
@@ -11301,20 +11479,20 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    u_k[0][i]=u_k_buff_r[i];
 
 	    if(simulation_files && debug)
-	    {
+	      {
 #ifdef MAIN
-	      double upd=0.0;
-	      cout << " W[" << i << "]=" << W_r[i] << endl;
-	      for(j=0;j<num_states;j++)
-		{
-		  cout << Vinv_r[i][j] << " ";
-		  if(Vinv_r[i][j]!=0.0)
-		    upd+=Vinv_r[i][j]*W_r[j];
-		}
-	      cout << endl;
-	      cout << " u_k_upd" << i << ":" << upd << endl;
+		double upd=0.0;
+		cout << " W[" << i << "]=" << W_r[i] << endl;
+		for(j=0;j<num_states;j++)
+		  {
+		    cout << Vinv_r[i][j] << " ";
+		    if(Vinv_r[i][j]!=0.0)
+		      upd+=Vinv_r[i][j]*W_r[j];
+		  }
+		cout << endl;
+		cout << " u_k_upd" << i << ":" << upd << endl;
 #endif // MAIN
-	    }
+	      }
 	  }
       
       t_0=t;
@@ -11333,7 +11511,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       Rcout << "u_k_2: ";
       for(i=0;i<num_states;i++)
 	Rcout << u_k[0][i] << " ";
-      Rcout << endl;
+      Rcout << std::endl;
 #endif // MAIN
     }
   
@@ -11346,12 +11524,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
       // fetch the time of the current measurement:
       t_k[k]=me[k].tm;
       
-      if(debug && t_k[k]> -10.045 && t_k[k]< -10.035)
-	{
-	  //double dd=4.0;
-	  printf("stop!\n");
-	}
-
       if(ser[0].meas[0].dt!=NoHydDateTime)
 	dt_k[k]=me[k].dt;
       
@@ -11398,19 +11570,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      
 	      if(state_layer[b]!=(nl-1))
 		{
-		  printf("state_layer=%d numlayers-1=%d\n",
-			 state_layer[b], nl-1);
+#ifdef MAIN
+		  cerr << "state_layer=" << state_layer[b] <<
+		    " numlayers-1=" << nl-1 << endl;
 		  exit(0);
+#else
+		  Rcout << "state_layer=" << state_layer[b] <<
+		    " numlayers-1=" << nl-1 << std::endl;
+#endif // MAIN
 		}
-	      
-	      /*
-	      if(!is_complex && ser[s].pull[nl-1][i%numsites] != -lambda_r[b])
-		{
-		  printf("pull=%f -lambda=%f!\n",
-			 ser[s].pull[nl-1][i%numsites], -lambda_r[b]);
-		  exit(0);
-		}
-	      */
 	      
 	      if(!ser[s].no_pull_lower &&
 		 ((is_complex && lambda && lambda[i]!=0.0) ||
@@ -11512,8 +11680,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		
 		if(ABSVAL((u_k_buff[i].Im()))>0.001)
 		  {
-		    cerr << "Complex expectancy! u_k[" << k << "][" << i << "]=" << 
-		      u_k_buff[i].Re() << "+" << u_k_buff[i].Im() << "i" << endl;
+#ifdef MAIN
+		    cerr << "Complex expectancy! u_k[" << k << "][" <<
+		      i << "]=" << u_k_buff[i].Re() << "+" <<
+		      u_k_buff[i].Im() << "i" << endl;
+#else
+		    Rcout << "Complex expectancy! u_k[" << k << "][" <<
+		      i << "]=" << u_k_buff[i].Re() << "+" <<
+		      u_k_buff[i].Im() << "i" << std::endl;
+#endif // MAIN
+		    doubledelete(prior_expectancy, numobs);
+		    doubledelete(resids, numobs);
+		    delete [] resids_time;
 		    return(-1e+200);
 		  }
 		
@@ -11583,10 +11761,22 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  {
 		    if(ABSVAL((F_k_buff[i][j].Im()))>0.001)
 		      {
-			cerr << "Complex linear transformation! F_k[" << k << "][" << 
+#ifdef MAIN
+			cerr << "Complex linear transformation! F_k[" <<
+			  k << "][" << 
 			  i << "][" << j << "]=" << 
 			  F_k_buff[i][j].Re() << "+" << 
 			  F_k_buff[i][j].Im() << "i" << endl;
+#else
+			Rcout << "Complex linear transformation! F_k[" <<
+			  k << "][" << 
+			  i << "][" << j << "]=" << 
+			  F_k_buff[i][j].Re() << "+" << 
+			  F_k_buff[i][j].Im() << "i" << std::endl;
+#endif // MAIN
+			doubledelete(prior_expectancy, numobs);
+			doubledelete(resids, numobs);
+			delete [] resids_time;
 			return(-1e+200);
 			//exit(0);
 		      }
@@ -11732,6 +11922,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 		    first_cvar=0;
 #endif // MAIN		
+		    doubledelete(prior_expectancy, numobs);
+		    doubledelete(resids, numobs);
+		    delete [] resids_time;
 		    return (-1e+200);
 		    
 		    //exit(0);
@@ -11796,6 +11989,26 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		P_k_prev[k][start+i][start+j]=0.0;
 	  }
       
+      for(i=0;i<num_states;i++)
+	for(j=0;j<num_states;j++)
+	  if(!(P_k_prev[k][i][j]> -1e+200 && P_k_prev[k][i][j]< 1e+200))
+	    {
+	      doubledelete(prior_expectancy, numobs);
+	      doubledelete(resids, numobs);
+	      delete [] resids_time;
+	      return(-1e+200);
+	    }
+
+      if(debug && return_residuals)
+#ifdef MAIN
+	cout << "k=" << k << " me[k].num_measurements=" <<
+	  me[k].num_measurements << " ret=" << ret << endl;
+#else
+      Rcout << "k=" << k << " me[k].num_measurements=" <<
+	me[k].num_measurements << " ret=" << ret << std::endl;
+#endif // MAIN
+
+      
       if(me[k].num_measurements==1)
 	{
 	  int j1,j2;
@@ -11826,7 +12039,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    cout << "k=" << k << " " << me[k].meanval[0] << " " << 
 	      x_k_prev[me[k].index[0]] << " " << S_k << " " << 
 	      R_k << endl;
-#endif // MAIN
 
 	  if(simulation_files)
 	    {
@@ -11849,9 +12061,19 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		fprintf(f[s],"%d ", me[k].n[0]);
 	      fprintf(f[s],"\n");
 	    }
+#endif // MAIN
 
-	  resids[k]=y_k/sqrt(S_k);
-	  
+	  int s_site=me[k].site[0];
+	  prior_expectancy[s*numsites+s_site][k]=x_k_prev[me[k].index[0]];
+	  resids[s*numsites+s_site][k]=y_k/sqrt(S_k);
+#ifndef MAIN
+	  if(debug && return_residuals)
+	    Rcout << "s=" << " site=" << s_site <<
+	      " numsites=" << numsites << " index=" << s*numsites+s_site <<
+	      " k=" << k << " y_k=" << y_k << " S_k=" << S_k <<
+	      " y_k/sqrt(S_k)=" << y_k/sqrt(S_k) << std::endl;
+#endif // MAIN
+	      
 	  // Calculate K_k = P_k,(k-1) * H_k' * inv(S_k)
 	  double *K_k=new double[num_states];
 	  for(j=0;j<num_states;j++)
@@ -11965,7 +12187,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    cout << "k=" << k << " " << me[k].meanval[0] << " " << 
 	      x_k_prev[me[k].index[0]] << " " << S_k[0][0] << " " << 
 	      R_k[0][0] << endl;
-#endif // MAIN
 
 	  if(simulation_files)
 	    {
@@ -11999,8 +12220,23 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      delete [] mval;
 	      doubledelete(sample,1);
 	    }
+#endif // MAIN
+	  
+	  for(i=0;i<n;i++)
+	    {
+	      s=me[k].serie_num[i];
+	      int s_site=me[k].site[i];
 
-	  resids[k]=y_k[0]/sqrt(S_k[0][0]);
+	      prior_expectancy[s*numsites+s_site][k]=x_k_prev[me[k].index[i]];
+	      resids[s*numsites+s_site][k]=y_k[i]/sqrt(S_k[i][i]);
+#ifndef MAIN
+	      if(debug && return_residuals)
+		Rcout << "i=" << i << " s=" << " site=" << s_site <<
+		  " numsites=" << numsites << " index=" << s*numsites+s_site <<
+		  " k=" << k << " y_k=" << y_k[i] << " S_k=" << S_k[i][i] <<
+		  " y_k/sqrt(S_k)=" << y_k[i]/sqrt(S_k[i][i]) << std::endl;
+#endif // MAIN
+	    }
 	  
 	  // Calculate K_k = P_k,(k-1) * H_k' * inv(S_k)
 	  double **K_k=Make_matrix(num_states,n);
@@ -12027,6 +12263,19 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  P_k_now[k][j1][j2] -= K_k[j1][i]*P_k_prev[k][me[k].index[i]][j2];
 	      }
 	  
+	  /* DEBUG stuff
+	     Rcout << "loglik mainloop " << k << std::endl;
+
+	     for(int ii=0;ii<numpar;ii++)
+	     Rcout << par_name[ii] << ":" << pars[ii] << std::endl;
+	  
+	     show_mat_R("R_k",R_k,n,n);
+	     show_mat_R("P_k_prev",P_k_prev[k],n,n);
+	     show_mat_R("K_k",K_k,n,n);
+	     show_mat_R("P_k_now",P_k_now[k],n,n);
+	     show_mat_R("S_k",S_k,n,n);
+	  */
+
 	  // Calculate log(f(y_k | D-1)), which is
 	  // the likelihood contribution from the current measurement:
 	  ret -= pdf_multinormal(y_k, zeroes_k, S_k, n, true);
@@ -12103,7 +12352,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      cout << i << " " << x_k_prev[i] << " " << P_k_prev[k][i][i] << endl;
 #endif // MAIN
 
-	  resids[k]=MISSING_VALUE;
+	  //resids[k]=MISSING_VALUE;
 	  for(i=0;i<num_states;i++)
 	    x_k_now[k][i] = x_k_prev[i];
 	  for(i=0;i<num_states;i++)
@@ -12224,6 +12473,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   if(do_realize)
     {
+      //Rcout << "loglik realizations" << std::endl;
+      
       if(!x_k_realized)
 	x_k_realized=Make_matrix(meas_smooth_len, num_states);
       
@@ -12299,10 +12550,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      
 		      if(t_k[k]>=t_k[k+1])
 			{
-			  printf("%d %f %f %f %f %f\n", k, Tx[2], 
-				 x_k_realized[k+1][2],
-				 t_k[k], t_k[k+1], t_k[k+1]-t_k[k]);
+#ifdef MAIN
+			  cerr << k << " " << Tx[2] << " " <<
+			    x_k_realized[k+1][2] << " t_k[k]=" << t_k[k] <<
+			    " t_k[k+1]" << t_k[k+1] << " t_k[k+1]-t_k[k]=" <<
+			    t_k[k+1]-t_k[k] << endl;
 			  exit(0);
+#else
+			  Rcout << k << " " << Tx[2] << " " <<
+			    x_k_realized[k+1][2] << " t_k[k]=" << t_k[k] <<
+			    " t_k[k+1]" << t_k[k+1] << " t_k[k+1]-t_k[k]=" <<
+			    t_k[k+1]-t_k[k] << std::endl;
+#endif // MAIN
 			}
 		      
 		      double **Sk_inv=new double*[num_states];
@@ -12421,33 +12680,41 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  // before the currently examined time point:
 		  for(i=0;i<numsites && !stopped;i++)
 		    {
-		      while(k2[i]>=0 && (k2[i]>=k || 
-					 me[k2[i]].site[0]!=i || 
-					 me[k2[i]].meanval[0]==MISSING_VALUE))
+		      while(k2[i]>=0 && 
+			    (k2[i]>=k || 
+			     (me[k2[i]].site!=NULL && me[k2[i]].site[0]!=i) || 
+			     (me[k2[i]].meanval!=NULL && 
+			      me[k2[i]].meanval[0]==MISSING_VALUE)))
 			k2[i]--;
-		  
+		      
 		      if(k2[i]>=0)
 			{
 			  if(real_strat==ASCENDING_CENSORING &&
 			     x_k_realized[k][i]>=x_k_realized[k2[i]][i])
 			    {
 			      stopped=1;
-			      printf("iteration %d/%d - site %d: "
-				     "(t=%8.3f,x=%8.3f)>=(t=%8.3f,x=%8.3f)\n",
-				     numit, numit_realization,i, 
-				     t_k[k], x_k_realized[k][i],
-				     t_k[k2[i]],x_k_realized[k2[i]][i]);
+#ifdef MAIN
+			      if(!silent)
+				printf("iteration %d/%d - site %d: "
+				       "(t=%8.3f,x=%8.3f)>=(t=%8.3f,x=%8.3f)\n",
+				       numit, numit_realization,i, 
+				       t_k[k], x_k_realized[k][i],
+				       t_k[k2[i]],x_k_realized[k2[i]][i]);
+#endif  // MAIN
 			    }
 				
 			  if(real_strat==DESCENDING_CENSORING &&
 			     x_k_realized[k][i]<=x_k_realized[k2[i]][i])
 			    {
 			      stopped=1;
-			      printf("iteration %d/%d - site %d: "
-				     "(t=%8.3f,x=%8.3f)<=(t=%8.3f,x=%8.3f)\n",
-				     numit, numit_realization,i, 
-				     t_k[k], x_k_realized[k][i],
-				     t_k[k2[i]],x_k_realized[k2[i]][i]);
+#ifdef MAIN
+			      if(!silent)
+				printf("iteration %d/%d - site %d: "
+				       "(t=%8.3f,x=%8.3f)<=(t=%8.3f,x=%8.3f)\n",
+				       numit, numit_realization,i, 
+				       t_k[k], x_k_realized[k][i],
+				       t_k[k2[i]],x_k_realized[k2[i]][i]);
+#endif  // MAIN
 			    }
 			}
 		    }
@@ -12475,8 +12742,23 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
 
   if(residual_analysis)
-    analyze_residuals(resids, t_k, dt_k,len, res_filestart);
-  delete [] resids;
+    analyze_residuals(resids[0], t_k, dt_k,len, res_filestart);
+  if(return_residuals && residuals!=NULL &&
+     resid_len!=NULL && residuals_time!=NULL)
+    {
+      *residuals_time=resids_time;
+      *prior_expected_values=prior_expectancy;
+      *residuals=resids;
+      *resid_numcolumns=numobs;
+      *resid_len=len;
+    }
+  else
+    {
+      doubledelete(prior_expectancy, numobs);
+      doubledelete(resids, numobs);
+      delete [] resids_time;
+    }
+  
   if(dt_k)
     delete [] dt_k;
 
@@ -12553,7 +12835,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   delete [] x_k_prev;
   delete [] u_k;
   delete [] m;
-  
+
+#ifdef MAIN
   if(f)
     {
       for(s=0;s<num_series;s++)
@@ -12561,12 +12844,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
       delete [] f;
       f=NULL;
     }
+#endif // MAIN
   
   if(talkative_likelihood)
 #ifdef MAIN
     cout << "ll=" << -ret << endl;
 #else  
-    Rcout << "ll=" << -ret << endl;
+  Rcout << "ll=" << -ret << std::endl;
 #endif // MAIN
 
   // return the loglikelihood:
@@ -12735,8 +13019,8 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				  pr->ldt_s/pr->ldt_s -
 				  log(standard_normal_cdf((ldt_old-pr->ldt_m)/
 							  pr->ldt_s));
-				  //log(gsl_cdf_ugaussian_P((ldt_old-pr->ldt_m)/
-				  //pr->ldt_s));
+			      //log(gsl_cdf_ugaussian_P((ldt_old-pr->ldt_m)/
+			      //pr->ldt_s));
 			      else if(id_strategy==ID_SUB_LOWER)
 				prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				  log(exp(ldt_old-ldt)-1.0)-
@@ -12753,7 +13037,7 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 		      for(i=0;i<numsites;i++)
 			{
 			  if((indicator_array[i]==0 && !done0) ||
-			       (indicator_array[i]==1 && !done1))
+			     (indicator_array[i]==1 && !done1))
 			    {
 			      double ldt=-log(ser[s].pull[l][i]);
 			      
@@ -12777,8 +13061,8 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				      0.5*(ldt - pr->ldt_m)*(ldt - pr->ldt_m)/
 				      pr->ldt_s/pr->ldt_s -
-			 log(standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
-		      // log(gsl_cdf_ugaussian_P((ldt_old - pr->ldt_m)/pr->ldt_s));
+				      log(standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
+				  // log(gsl_cdf_ugaussian_P((ldt_old - pr->ldt_m)/pr->ldt_s));
 				  else if(id_strategy==ID_SUB_LOWER)
 				    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				      log(exp(ldt_old-ldt)-1.0)-
@@ -12871,8 +13155,8 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				  0.5*(ldt - pr->ldt_m)*(ldt - pr->ldt_m)/
 				  pr->ldt_s/pr->ldt_s -
-                   log(1.0-standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
-		// log(gsl_cdf_ugaussian_Q((ldt_old - pr->ldt_m)/pr->ldt_s));
+				  log(1.0-standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
+			      // log(gsl_cdf_ugaussian_Q((ldt_old - pr->ldt_m)/pr->ldt_s));
 			      else if(id_strategy==ID_ADD_UPPER)
 				prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				  log(1.0-exp(ldt_old-ldt))-
@@ -12914,8 +13198,8 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				      0.5*(ldt - pr->ldt_m)*(ldt - pr->ldt_m)/
 				      pr->ldt_s/pr->ldt_s -
-                     log(1.0-standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
-		  // log(gsl_cdf_ugaussian_Q((ldt_old - pr->ldt_m)/pr->ldt_s));
+				      log(1.0-standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
+				  // log(gsl_cdf_ugaussian_Q((ldt_old - pr->ldt_m)/pr->ldt_s));
 				  else if(id_strategy==ID_ADD_UPPER)
 				    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 				      log(1.0-exp(ldt_old-ldt))-
@@ -12954,8 +13238,8 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 			    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 			      0.5*(ldt - pr->ldt_m)*(ldt - pr->ldt_m)/
 			      pr->ldt_s/pr->ldt_s -
-                     log(1.0-standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
-		  // log(gsl_cdf_ugaussian_Q((ldt_old - pr->ldt_m)/pr->ldt_s));
+			      log(1.0-standard_normal_cdf((ldt_old - pr->ldt_m)/pr->ldt_s));
+			  // log(gsl_cdf_ugaussian_Q((ldt_old - pr->ldt_m)/pr->ldt_s));
 			  else if(id_strategy==ID_ADD_UPPER)
 			    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
 			      log(1.0-exp(ldt_old-ldt))-
@@ -12969,8 +13253,12 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 		}
 		
 	      default:
-		printf("Unknown identification-prior strategy!\n");
+#ifdef MAIN
+		cerr << "Unknown identification-prior strategy!" << endl;
 		exit(0);
+#else
+		Rcout << "Unknown identification-prior strategy!" << std::endl;
+#endif // MAIN
 		break;
 	      }
 	  }
@@ -13089,7 +13377,7 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 #ifdef MAIN
     cout << "ll=" << ll << " prp=" << prp << endl;
 #else
-    Rcout << "ll=" << ll << " prp=" << prp << endl;
+  Rcout << "ll=" << ll << " prp=" << prp << std::endl;
 #endif // MAIN
 
   // update the parameter likelihood and probability density:
@@ -13333,8 +13621,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    cout << trials << " trials. logprob=" << log_prob[t] << " temp=" <<
 	      T[t] << endl;
 #else
-	    Rcout << trials << " trials. logprob=" << log_prob[t] << " temp=" <<
-	      T[t] << endl;
+	  Rcout << trials << " trials. logprob=" << log_prob[t] << " temp=" <<
+	    T[t] << std::endl;
 #endif // MAIN
 	  
 	  // check if this logprob makes sense, if not, resample
@@ -13344,7 +13632,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #ifdef MAIN
     cout << "done getting initial values" << endl;
 #else
-    Rcout << "done getting initial values" << endl;
+  Rcout << "done getting initial values" << std::endl;
 #endif // MAIN
   
   double ***XX=NULL;
@@ -13376,7 +13664,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #ifdef MAIN
 	    cout << j << " 1 " << i << endl;
 #else
-	    Rcout << j << " 1 " << i << endl;
+	  Rcout << j << " 1 " << i << std::endl;
 #endif // MAIN
 	  newsample(pars, log_prob, &acc, &rw,
 		    T, numtemp, swaps);
@@ -13393,7 +13681,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #ifdef MAIN
 	    cout << j << " 2 " << i << endl;
 #else
-	    Rcout << j << " 2 " << i << endl;
+	  Rcout << j << " 2 " << i << std::endl;
 #endif // MAIN
 	    
 	  newsample(pars, log_prob, &acc, &rw,
@@ -13429,7 +13717,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 		  Rcout << "RW:";
 		  for(k=0;k<numpar;k++)
 		    Rcout << rw.param[k] << " ";
-		  Rcout << endl;
+		  Rcout << std::endl;
 #endif // MAIN
 		}
 	    }
@@ -13494,17 +13782,17 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	      //double offdiag=ss[0][1];
 	      int is_singular=0;
 	      /*
-	      int is_singular=1;
-	      for(ii=0;ii<num_states && is_singular;ii++)
+		int is_singular=1;
+		for(ii=0;ii<num_states && is_singular;ii++)
 		for(jj=0;jj<num_states && is_singular;jj++)
-		  if((ii==jj && !almost_equal(ss[ii][jj], diag)) ||
-		     (ii!=jj && !almost_equal(ss[ii][jj], offdiag)))
-		    is_singular=0;
+		if((ii==jj && !almost_equal(ss[ii][jj], diag)) ||
+		(ii!=jj && !almost_equal(ss[ii][jj], offdiag)))
+		is_singular=0;
 	      */
 
 	      /*
-	      if(t_k_smooth[k]> -10.045 && t_k_smooth[k]< -10.035)
-		cout << is_singular << endl;
+		if(t_k_smooth[k]> -10.045 && t_k_smooth[k]< -10.035)
+		cout << is_singular << std::endl;
 	      */
 
 	      double det=matrix_determinant(ss,num_states);
@@ -13514,13 +13802,13 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	      is_singular=(det <= ABSVAL((diagprod*1e-8)) ? 1 : 0);
 
 	      /*
-	      if(t_k_smooth[k]> -10.045 && t_k_smooth[k]< -10.035)
+		if(t_k_smooth[k]> -10.045 && t_k_smooth[k]< -10.035)
 		{
-		  cout << is_singular << endl;
-		  cout << "det=" << det << " " << diagprod << " " << 
-		    ABSVAL((diagprod*1e-8)) << " " <<
-		       (det <= ABSVAL((diagprod*1e-8)) ? 1 : 0) << endl;
-		  cout << "1 " << xx[0] << " " << xx[1] << endl;
+		cout << is_singular << endl;
+		cout << "det=" << det << " " << diagprod << " " << 
+		ABSVAL((diagprod*1e-8)) << " " <<
+		(det <= ABSVAL((diagprod*1e-8)) ? 1 : 0) << endl;
+		cout << "1 " << xx[0] << " " << xx[1] << endl;
 		}
 	      */
 
@@ -13561,7 +13849,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  cleanup_x_and_P(meas_smooth_len);
 	}
 
-   
+
+#ifdef MAIN
       // Show debug info, if wanted:
       if(i%10==0 && !silent)
 	{
@@ -13574,18 +13863,18 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  printf(" l=%g\n", loglik(pars->param));
 	  printf("\n");
 	}
-
+#endif // MAIN
 
       if(do_realization)
 	{
-	  char filename[2000],cmd[2000];
+	  char filename[2000],cmd[2100];
 	  
 	  if(!x_k_realized)
 	    {
 #ifdef MAIN
 	      cout << "Skipped realization " << i+1 << endl;
 #else
-	      Rcout << "Skipped realization " << i+1 << endl;
+	      Rcout << "Skipped realization " << i+1 << std::endl;
 #endif // MAIN
 	    }
 	  else if(realization_file_start==NULL)
@@ -13608,6 +13897,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    }
 	  else
 	    {
+#ifdef MAIN
 	      sprintf(filename, "%s_%08d.txt", realization_file_start, i+1);
 	      FILE *f=fopen(filename,"w");
 	      
@@ -13623,7 +13913,12 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	      fclose(f);
 	      
 	      sprintf(cmd,"gzip %s", filename);
-	      system(cmd);
+	      int sint=system(cmd);
+	      if(sint)
+		{
+		  printf("system(%s) failed!\n",cmd);
+		}
+#endif // MAIN
 	    }  
 	}
     }
@@ -13639,9 +13934,9 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  for(i=0;i<(numtemp-1);i++)
 	    printf("%d<->%d: %d\n", i, i+1, swaps[i]);
 #else
-	  Rcout << "Swaps:" << endl;
+	  Rcout << "Swaps:" << std::endl;
 	  for(i=0;i<(numtemp-1);i++)
-	    Rcout << i << "<->" << i+1 << ": " << swaps[i] << endl;
+	    Rcout << i << "<->" << i+1 << ": " << swaps[i] << std::endl;
 #endif // MAIN
 	}
     }
@@ -13649,6 +13944,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 
   if(do_importance)
     {
+      //Rcout << "loglik importance" << std::endl;
+
       // **************************************************************
       // Importance sampling for finding the marginal data probability
       // Get mean and correlation for the coefficients 
@@ -13706,7 +14003,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #else
 	  Rcout << "det_eigen=" << det_eigen.Re() << "+" << det_eigen.Im() << 
 	    "i det_orig=" << det_orig << 
-	    " det_log=" << det_log << endl;
+	    " det_log=" << det_log << std::endl;
 #endif // MAIN
 
 	  delete [] lambda;
@@ -13726,8 +14023,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    {
 	      if(0.5<prob_indicator[j])
 		par0.param[j] = 1.0;
-	  else
-	    par0.param[j] = 0.0;
+	      else
+		par0.param[j] = 0.0;
 	    }
 	}
       // put the proposals into the proposal parameter structure
@@ -13738,7 +14035,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #ifdef MAIN
 	cout << "lp0=" << lp0 << endl;
 #else
-	Rcout << "lp0=" << lp0 << endl;
+      Rcout << "lp0=" << lp0 << std::endl;
 #endif // MAIN
       
 
@@ -13752,8 +14049,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  // the same moments as the posterior MCMC samples:
 	  // old
 	  /* double **csample=sample_from_multinormal(1, mu_coefs, 
-						   sigma_coefs, 
-						   numpar2, rptr); */
+	     sigma_coefs, 
+	     numpar2, rptr); */
 	  //new 
 	  double **csample=multinormal_sample(1, mu_coefs, 
 	  				      sigma_coefs, 
@@ -13816,8 +14113,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	      cout << "noe er galt3!" << endl;
 	      cout << "prob=" << prob << " logprob=" << lp-lp0-log_prop_g << endl;
 #else
-	      Rcout << "noe er galt3!" << endl;
-	      Rcout << "prob=" << prob << " logprob=" << lp-lp0-log_prop_g << endl;
+	      Rcout << "noe er galt3!" << std::endl;
+	      Rcout << "prob=" << prob << " logprob=" << lp-lp0-log_prop_g << std::endl;
 #endif // MAIN
 	      prob=exp(lp-lp0-log_prop_g);
 	    }
@@ -13831,12 +14128,14 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    {
 	      double ll1=loglik(par.param);
 	      double pp=(double) prob;
+#ifdef MAIN
 	      printf("%5d logpropg=%f p=%g lik=%g prior=%g w*p=%g probsum=%g\n", 
 		     i, log_prop_g, (double) pp, 
 		     exp(ll1), pp/exp(ll1),
 		     (double) (prob), 
 		     //(double) prisum,
 		     (double) probsum);
+#endif // MAIN
 	      contrib=prob;
 	    }
 	  
@@ -13847,16 +14146,17 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
       // Monte Carlo estimate for the marginal data density
       probsum/=((double) num_imp);
       // Show the model marginal data density:
+#ifdef MAIN
       if(!silent)
 	printf("probsum_0=%g\n", double(probsum));
+#endif // MAIN
       
       // Show the model marginal data density:
       double lprobsum=log(probsum)+lp0;
+      printf("lprobsum=%g\n", lprobsum);
       if(!silent)
-#ifdef MAIN
-	printf("lprobsum=%g\n", lprobsum);
-#else
-        Rcout << "lprobsum=" << lprobsum << endl;
+#ifndef MAIN
+        Rcout << "lprobsum=" << lprobsum << std::endl;
 #endif // MAIN
       
       if(model_loglik)
@@ -13872,7 +14172,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #ifdef MAIN
 	printf("probsum=%g\n", double(probsum));
 #else
-        Rcout << "probsum=" << probsum << endl;
+      Rcout << "probsum=" << probsum << std::endl;
 #endif // MAIN      
       
       double mean_D=-2.0*find_statistics(ll,numsamples,MEAN);
@@ -13936,7 +14236,6 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 void show_parameter(double *par, int N, char *parname, int silent, char *filestart) 
 {
   char cmd[1000], filename[1000]; // command string + file name string
-  FILE *p; // file pointer
   int i, len=N; 
   // calculate one-step autocorrelation:
   double rho=get_auto_correlation(par, len);
@@ -13952,14 +14251,22 @@ void show_parameter(double *par, int N, char *parname, int silent, char *filesta
     spacing << endl;
 #else
   Rcout << parname << " - spacing between independent samples:" << 
-    spacing << endl;
+    spacing << std::endl;
 #endif // MAIN
 
-
+#ifdef MAIN
+  
+  cout << parname << " mean=" << find_statistics(par,N,MEAN);
+  cout << " median=" << find_statistics(par,N,MEDIAN);
+  cout << " 95% post.cred.int=(" << 
+    find_statistics(par,N,PERCENTILE_2_5) << " , " <<
+    find_statistics(par,N,PERCENTILE_97_5) << ")" << endl;
+  
   // if silent, this is all that is to be done:
   if(silent)
     return;
 
+  FILE *p; // file pointer
   // show sampling history using 'vvgraph':
   if(!filestart || !*filestart)
     {
@@ -13998,9 +14305,11 @@ void show_parameter(double *par, int N, char *parname, int silent, char *filesta
     pclose(p);
   else
     fclose(p);
+#endif // MAIN
 }
 
 
+#ifdef MAIN
 // ******************************************************
 // show_scatter: Shows scatterplots of the samples for
 // two parameter.
@@ -14039,14 +14348,13 @@ void show_scatter(double *par1, double *par2, int N,
   else
     fclose(p);
 }
+#endif // MAIN
 
 
 #ifndef MAIN // Only for when compiling as R package
 
 #include <Rcpp.h>
 #include <RcppCommon.h>
-
-using namespace Rcpp;
 
 RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP Spacing,SEXP NumTemp,
@@ -14059,12 +14367,14 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP TempGround, SEXP UseHalfLives,
 			      SEXP ReturnMCMC, 
                               SEXP causal, SEXP causal_symmetric, SEXP corr,
-			      SEXP smooth_specs, SEXP realization_specs)
+			      SEXP smooth_specs, SEXP realization_specs,
+			      SEXP ReturnResiduals)
 {  
   reset_global_variables();
   ser=new series[100];  
   id_strategy=ID_NONE; // ID_SUB_LOWER;
   
+  GetRNGstate();
   int static first=1;
   if(first)
     randify();
@@ -14087,7 +14397,11 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   double T_ground=as<double>(TempGround);
   int use_half_times=as<int>(UseHalfLives);
   int return_mcmc=as<int>(ReturnMCMC);
-  
+  int return_residuals=as<int>(ReturnResiduals);
+  double **resids=NULL, *resids_time, **prior_expected_values=NULL;
+  int resid_numcol=0, resid_len=0;
+
+  // DEBUG: Rcout << "return_residuals=" << return_residuals << std::endl;
   
   List smoothspecs=as<List>(smooth_specs);
   int dosmooth=as<int>(smoothspecs["do.smoothing"]);
@@ -14175,7 +14489,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   num_series=inall.size();
   
   if(!silent)
-    Rcout << inall.size() << endl;
+    Rcout << inall.size() << std::endl;
   
   int s,i,j,l;
   for(s=0;s<num_series;s++)
@@ -14199,8 +14513,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       if(len_time!=len_value)
 	{
-	  cerr << "Length of 'time' array ("<< len_time << ")!= length of 'value' array ("
-	       << len_value << ")!" << endl;
+	  Rcout << "Length of 'time' array ("<< len_time <<
+	    ")!= length of 'value' array ("
+	       << len_value << ")!" << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       int len=len_time;
@@ -14311,21 +14627,21 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       NumericVector prior_obs=as<NumericVector>(currprior["obs"]);
       int prior_islog=as<int>(currprior["islog"]);
       if(!silent)
-	Rcout << "prior_obs1=" << prior_obs[0] << " prior_obs2=" << prior_obs[1] << endl;
+	Rcout << "prior_obs1=" << prior_obs[0] << " prior_obs2=" << prior_obs[1] << std::endl;
       prior *newprior=new prior(prior_islog, prior_mu[0],prior_mu[1],
 				prior_dt[0],prior_dt[1],
 				prior_s[0],prior_s[1],
-			    prior_lin[0],prior_lin[1],
+				prior_lin[0],prior_lin[1],
 				prior_beta[0],prior_beta[1],
 				prior_init[0],prior_init[1],
-			    prior_obs[0],prior_obs[1],
+				prior_obs[0],prior_obs[1],
 				meanval);
       if(!silent)
 	{
 	  Rcout << "prior_obs1=" << newprior->os_1 << 
-	    " prior_obs2=" << newprior->os_2 << endl;
+	    " prior_obs2=" << newprior->os_2 << std::endl;
 	  
-	  Rcout << "num_layers=" << num_layers << endl;
+	  Rcout << "num_layers=" << num_layers << std::endl;
 	}
       
       
@@ -14355,8 +14671,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      if(timeint_layers[i]>(num_layers-1))
 		{
 		  Rcout << "Can't put time integration on the "
-		    "lowest layer (or lower)" << endl;
-		  exit(0);
+		    "lowest layer (or lower)" << std::endl;
+		  return NULL;
 		}
 	      ser[s].time_integral[timeint_layers[i]-1]=1;
 	      id_strategy=ID_NONE;
@@ -14432,7 +14748,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       else
 	ser[s].layered_init=1;
       if(num_init_specified!=2)
-	cerr << "Input vector for init.specified should be of size 2!" << endl;
+	Rcout << "Input vector for init.specified should be of size 2!" << std::endl;
       else if(init_specified[0]!=MISSING_VALUE)
 	{
 	  ser[s].init_treatment=1;
@@ -14581,9 +14897,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      //meas_tot[0].dt << endl;
 		      if(!meas_smooth[k].dt.legal())
 			{
-			  //cout << ref << " " << t << " " << ((long int)t) << 
-			  //" " << meas_tot[0].dt << endl;
-			  exit(0);
+			  Rcout << ref << " " << t << " " << ((long int)t) << 
+			    " " << meas_tot[0].dt << std::endl;
+			  return NULL;
 			}
 		    }
 		  k++;
@@ -14596,9 +14912,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  meas_smooth_len=k;
 	}
     }
-  
-  
-  
+
+  /* DEBUG
+     if(return_residuals)
+     {
+     Rcout << "right after reading:" << endl;
+     for(int k=0;k<meas_tot_len;k++)
+     meas_tot[k].print();
+     Rcout << "later:" << endl;
+     }
+  */
   
   // Read causal connections:
   feed_from_series=new int[10000];
@@ -14613,9 +14936,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   if(!silent)
     {
-      Rcout << causal_pairs.size() << endl;
+      Rcout << causal_pairs.size() << std::endl;
       for(i=0;i<causal_pairs.size();i++)
-        Rcout << "i=" << i << " f=" << causal_pairs[i] << endl;
+        Rcout << "i=" << i << " f=" << causal_pairs[i] << std::endl;
     }
   
   for(i=0;i<num_series_feed;i++)
@@ -14624,54 +14947,62 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       if(feed_from_series[i]>=num_series)
 	{
 	  Rcout << "Series index too high for 'from' series:" << 
-	    feed_from_series[i]+1 << endl;
+	    feed_from_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_from_series[i]<0)
 	{
 	  Rcout << "Series index too low for 'from' series:" << 
-	    feed_from_series[i]+1 << endl;
+	    feed_from_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_from_layer[i]=causal_pairs[4*i+1]-1;
       if(feed_from_layer[i]>=
 	 ser[feed_from_series[i]].numlayers)
 	{
-	  cerr << "Layer index too high for 'from' series:" << 
-	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << endl;
+	  Rcout << "Layer index too high for 'from' series:" << 
+	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_from_layer[i]<0)
 	{
-	  cerr << "Layer index too low for 'from' series:" << 
-	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << endl;
+	  Rcout << "Layer index too low for 'from' series:" << 
+	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_to_series[i]=causal_pairs[4*i+2]-1;
       if(feed_to_series[i]>=num_series)
 	{
-	  cerr << "Series index too high for 'to' series:" << 
-	    feed_to_series[i]+1 << endl;
+	  Rcout << "Series index too high for 'to' series:" << 
+	    feed_to_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_to_series[i]<0)
 	{
-	  cerr << "Series index too low for 'to' series:" << 
-	    feed_to_series[i]+1 << endl;
+	  Rcout << "Series index too low for 'to' series:" << 
+	    feed_to_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_to_layer[i]=causal_pairs[4*i+3]-1;
       if(feed_to_layer[i]>=
 	 ser[feed_to_series[i]].numlayers)
 	{
-	  cerr << "Layer index too high for 'to' series:" << 
-	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << endl;
+	  Rcout << "Layer index too high for 'to' series:" << 
+	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_to_layer[i]<0)
 	{
-	  cerr << "Layer index too low for 'to' series:" << 
-	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << endl;
+	  Rcout << "Layer index too low for 'to' series:" << 
+	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_symmetric[i]=0;
@@ -14684,55 +15015,63 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       feed_from_series[i]=causal_sym_pairs[4*(i-num_series_feed)]-1;
       if(feed_from_series[i]>=num_series)
 	{
-	  cerr << "Series index too high for 'from' series:" << 
-	    feed_from_series[i]+1 << endl;
+	  Rcout << "Series index too high for 'from' series:" << 
+	    feed_from_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_from_series[i]<0)
 	{
-	  cerr << "Series index too low for 'from' series:" << 
-	    feed_from_series[i]+1 << endl;
+	  Rcout << "Series index too low for 'from' series:" << 
+	    feed_from_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_from_layer[i]=causal_sym_pairs[4*(i-num_series_feed)+1]-1;
       if(feed_from_layer[i]>=
 	 ser[feed_from_series[i]].numlayers)
 	{
-	  cerr << "Layer index too high for 'from' series:" << 
-	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << endl;
+	  Rcout << "Layer index too high for 'from' series:" << 
+	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_from_layer[i]<0)
 	{
-	  cerr << "Layer index too low for 'from' series:" << 
-	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << endl;
+	  Rcout << "Layer index too low for 'from' series:" << 
+	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_to_series[i]=causal_sym_pairs[4*(i-num_series_feed)+2]-1;
       if(feed_to_series[i]>=num_series)
 	{
-	  cerr << "Series index too high for 'to' series:" << 
-	    feed_to_series[i]+1 << endl;
+	  Rcout << "Series index too high for 'to' series:" << 
+	    feed_to_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_to_series[i]<0)
 	{
-	  cerr << "Series index too low for 'to' series:" << 
-	    feed_to_series[i]+1 << endl;
+	  Rcout << "Series index too low for 'to' series:" << 
+	    feed_to_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_to_layer[i]=causal_sym_pairs[4*(i-num_series_feed)+3]-1;
       if(feed_to_layer[i]>=
 	 ser[feed_to_series[i]].numlayers)
 	{
-	  cerr << "Layer index too high for 'to' series:" << 
-	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << endl;
+	  Rcout << "Layer index too high for 'to' series:" << 
+	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(feed_to_layer[i]<0)
 	{
-	  cerr << "Layer index too low for 'to' series:" << 
-	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << endl;
+	  Rcout << "Layer index too low for 'to' series:" << 
+	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       feed_symmetric[i]=1;
@@ -14743,11 +15082,11 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   IntegerVector corr_pairs=as<IntegerVector>(corr);
   num_series_corr=corr_pairs.size()/4;
   if(!silent)
-  {
-    Rcout << corr_pairs.size() << endl;
-    for(i=0;i<corr_pairs.size();i++)
-      Rcout << "i=" << i << " c=" << corr_pairs[i] << endl;
-  }
+    {
+      Rcout << corr_pairs.size() << std::endl;
+      for(i=0;i<corr_pairs.size();i++)
+	Rcout << "i=" << i << " c=" << corr_pairs[i] << std::endl;
+    }
   
   corr_from_series=new int[10000];
   corr_to_series=new int[10000];
@@ -14762,55 +15101,63 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       corr_from_series[i]=corr_pairs[4*i]-1;
       if(corr_from_series[i]>=num_series)
 	{
-	  cerr << "Series index too high for 'from' series:" << 
-	    corr_from_series[i]+1 << endl;
+	  Rcout << "Series index too high for 'from' series:" << 
+	    corr_from_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(corr_from_series[i]<0)
 	{
-	  cerr << "Series index too low for 'from' series:" << 
-	    corr_from_series[i]+1 << endl;
+	  Rcout << "Series index too low for 'from' series:" << 
+	    corr_from_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       corr_from_layer[i]=corr_pairs[4*i+1]-1;
       if(corr_from_layer[i]>=
 	 ser[corr_from_series[i]].numlayers)
 	{
-	  cerr << "Layer index too high for 'from' series:" << 
-	    corr_from_series[i]+1 << ":" << corr_from_layer[i]+1 << endl;
+	  Rcout << "Layer index too high for 'from' series:" << 
+	    corr_from_series[i]+1 << ":" << corr_from_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(corr_from_layer[i]<0)
 	{
-	  cerr << "Layer index too low for 'from' series:" << 
-	    corr_from_series[i]+1 << ":" << corr_from_layer[i]+1 << endl;
+	  Rcout << "Layer index too low for 'from' series:" << 
+	    corr_from_series[i]+1 << ":" << corr_from_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       corr_to_series[i]=corr_pairs[4*i+2]-1;
       if(corr_to_series[i]>=num_series)
 	{
-	  cerr << "Series index too high for 'to' series:" << 
-	    corr_to_series[i]+1 << endl;
+	  Rcout << "Series index too high for 'to' series:" << 
+	    corr_to_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(corr_to_series[i]<0)
 	{
-	  cerr << "Series index too low for 'to' series:" << 
-	    corr_to_series[i]+1 << endl;
+	  Rcout << "Series index too low for 'to' series:" << 
+	    corr_to_series[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       corr_to_layer[i]=corr_pairs[4*i+3]-1;
       if(corr_to_layer[i]>=
 	 ser[corr_to_series[i]].numlayers)
 	{
-	  cerr << "Layer index too high for 'to' series:" << 
-	    corr_to_series[i]+1 << ":" << corr_to_layer[i]+1 << endl;
+	  Rcout << "Layer index too high for 'to' series:" << 
+	    corr_to_series[i]+1 << ":" << corr_to_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
       if(corr_to_layer[i]<0)
 	{
-	  cerr << "Layer index too low for 'to' series:" << 
-	    corr_to_series[i]+1 << ":" << corr_to_layer[i]+1 << endl;
+	  Rcout << "Layer index too low for 'to' series:" << 
+	    corr_to_series[i]+1 << ":" << corr_to_layer[i]+1 << std::endl;
+	  PutRNGstate();
 	  return NULL;
 	}
     }
@@ -14956,11 +15303,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  else
 		    {
 		      if(!found_pull)
-			Rcout << "Couldn't find pull for series " << s << 
-			  " layer " << l+1 << " site " << j << endl;
-		      else
-			Rcout << "Couldn't find diffusion for series " << s << 
-			  " layer " << l+1 << " site " << j << "!" << endl;
+			{
+			  Rcout << "Stationary standard deviation for series " << s <<
+			    " layer " << l+1 << " site " << j << std::endl;
+			  Rcout << "could not be calculated due to no pull given "
+			    "for this process " << std::endl;
+			  Rcout << "(i.e. the process is not stationary)." << std::endl;
+			  //else
+			  //Rcout << "Couldn't find diffusion for series " << s << 
+			  //  " layer " << l+1 << " site " << j << "!" << std::endl;
+			}
 		    }
 		}
 	    }
@@ -14974,13 +15326,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       numpar2++;
       for(i=0;i<10;i++)
 	{
-	has_cycles[i]=false;
+	  has_cycles[i]=false;
 	  for(j=0;j<numsamples && !has_cycles[i];j++)
 	    if(pars[j].cycles[i]!=MISSING_VALUE && (ABSVAL((pars[j].cycles[i]))>1e-30))
 	      {
                 if(!silent)
 		  Rcout << "j=" << j << " i=" << i << " cycles=" << 
-		    pars[j].cycles[i] << endl;
+		    pars[j].cycles[i] << std::endl;
 		has_cycles[i]=true;
 	      }
 	  if(has_cycles[i])
@@ -14989,7 +15341,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   StringVector parnames(numpar2);
   
-  double ml=MISSING_VALUE,aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
+  double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
   double best_loglik=MISSING_VALUE;
   if(do_ml)
@@ -15049,7 +15401,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(j=0;j<numpar;j++)
 	{
 	  ml_pars[j]=invtransform_parameter(best_pars_repar[j], 
-					      par_trans_type[j]);
+					    par_trans_type[j]);
 	  
 	  s=par_series[j];
 	  if(ser[s].pr->is_log)
@@ -15062,7 +15414,23 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  exp(ml_pars[j]*ml_pars[j]/2.0);
 	    }
 	}
-      
+
+      if(return_residuals==1)
+	{
+	  if(!silent)
+	    Rcout << "Running loglik to fetch ML residuals..." << std::endl;
+	  
+	  double lres=loglik(best_pars_repar, 0, 0, 0, NULL, 0, NULL,
+			     1, &resids_time,
+			     &resids, &prior_expected_values,
+			     &resid_numcol, &resid_len);
+
+	  if(!resids)
+	    Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
+	      lres << std::endl;
+	  else if(!silent)
+	    Rcout << "lres=" << lres << std::endl;
+	}
       //loglik(best_pars_repar, 0, 0,1,filestart);
       
       delete [] best_pars_repar;
@@ -15075,6 +15443,27 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       aic=-2*best_loglik + 2.0*double(k);
       aicc=-2*best_loglik + 2.0*double(k) + double(k*(k+1))/double(nn-k-1);
       bic=-2*best_loglik + log(double(nn))*double(k);
+    }
+  if(!do_ml && return_residuals==1)
+    {
+      double *medpar=new double[numpar];
+      for(j=0;j<numpar;j++)
+	medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
+      
+      if(!silent)
+	Rcout << "Running loglik to fetch Bayesian median residuals..." << std::endl;
+	  
+      double lres=loglik(medpar, 0, 0, 0, NULL, 0, NULL,
+			 1, &resids_time, &resids, &prior_expected_values,
+			 &resid_numcol, &resid_len);
+      
+      if(!resids)
+	Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
+	  lres << std::endl;
+      else if(!silent)
+	Rcout << "lres=" << lres << std::endl;
+	  
+      delete [] medpar;
     }
   
   List out;
@@ -15101,10 +15490,12 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   // insert mean, median and 95% credibility interval for
   // each parameter into the return list:
+  if(!silent)
+    Rcout << "numpar=" << numpar << std::endl;
   for(j=0;j<numpar;j++)
     {
-      double mean=find_statistics(parsample[j], numsamples, MEAN);
-      double med=find_statistics(parsample[j], numsamples, MEDIAN);
+      double mean= find_statistics(parsample[j], numsamples, MEAN);
+      double med=  find_statistics(parsample[j], numsamples, MEDIAN);
       double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
       double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
       
@@ -15131,6 +15522,14 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			     Named("lower02_5",lower),
 			     Named("upper97_5",upper) );
       out[par_name_new[j]]=parlist;
+      
+      if(!silent)
+	{
+	  Rcout << "j=" << j << std::endl;
+	  Rcout << par_name_new[j] << std::endl;
+	  Rcout << "mean=" << mean << " median=" << med << 
+	    " lower=" << lower << " upper=" << upper << std::endl;
+	}
       
       std::string pname(par_name_new[j]);
       parnames(j)=pname;
@@ -15194,7 +15593,42 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   
   out["parameter.names"]=parnames;
-  
+
+  if(return_residuals==1)
+    {
+      if(resids && resid_len>0)
+	{
+	  NumericMatrix standardized_residuals(resid_len, resid_numcol);
+	  for(i=0;i<resid_numcol;i++)
+	    for(j=0;j<resid_len;j++)
+	      standardized_residuals(j,i)=resids[i][j];
+	  out["standardized.residuals"]=standardized_residuals;
+	  doubledelete(resids, resid_numcol);
+	}
+      else
+	{
+	  Rcout << "No residuals found!" << std::endl;
+	}
+      
+      if(resids_time && resid_len>0)
+	{
+	  NumericVector residuals_time(resid_len);
+	  for(j=0;j<resid_len;j++)
+	    residuals_time(j)=resids_time[j];
+	  out["residuals.time"]=residuals_time;
+	  delete [] resids_time;
+	}
+
+      if(prior_expected_values && resid_len>0)
+	{
+	  NumericMatrix prior_expectancy(resid_len, resid_numcol);
+	  for(i=0;i<resid_numcol;i++)
+	    for(j=0;j<resid_len;j++)
+	      prior_expectancy(j,i)=prior_expected_values[i][j];
+	  out["prior.expected.values"]=prior_expectancy;
+	  doubledelete(prior_expected_values, resid_numcol);
+	}
+    }
   
   if(dosmooth && !do_realizations)
     {
@@ -15214,7 +15648,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  int s=state_series[i], l=state_layer[i];
 	  int site=i%numsites;
 	  
-	  procname[i]=new char[100];
+	  procname[i]=new char[1000];
 	  if(numsites<=1)
 	    sprintf(procname[i], "%s_layer%03d",ser[s].name,l+1);
 	  else
@@ -15223,7 +15657,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  std::string pname(procname[i]);
 	  
           process_names(i)=pname;
-	  
+
 	  for(j=0;j<meas_smooth_len;j++)
 	    {
 	      process_mean(i,j)=find_statistics(x[i][j], num_smooth*numsamples, MEAN);
@@ -15240,6 +15674,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       out["process.lower95"]=process_lower95;
       out["process.upper95"]=process_upper95;
       
+     
       if(do_return_smoothing_samples)
 	{
 	  NumericMatrix firstmatrix(meas_smooth_len,num_smooth*numsamples);
@@ -15267,6 +15702,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     tripledelete(x,num_states,meas_smooth_len);
   
   
+  
   if(do_realizations && numit_realizations_made>0 && x_k_realized_all!=NULL)
     {
       NumericVector realization_time_points(meas_smooth_len);
@@ -15280,7 +15716,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  int s=state_series[i], l=state_layer[i];
 	  int site=i%numsites;
 	  
-	  procname[i]=new char[100];
+	  procname[i]=new char[200];
 	  if(numsites<=1)
 	    sprintf(procname[i], "%s_layer%03d",ser[s].name,l+1);
 	  else
@@ -15291,27 +15727,37 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       NumericMatrix firstmatrix(meas_smooth_len,numit_realizations_made);
       for(j=0;j<meas_smooth_len;j++)
 	for(k=0;k<numit_realizations_made;k++)
-	  firstmatrix(j,k)=x_k_realized_all[k][j][0];
+	  {
+	    if(!silent)
+	      Rcout << "j=" << j << " k=" << k << " x[k]=" << x_k_realized_all[k] << " x_k_j=" << x_k_realized_all[k][j] << std::endl;
+	    firstmatrix(j,k)=x_k_realized_all[k][j][0];
+	  }
       List realizations=List::create(Named(procname[0],firstmatrix));
       
       for(i=1;i<num_states;i++)
 	{
+	  Rcout << "state=" << i << std::endl;
 	  NumericMatrix nextmatrix(meas_smooth_len,numit_realizations_made);
 	  for(j=0;j<meas_smooth_len;j++)
 	    for(k=0;k<numit_realizations_made;k++)
-	      nextmatrix(j,k)=x[k][j][i];
+	      {
+		if(!silent)
+		  Rcout << "state=" << i << " j=" << j << " k=" << k << " x[k]=" << x_k_realized_all[k] << " x_k_j=" << x_k_realized_all[k][j] << std::endl;
+		nextmatrix(j,k)=x_k_realized_all[k][j][i];
+	      }
+	  Rcout << "Set realizations number " << i << std::endl;
 	  realizations[procname[i]]=nextmatrix;
 	}
       
+      if(!silent)
+	Rcout << "Set realizations" << std::endl;
       out["realizations"]=realizations;
       
+      if(!silent)
+	Rcout << "Cleanup" << std::endl;
       doubledelete(procname,num_states);
     }
   
-  
-  doubledelete(par_name_orig,numpar);
-  doubledelete(par_name_new,numpar);
-  doubledelete(parsample_repar,numpar);
   
   if(return_mcmc)
     {
@@ -15321,21 +15767,22 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  mcmcsamples(i,j)=parsample[i][j];
       out["mcmc"]=mcmcsamples;
     }
+  
+  doubledelete(par_name_orig,numpar);
+  doubledelete(par_name_new,numpar);
   doubledelete(parsample,numpar);
+  doubledelete(parsample_repar,numpar);
   
   delete [] pars;
   delete [] meas_buffer;
   reset_global_variables();
   
+  PutRNGstate();
   return(out);
 }
 
 
-
-
-#endif // MAIN
-
-
+#endif // ifndef MAIN
 
 
 
@@ -15343,6 +15790,205 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 
 
 #ifdef MAIN // Only for when compiling as standalone program
+
+
+
+// ********************************************************
+// Usage: Print usage and exit
+// ********************************************************
+
+void usage(void)
+{
+  printf("Usage: layer_analyzer [run options] <series specificiations> "
+	 "<numsamples>\n"
+	 "<burnin> <indep> <numtemp> \n");
+  printf("or\n");
+  printf("layer_analyzer [run options] -S <simulation file start> "
+	 "<number of simulations> <parameter list>\n");
+  printf("\n");
+  printf("Series specfication syntax:\n");
+  printf("  -i [series options] <series name> <series file> <prior file>\n");
+  printf("Series options:\n");
+  printf("         -l <num of layers> : Specifies the number of layers used\n"
+	 "               (default three for the main series and one for the "
+	 "supplementary series)\n");
+  printf("               Should be specified before the other series options\n");
+  printf("         -t: linear time dependency\n");
+  printf("         -T <layer>: time integration of the layer below on the \n"
+	 "               specified layer (can't be the lowest layer)\n"
+	 "               PS: Automatically switches on identification\n"
+	 "               prior strategy 0 (no identification restriction).\n");
+  printf("         -ru : Regional mu\n");
+  printf("         -rt : Regional linear time dependency\n");
+  printf("         -rp <layer> : Regional pull for a given layer\n");
+  printf("         -rs <layer> : Regional diffusion for a given layer\n");
+  printf("         -C <layer> : Correlated diffusion for a given layer\n");
+  printf("         -rC <layer> : Correlated diffusion with pairwise "
+	 "correlation coefficient\n");
+  printf("               PS: Inefficient numerics means that #sites<=6\n");
+  printf("               PSS: Fairly unparsemoneous when #sites>=4\n");
+  printf("         -np : No pull in the lowest layer layer (random walk)\n");
+  printf("         -ns <layer> : No diffusion on a given layer "
+	 "(should not be the bottom layer)\n");
+  printf("         -1s <layer> : 1D diffusion (one dimensional noise)\n");
+  printf("         -SS <layer> : indicator flag gourping of correlation "
+	 "at a given layer\n");
+  printf("         -SC <layer> : indicator flag removal of correlation "
+	 "at a given layer\n");
+  printf("         -Ss <layer> : indicator flag differentiation of diffusion\n");
+  printf("         -Sp <layer> : indicator flag differentiation of pull\n");
+  printf("         -Su : indicator flag differentiation of mu\n");
+  printf("         -St : indicator flag differentiation of linear time dependency\n");
+  printf("         -i0 : initial state treatment, with initial time equal \n");
+  printf("               to the first measurement\n");
+  printf("               (The default is to use the stationary distribuition as\n");
+  printf("               the initial insight into the process).\n");
+  printf("         -it <time>: initial state treatment, with initial time specified\n");
+  printf("         -iT <datetime>: initial state treatment, with initial time \n");
+  printf("               specified using datetime specification.\n");
+  printf("         -is : if initial state treatment, the initial state \n");
+  printf("               is assumed to be the same for all sites.\n");
+  printf("         -il : if initial state treatment, the initial state \n");
+  printf("               is assumed to be the same for all layers in a site.\n");
+  printf("         -It <time> <init> : Initial value treatment\n");
+  printf("               with the same specified initial value for all sites.\n");
+  printf("         -IT <datetime> <init> : Initial value treatment\n");
+  printf("               with the same specified initial value for all sites.\n");
+  printf("         -U : Allows for positive (unstable) pull coefficients.\n");
+  printf("               Only alloweable with initial value treatment.\n");
+  printf("               The prior 95%% credibility interval for the untransformed\n");
+  printf("               pulls will be set to ±1/lower boundry for\n");
+  printf("               the characteristic time, using the normal distribution.\n");
+  printf("               Should only be used when the pull identificaiton restriciton "
+	 "is switched off.\n");
+  printf("          -P <period>: Substracts a trigonometric from the data with the\n"
+	 "               given period but with unknown constants before cos and sin\n"
+	 "               Multiple such periodic functions can be used\n"); 
+  printf("\n");
+  printf("The prior file should have the format "
+	 "is_log;mu1;mu2;dt1;dt2;s1;s2;lin1;lin2;beta1;beta2\n");
+  printf("  indicating prior lower and upper 95%% credibility limits for all "
+	 "parameter types.\n");
+  printf("  is_log=0 means the data should not be log-transformed\n");
+  printf("  is_log=1 means the data should be log-transformed\n");
+  printf("  is_log=2 means the data already has been log-transformed\n");
+  printf("  Parameter priors must relate to the log-transform series if is_log!=0\n");
+  printf("\n");
+  printf("Run options:\n");
+  printf("         -S <simulation file start> <number of realizations> <parameter list>\n"
+	 "            Simulates a set of realizations conditioned on the\n"
+	 "            parameter set, times, standard deviations (if applicable),\n"
+	 "            and number of observations (if applicable)\n"
+	 "            *but not the observations themselves*. Used for making\n"
+	 "            simulation datasets\n");
+  printf("         -n : null data - ignores the data file and assumes\n"
+	 "              no data. For debug purposes\n");
+  printf("         -e <external serie file> : Include external time serie\n");
+  printf("         -s  : Silent modus. Only shows marginal data density "
+	 "and parameter estimates\n");
+  printf("         -H <identification prior strategy>: Specifies how to \n"
+	 "              handle the identification restrictions in the prior.\n");
+  printf("              Options:\n"
+	 "               0 - No identification treatment. (Default) PS: Can and\n"
+	 "                   even should yield multimodal characteristic times\n"
+	 "               1 - Keep upper characteristic time prior. Add\n"
+	 "                   lognormally to beneath-lying characteristic times.\n"
+	 "               2 - Keep lower characteristic time prior. Substract\n"
+	 "                   lognormally to above-lying characteristic times.\n"
+	 "               3 - Keep lower characteristic time prior. Cut\n"
+	 "                   depending on that on the above-lying "
+	 "characteristic times. (Recommended option)\n"
+	 "               4 - Keep upper characteristic time prior. Cut\n"
+	 "                   depending on that on the below-lying "
+	 "characteristic times.\n");
+  printf("         -o <file start> <numit> <N/A/D>: Sends process realizations "
+	 "(Kalman smoother\n"
+	 "            results) to a set of output files starting with the\n"
+	 "            specified string, instead of showing on the screen.\n"
+	 "            <numit> determines the number of iterations before \n"
+	 "            giving up trying to make a realization.\n"
+	 "            \"N\" gives no censoring on the realizations\n"
+	 "            \"A\" censors realizations that anywhere ascends beyond the\n"
+	 "            value of the previous measurement point."
+	 "            \"D\" censors realizations that anywhere descends beyond the\n"
+	 "            value of the previous measurement point.\n"
+	 "            PS:  The last two options will affect the inference.\n"
+	 "            PSS: These options are only implemented for single "
+	 "data file analysis.\n");
+  printf("         -b: skip importance sampling estimation of BML\n");
+  printf("         -R <site> : remove site\n");
+  printf("         -O <site> : only use this site\n");
+  printf("         -B <age> : cut data before <age>\n");
+  printf("         -A <age> : cut data after <age>\n");
+  printf("         -p : pre show data\n");
+  printf("         -Pr : Plot re-parametrized parameters\n");
+  printf("         -Ps : Plot stationary standard deviations\n");
+  printf("         -d <time diff>: Toogle smoothing analysis with the given "
+	 "time resolution\n");
+  printf("         -D <time diff> <start time> <end time>: Toogle smoothing analysis\n");
+  printf("            with the given time resolution plus start and end time.\n");
+  printf("         -G <time diff> <start time> <end time>: Toogle smoothing analysis\n");
+  printf("            with the given time resolution plus start and end date-time.\n");
+  printf("         -F <filestart>: File start for smoothing output and parameter "
+	 "plots\n  "
+	 "            (toggles sending the smoothing output to files)\n");
+  printf("         -ML <number of optimizations> : "
+	 "Performs ML analysis (after the\n"
+	 "            Bayesian analysis) and residual dependency analysis\n");
+  printf("         -E : toggles showing population standard deviation vs \n"
+	 "            selection pressure (only appropriate for "
+	 "evoluationary data,\n"
+	 "            where the first layer is phenotype and the "
+	 "second is the optimum)\n"
+	 "            The difference between the inference on the "
+	 "first and second\n"
+	 "            layer is interpreted as selection pressure.\n");
+  printf("         -C <series1> <layer> <series 2> <layer>\n");
+  printf("               Injects a instantaneous correlation between one layer in\n");
+  printf("               series 1 and one layer in series 2\n");
+  printf("               Warning: Injecting more than one instantaneous series "
+	 "correlation\n");
+  printf("         -rC <series1> <layer> <series 2> <layer>\n");
+  printf("               Same as option -C but with site-specific "
+	 "correlation parameters\n");
+  printf("               may lead to incorrectly calculated BMLs\n");
+  printf("         -f <series1> <layer 1> <series 2> <layer 2>\n");
+  printf("               Causal link from a specific series and layer to another "
+	 "specific series and layer\n");
+  printf("               that doesn't go by the layering system.\n");
+  printf("               Treated with a regression parameter.\n");
+  printf("         -g <series1> <layer 1> <series 2> <layer 2>\n");
+  printf("               Symmetric causal links from between two specific series+layer\n");
+  printf("         -c <correlation file>: Specifies the series observational\n");
+  printf("               correlations for each combination of site and time. \n");
+  printf("               Each line should contain:\n");
+  printf("                site (unless number of sites is one), time, corr_1_2,\n"); 
+  printf("                corr_1_3,...,corr_1_S,corr_2_3,...corr_2_S,...,corr_S-1,S\n");
+  printf("                (a total of S*(S-1)/2 correlations) where S is the number\n");
+  printf("                of series. Time is specified by floating point numbers if\n");
+  printf("                that is used in the data files and date/time-format if\n");
+  printf("                that is used in the data files. Do not use this option\n");
+  printf("                until all input series have been specified!\n");
+  printf("               If some series do not have measurements for some site+time\n");
+  printf("               combinations then just put 0 there. If all but one serie\n");
+  printf("               lacks measurements for a site+time, that site+time can be\n");
+  printf("               omitted from the correlation file\n");
+  printf("         -T <T_ground>: Set ground temperature for tempering chains.\n");
+  printf("               Temperatures=T_ground^(i-1) for the i'th chain. "
+	 "Default ground temperature is 2.\n");
+  printf("         -tl : talkative likelihood\n");
+  printf("         -tb : talkative burnin\n");
+  printf("         -a <parameter list>: Set start parameters\n");
+  printf("         -h <number of smoothings per iteration>. Default 10\n");
+  printf("               Not meaningful without '-d', '-D' or '-G'.\n");
+  printf("         -N: Toggles no sites. Reads the first column in each file as time\n");
+  printf("             no matter what. Must be invoked before the options for "
+	 "reading.\n");
+  printf("         -2: Report half-times rather than characteristic times. Half-time="
+	 "log(2)*characteristic time.\n");
+  printf("         -q: Report stationary standard deivations.\n");
+  exit(0);
+}
 
 
 
@@ -15480,7 +16126,7 @@ int main(int argc, char **argv)
       reset_global_variables();
       exit(0);
     }
-
+  
   // indicator for whether a site is to be used or not
   // default on.
   bool *use_site=new bool[1000], plot_repar=false, 
@@ -15534,7 +16180,7 @@ int main(int argc, char **argv)
 	case 'a':
 	  loglik(NULL);
 	  startpar=new double[numpar];
-	   for(i=0;i<numpar;i++)
+	  for(i=0;i<numpar;i++)
 	    {
 	      startpar[i]=transform_parameter(atof(argv[2]),par_trans_type[i]);
 	      argc--;
@@ -15803,104 +16449,104 @@ int main(int argc, char **argv)
 	  num_series_corr++;
 	  break;
 	  /*
-	case 'r':
-	  {
+	    case 'r':
+	    {
 	    switch(argv[1][2])
-	      {
-	      case 'C':
-		if(num_series_corr==0)
-		  {
-		    corr_from_series=new int[10000];
-		    corr_to_series=new int[10000];
-		    corr_from_layer=new int[10000];
-		    corr_to_layer=new int[10000];
-		    corr_from_index=new int[10000];
-		    corr_to_index=new int[10000];
-		    corr_from_to_regional=new int[10000];
-		    series_corr=new double[10000];
-		  }
+	    {
+	    case 'C':
+	    if(num_series_corr==0)
+	    {
+	    corr_from_series=new int[10000];
+	    corr_to_series=new int[10000];
+	    corr_from_layer=new int[10000];
+	    corr_to_layer=new int[10000];
+	    corr_from_index=new int[10000];
+	    corr_to_index=new int[10000];
+	    corr_from_to_regional=new int[10000];
+	    series_corr=new double[10000];
+	    }
 		
-		corr_from_series[num_series_corr]=atoi(argv[2]);
-		corr_from_layer[num_series_corr]=atoi(argv[3]);
-		corr_to_series[num_series_corr]=atoi(argv[4]);
-		corr_to_layer[num_series_corr]=atoi(argv[5]);
-		corr_from_to_regional[num_series_corr]=1;
+	    corr_from_series[num_series_corr]=atoi(argv[2]);
+	    corr_from_layer[num_series_corr]=atoi(argv[3]);
+	    corr_to_series[num_series_corr]=atoi(argv[4]);
+	    corr_to_layer[num_series_corr]=atoi(argv[5]);
+	    corr_from_to_regional[num_series_corr]=1;
 		
-		if(corr_from_series[num_series_corr]>num_series)
-		  {
-		    cerr << "Series index too high:" << 
-		      corr_from_series[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_from_series[num_series_corr]>num_series)
+	    {
+	    cerr << "Series index too high:" << 
+	    corr_from_series[num_series_corr] << endl;
+	    exit(0);
+	    }
 		
-		if(corr_to_series[num_series_corr]>num_series)
-		  {
-		    cerr << "Series index too high:" << 
-		      corr_to_series[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_to_series[num_series_corr]>num_series)
+	    {
+	    cerr << "Series index too high:" << 
+	    corr_to_series[num_series_corr] << endl;
+	    exit(0);
+	    }
 		
-		if(corr_from_series[num_series_corr]<=0)
-		  {
-		    cerr << "Series index too low:" << 
-		      corr_from_series[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_from_series[num_series_corr]<=0)
+	    {
+	    cerr << "Series index too low:" << 
+	    corr_from_series[num_series_corr] << endl;
+	    exit(0);
+	    }
 		
-		if(corr_to_series[num_series_corr]<=0)
-		  {
-		    cerr << "Series index too low:" << 
-		      corr_to_series[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_to_series[num_series_corr]<=0)
+	    {
+	    cerr << "Series index too low:" << 
+	    corr_to_series[num_series_corr] << endl;
+	    exit(0);
+	    }
 		
-		if(corr_from_layer[num_series_corr]>
-		   ser[corr_from_series[num_series_corr]-1].numlayers)
-		  {
-		    cerr << "Layer index too high:" << 
-		      corr_from_layer[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_from_layer[num_series_corr]>
+	    ser[corr_from_series[num_series_corr]-1].numlayers)
+	    {
+	    cerr << "Layer index too high:" << 
+	    corr_from_layer[num_series_corr] << endl;
+	    exit(0);
+	    }
 		
-		if(corr_to_layer[num_series_corr]>
-		   ser[corr_to_series[num_series_corr]-1].numlayers)
-		  {
-		    cerr << "Layer index too high:" << 
-		      corr_to_layer[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_to_layer[num_series_corr]>
+	    ser[corr_to_series[num_series_corr]-1].numlayers)
+	    {
+	    cerr << "Layer index too high:" << 
+	    corr_to_layer[num_series_corr] << endl;
+	    exit(0);
+	    }
 		
-		if(corr_from_layer[num_series_corr]<=0)
-		  {
-		    cerr << "Layer index too low:" << 
-		      corr_from_layer[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_from_layer[num_series_corr]<=0)
+	    {
+	    cerr << "Layer index too low:" << 
+	    corr_from_layer[num_series_corr] << endl;
+	    exit(0);
+	    }
 
-		if(corr_to_layer[num_series_corr]<=0)
-		  {
-		    cerr << "Layer index too low:" << 
-		      corr_to_layer[num_series_corr] << endl;
-		    exit(0);
-		  }
+	    if(corr_to_layer[num_series_corr]<=0)
+	    {
+	    cerr << "Layer index too low:" << 
+	    corr_to_layer[num_series_corr] << endl;
+	    exit(0);
+	    }
 	  
-		corr_from_series[num_series_corr]--;
-		corr_from_layer[num_series_corr]--;
-		corr_to_series[num_series_corr]--;
-		corr_to_layer[num_series_corr]--;
+	    corr_from_series[num_series_corr]--;
+	    corr_from_layer[num_series_corr]--;
+	    corr_to_series[num_series_corr]--;
+	    corr_to_layer[num_series_corr]--;
 		
-		argc-=4;
-		argv+=4;
+	    argc-=4;
+	    argv+=4;
 		
-		num_series_corr++;
-		break;
-	      default:
-		printf("Unknown regional option!\n");
-		usage();
-		break;
-	      }
+	    num_series_corr++;
 	    break;
-	  }
+	    default:
+	    printf("Unknown regional option!\n");
+	    usage();
+	    break;
+	    }
+	    break;
+	    }
 	  */
 	case 'g':
 	  if(num_series_feed==0)
@@ -16260,6 +16906,7 @@ int main(int argc, char **argv)
       //ser[s].meas[i].print();
       //meas_tot[j].print();
     }
+  delete [] meas_buffer;
   meas_tot_len=j+1;
   printf("meas_tot_len=%d\n", meas_tot_len);
   //qsort(meas_tot,(size_t) meas_tot_len,sizeof(measurement_cluster), 
@@ -16289,7 +16936,7 @@ int main(int argc, char **argv)
       int *handled=new int[meas_tot[i].num_measurements];
       for(j=0;j<meas_tot[i].num_measurements;j++)
 	handled[j]=0;
-
+      
       double **total_corr_matrix=Make_matrix(meas_tot[i].num_measurements,
 					     meas_tot[i].num_measurements);
       
@@ -16325,6 +16972,8 @@ int main(int argc, char **argv)
 			  corr_matrix[meas_tot[i].serie_num[k]][meas_tot[i].serie_num[l]];
 			handled[k]=handled[l]=1;
 		      }
+
+		doubledelete(corr_matrix, num_series);
 	      }
 	  }
       
@@ -16336,6 +16985,8 @@ int main(int argc, char **argv)
       for(j=0;j<meas_tot[i].num_measurements;j++)
 	for(k=0;k<meas_tot[i].num_measurements;k++)
 	  meas_tot[i].corr_matrix[j][k]=total_corr_matrix[j][k];
+
+      doubledelete(total_corr_matrix,meas_tot[i].num_measurements);
     }
 
 
@@ -16345,11 +16996,11 @@ int main(int argc, char **argv)
 
   HydDateTime ref(1970);
   /*
-  for(j=0;j<meas_tot_len;j++)
+    for(j=0;j<meas_tot_len;j++)
     {
-      HydDateTime dt=ref+((long int)meas_tot[j].tm);
-      printf("%f %s %s\n", meas_tot[j].tm, meas_tot[j].dt.syCh(1),
-	     dt.syCh(1));
+    HydDateTime dt=ref+((long int)meas_tot[j].tm);
+    printf("%f %s %s\n", meas_tot[j].tm, meas_tot[j].dt.syCh(1),
+    dt.syCh(1));
     }
   */
 
@@ -16440,9 +17091,9 @@ int main(int argc, char **argv)
 	}
       
       /*
-      if(!silent)
+	if(!silent)
 	for(i=0;i<meas_smooth_len;i++)
-	  meas_smooth[i].print();
+	meas_smooth[i].print();
       */
 
       //for(i=0;i<meas_smooth_len;i++)
@@ -16578,14 +17229,14 @@ int main(int argc, char **argv)
 		  else
 		    {
 		      if(!ser[s].pr->is_log)
-		    fprintf(p,"%f -10000000 %f\n", 
-			    ser[s].comp_meas[k].tm, ser[s].meas[k].meanval);
+			fprintf(p,"%f -10000000 %f\n", 
+				ser[s].comp_meas[k].tm, ser[s].meas[k].meanval);
 		      else
 			fprintf(p,"%f -10000000 %f\n", ser[s].meas[k].tm, 
 				ser[s].comp_meas[k].meanval!=MISSING_VALUE ?
 				exp(ser[s].comp_meas[k].meanval) : MISSING_VALUE);
 		    }
-	    }
+		}
 	  pclose(p);
 	}
   
@@ -16593,9 +17244,9 @@ int main(int argc, char **argv)
   /*
   // DEBUG for a specific model
   double par1[]={1.990356, log(0.155857), log(1.315038), log(0.105345),
-		 2.0, 2.015047};
+  2.0, 2.015047};
   double par2[]={1.990356, log(0.155857), log(1.315038), log(0.105345),
-		 -2655392692221411860022296576.000000, 2.015047};
+  -2655392692221411860022296576.000000, 2.015047};
   params p1(par1,14), p2(par2,14);
 
   cout << logprob(p1, 1.0) << " " << loglik(par1,0,0,1) << endl;
@@ -16607,18 +17258,18 @@ int main(int argc, char **argv)
   /*
   // DEBUG for a specific model
   double par1[]={log(7.426756), log(0.000527), log(0.305514),
-		 log(0.004881), log(0.677918), log(1.140461),
-		 log(0.029075), log(1.042266), log(1.231357),
-		 log(0.020987), log(3.753786), log(0.136665),
-		 transform_parameter(0.488898, T_LOGIST_GLOBAL),
-		 0.0};
+  log(0.004881), log(0.677918), log(1.140461),
+  log(0.029075), log(1.042266), log(1.231357),
+  log(0.020987), log(3.753786), log(0.136665),
+  transform_parameter(0.488898, T_LOGIST_GLOBAL),
+  0.0};
   
   double par2[]={log(7.426756), log(0.000527), log(0.305514),
-		 log(0.004881), log(0.677918), log(1.140461),
-		 log(0.029075), log(1.042266), log(1.231357),
-		 log(0.020987), log(3.753786), log(0.136665),
-		 transform_parameter(0.488898, T_LOGIST_GLOBAL),
-		 1.0};
+  log(0.004881), log(0.677918), log(1.140461),
+  log(0.029075), log(1.042266), log(1.231357),
+  log(0.020987), log(3.753786), log(0.136665),
+  transform_parameter(0.488898, T_LOGIST_GLOBAL),
+  1.0};
   params p1(par1,14), p2(par2,14);
   
   cout << logprob(p1, 1.0) << " " << loglik(par1) << endl;
@@ -16691,27 +17342,29 @@ int main(int argc, char **argv)
     }
 
 
+  /*
   // show mean, median and 95% credibility interval for
   // each parameter:
   for(j=0;j<numpar;j++)
-    {
-      double mean=find_statistics(parsample[j], numsamples, MEAN);
-      double med=find_statistics(parsample[j], numsamples, MEDIAN);
-      double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
-      double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
+  {
+  double mean=find_statistics(parsample[j], numsamples, MEAN);
+  double med=find_statistics(parsample[j], numsamples, MEDIAN);
+  double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
+  double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
       
-      if(report_halflife && !strncmp(par_name[j],"dt_",3))
-	{
-	  mean*=log(2.0);
-	  med*=log(2.0);
-	  lower*=log(2.0);
-	  upper*=log(2.0);
-	}
+  if(report_halflife && !strncmp(par_name[j],"dt_",3))
+  {
+  mean*=log(2.0);
+  med*=log(2.0);
+  lower*=log(2.0);
+  upper*=log(2.0);
+  }
       
-      printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
-	     par_name[j], mean, med, lower,upper);
-    }
-  
+  printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
+  par_name[j], mean, med, lower,upper);
+  }
+  */
+ 
   if(do_ml)
     {
       // traverse the number of wanted hill-climbs:
@@ -16918,7 +17571,7 @@ int main(int argc, char **argv)
 	    for(k=0;k<meas_smooth_len;k++)
 	      {
 		/*
-		if(t_k_smooth[k]> -10.045 && t_k_smooth[k]< -10.035)
+		  if(t_k_smooth[k]> -10.045 && t_k_smooth[k]< -10.035)
 		  cout << find_statistics(x[0][k], 
 		  num_smooth*numsamples, MEAN) << " " <<
 		  find_statistics(x[1][k], 
@@ -17035,7 +17688,7 @@ int main(int argc, char **argv)
 			      exp(find_statistics(x[i][k], num_smooth*numsamples, 
 						  PERCENTILE_2_5)),
 			      exp(find_statistics(x[i][k], num_smooth*numsamples, 
-						      PERCENTILE_97_5)),
+						  PERCENTILE_97_5)),
 			      (m<meas_smooth[k].num_measurements) ? 
 			      exp(meas_smooth[k].meanval[m]) : MISSING_VALUE);
 		    
@@ -17241,7 +17894,7 @@ int main(int argc, char **argv)
 		if(!*filestart)
 		  pclose(p);
 		else
-		fclose(p);
+		  fclose(p);
 	      }
 	  }
     }
@@ -17388,10 +18041,12 @@ int main(int argc, char **argv)
 	  double(belowzero)/double(numsamples)*100.0 
 	     << " % below zero" << endl;
       }
-
+  
+  reset_global_variables();
+  delete [] use_site;
   doubledelete(parsample,numpar);
   doubledelete(parsample_repar,numpar);
-        
+  delete [] pars;
 }  // END 
 
 #endif // MAIN
