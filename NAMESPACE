@@ -4,5 +4,6 @@ importFrom("utils", "read.csv", "read.table")
 useDynLib("layeranalyzer")
 
 exportPattern("^[^\\.]")
-
+exportPattern("malta")
+export(anova.layered)
 

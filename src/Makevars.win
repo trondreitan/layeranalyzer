@@ -1,2 +1,2 @@
-PKG_LIBS = -lRlapack 
+PKG_LIBS = -lRlapack -U_GLIBCXX_ASSERTIONS
 

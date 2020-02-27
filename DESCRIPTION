@@ -1,9 +1,12 @@
 Package: layeranalyzer
 Type: Package
 Title: Time series analysis tool using linear layered SDEs
-Version: 0.1
+Version: 0.1.0
 Date: 2016-09-22
-Author:  Trond Reitan
+Encoding: UTF-8
+Author: Trond Reitan (trond.reitan@ibv.uio.no)
+Authors@R: person("Trond", "Reitan", email="trond.reitan@ibv.uio.no",
+ role=c("aut","cre"))
 Maintainer: Trond Reitan <trond.reitan@ibv.uio.no>
 Description: Time series analysis tool using linear layered SDEs. Allows
  for multiple time series with correlative or causal links between them.
@@ -11,9 +14,17 @@ Description: Time series analysis tool using linear layered SDEs. Allows
  eigenvalue decompositions) allows for complex numbers. In this case,
  cyclic behavior can be expected.
 License: LGPL-3
-Imports: Rcpp
-LinkingTo: Rcpp
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
+Imports:
+    methods,
+    stats,
+    Rcpp,
+    coda (>= 0.19.1)
+LinkingTo:
+    Rcpp
 URL: http://folk.uio.no/trondr/R
+LazyData: true
 ByteCompile: yes
 Biarch: no
 NeedsCompilation: yes
