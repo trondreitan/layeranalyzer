@@ -14,7 +14,7 @@ Description: Time series analysis tool using linear layered SDEs. Allows
  eigenvalue decompositions) allows for complex numbers. In this case,
  cyclic behavior can be expected.
 License: LGPL-3
-Suggests: knitr, rmarkdown
+Suggests: Rcpp, coda, knitr, rmarkdown, markdown
 VignetteBuilder: knitr
 Imports:
     methods,
