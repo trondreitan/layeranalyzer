@@ -705,6 +705,8 @@ traverse.connections.layered=function(... ,
        ll=res$model.log.lik
        if(do.maximum.likelihood)
 	 ll=res$input[[i]]$ML.loglik
+       if(length(ll)==0)
+         ll=NA
        iter=0
        while(iter<5 & (is.na(ll) | !(ll > -1e+199 & ll < 1e+199)))
 	 {
@@ -722,6 +724,8 @@ traverse.connections.layered=function(... ,
             ll=res$model.log.lik
 	    if(do.maximum.likelihood)
 	      ll=res$input[[i]]$ML.loglik
+            if(length(ll)==0)
+              ll=NA
 	    iter=iter+1
 	 }
 
@@ -1016,7 +1020,8 @@ stepwise.connections.layered=function(... ,
          ll=res$model.log.lik
 	 if(do.maximum.likelihood)
 	   ll=res$input[[i]]$ML.loglik
-	 
+         if(length(ll)==0)
+           ll=NA
 	 iter=0
 	 while(iter<5 & (is.na(ll) | !(ll > -1e+199 & ll < 1e+199)))
 	 {
@@ -1034,6 +1039,8 @@ stepwise.connections.layered=function(... ,
            ll=res$model.log.lik
 	   if(do.maximum.likelihood)
 	     ll=res$input[[i]]$ML.loglik
+           if(length(ll)==0)
+             ll=NA
 	   iter=iter+1
 	 }
 
