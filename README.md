@@ -21,7 +21,8 @@ Presentations:
 * BISP_small.pdf/pptx is a presentation made for the Seventh Conference on Bayesian Inference in Stochastic Processes in Madrid, Spain, BISP7.
 * stoch_layers7.pdf/pptx is a simpler presentation made for CEES, UiO of the basic modelling framework and how it connects to the application can be found here.
 * layer_analyzer_complex.pptx is a how-to concerning the program usage (an older version called 'layer_analyzer_complex' is used, but it has the same input structure as the current 'layeranalyzer' program), with a short intro to continuous time modelling. 
-
+* linkoping2021.pptx - A presentation I did over Zoom for the statistics department at the university of Linköping. Focuses slightly more on the mathematics than the other presentations.
+    
 Papers on theory and application:
 
     Reitan, T., Schweder, T., Henderiks, J. (2012)
@@ -43,11 +44,7 @@ Papers on theory and application:
     An unknown Phanerozoic driver of brachiopod extinction rates unveiled by multivariate linear stochastic differential equations.
     Paleobiology, Published online.
     DOI: 10.1017/pab.2017.11
-    Link: https://www.cambridge.org/core/journals/paleobiology/article/an-unknown-phanerozoic-driver-of-brachiopod-extinction-rates-unveiled-by-multivariate-linear-stochastic-differential-equations/0EAB1A42D58CCD17012D9CF3020D57EA.
-    
-Presentations:
-
-    linkoping2021.pptx - A presentation I did over Zoom for the statistics department at the university of Linköping. 
+    Link: https://www.cambridge.org/core/journals/paleobiology/article/an-unknown-phanerozoic-driver-of-brachiopod-extinction-rates-unveiled-by-multivariate-linear-stochastic-differential-equations/0EAB1A42D58CCD17012D9CF3020D57EA.    
 
 Examples
 R example code and vignettes as html files:
