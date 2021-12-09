@@ -44,6 +44,10 @@ Papers on theory and application:
     Paleobiology, Published online.
     DOI: 10.1017/pab.2017.11
     Link: https://www.cambridge.org/core/journals/paleobiology/article/an-unknown-phanerozoic-driver-of-brachiopod-extinction-rates-unveiled-by-multivariate-linear-stochastic-differential-equations/0EAB1A42D58CCD17012D9CF3020D57EA.
+    
+Presentations:
+
+    linkoping2021.pptx - A presentation I did over Zoom for the statistics department at the university of Linköping. 
 
 Examples
 R example code and vignettes as html files:
