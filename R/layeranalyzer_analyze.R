@@ -205,9 +205,9 @@ layer.analyzer.timeseries.list=function(data.structure ,
     data.structure[[i]]$numlayers=1
   }
   data.structure[[i]]$numlayers=as.integer(data.structure[[i]]$numlayers)
-  if(data.structure[[i]]$numlayers<1)
+  if(data.structure[[i]]$numlayers<0)
   {
-    stop("Number of layers must be 1 or more.")
+    stop("Number of layers must be 0 or more.")
   }
   if(data.structure[[i]]$numlayers>=100)
   {

@@ -325,9 +325,9 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     numlayers=1
   }
   numlayers=as.integer(numlayers)
-  if(numlayers<1)
+  if(numlayers<0)
   {
-    stop("Number of layers must be 1 or more.")
+    stop("Number of layers must be 0 or more.")
   }
   if(numlayers>=100)
   {

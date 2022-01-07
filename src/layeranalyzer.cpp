@@ -8564,6 +8564,11 @@ void series::set_series(char *serie_name, int serienum,
 
   strcpy(name,serie_name);
   numlayers=num_layers;
+  if(num_layers==0)
+    {
+      numlayers=1;
+      no_layers=true;
+    }
   
   serie_num=serienum;
   
@@ -8629,6 +8634,11 @@ void series::set_series(double **X, int n, int num_layers)
   init();
 
   numlayers=num_layers;
+  if(num_layers==0)
+    {
+      numlayers=1;
+      no_layers=true;
+    }
   
   meas_len=n;
   meas=new series_measurements[n];
@@ -9637,7 +9647,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
     gsl_rng_set(rptr, rand()); 
     }
   */
-  
+
+      
   // **************************************************
   // If the parameter value array is missing, that means
   // that the global variables for storing parameter
@@ -10081,10 +10092,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  for(j=i+1;j<numsites;j++)
 			    ser[s].paircorr[l][i][j]=ser[s].paircorr[l][j][i]=
 			      invtransform_parameter(pars[numpar++],T_LOGIST_PAIR);
+
+
+      
 			
 			double *sigma_lambda=double_eigenvalues(ser[s].paircorr[l],
 								numsites);
-			
+	
+      
+
 			for(i=0;i<numsites;i++)
 			  if(sigma_lambda[i]<0.0 || !(sigma_lambda[i]<1e+200))
 			    {
@@ -10472,9 +10488,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
       for(i=0;i<num_series_corr;i++)
 	sigma_series[corr_from_index[i]][corr_to_index[i]]=
 	  sigma_series[corr_to_index[i]][corr_from_index[i]]=series_corr[i];
-      
+     
+  
       double *sigma_lambda=double_eigenvalues(sigma_series,num_tot_layers);
-			
+	
+  		
       bool series_wrong=false;
       for(i=0;i<num_tot_layers;i++)
 	if(sigma_lambda[i]<0.0 || !(sigma_lambda[i]<1e+200))
@@ -10577,7 +10595,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
     {
       //V=get_complex_eigenvector_matrix(A,num_states,&lambda,0,1000000);
       //Vinv=inverse_complex_matrix(V,num_states);
-      
+
       Vinv=matrix_eigenvectors(A,num_states,&lambda,&V);
       
       for(j=0;j<10;j++)
@@ -14484,6 +14502,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       
     }
+
   
   List inall(input);
   num_series=inall.size();
@@ -14796,6 +14815,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	ser[s].meas[i].index=series_state_start[s]+ser[s].meas[i].site;
     }
   
+    
   series_measurements *meas_buffer=new series_measurements[meas_tot_len];	  
   j=0;
   for(s=0;s<num_series;s++)
@@ -14912,6 +14932,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  meas_smooth_len=k;
 	}
     }
+  
+    
 
   /* DEBUG
      if(return_residuals)
@@ -15185,6 +15207,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     p_pos_series_sigma2=1.0;
   
   
+    
   
   
   double ***x; // smoothing results from the latent processes
@@ -15200,7 +15223,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			  &model_dic1, &eff_num_param1, 
 			  &model_dic2, &eff_num_param2);
   long int t1=clock();
+
   
+    
   
   int numsamples=num_mcmc;
   double **parsample=Make_matrix(numpar,numsamples);
@@ -15341,6 +15366,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   StringVector parnames(numpar2);
   
+
+      
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
   double best_loglik=MISSING_VALUE;
@@ -15465,7 +15492,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
       delete [] medpar;
     }
-  
+
   List out;
   if(!do_ml)
     out=List::create(Named("model.log.lik",model_loglik),
