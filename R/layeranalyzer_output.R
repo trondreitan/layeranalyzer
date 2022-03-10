@@ -34,11 +34,20 @@ summary.layered=function(object, ...)
   }  
   if(!is.null(object$ML.loglik))
   {
-    mat=matrix(NA,nrow=length(object$parameter.names),ncol=3)
+    par=object$parameter.names[object$parameter.names!="complex.eigen"]
+
+    k=0
+    mat=matrix(NA,nrow=length(par),ncol=3)
     for(i in 1:length(object$parameter.names))
-     for(j in 1:3)
-      mat[i,j]=as.numeric(object[[i+10]][c(1,4,5)[j]])
-    dimnames(mat)=list(object$parameter.names, c("ML estimate",
+    {
+     if(object$parameter.names[i]!="complex.eigen")
+     {
+      k=k+1
+      for(j in 1:3)
+       mat[k,j]=as.numeric(object[[i+10]][c(1,4,5)[j]])
+     }
+    }
+    dimnames(mat)=list(par, c("ML estimate",
      "Bayesian Lower 95%", "Bayesian Upper 95%"))
     
     ans=list(coefficients=round(mat,6), ML.loglik=object$ML.loglik, 
