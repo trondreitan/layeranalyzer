@@ -8,7 +8,7 @@ Originally, this was used for modelling phenotypic evolution towards a optima th
 
 Code:
 
-* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed.
+* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. See "troubleshooting" for technical issues.
 
 * layeranalyzer.cpp. This is the current source version of the program. This version does not depend on any library but the Lapack library (for linear algebra operations), which typically can be found in an R installation. The program can then typically be compiled on a Linux machine like this: "g++ -DMAIN -DENGLISH_LANGUAGE -I/usr/include/R -I/usr/include/R/R_ext -o layeranalyzer layeranalyzer.cpp -lm -llapack". If the Lapack library files or header files are somewhere else on your computer, you should change the "-I" (which tells the compiler where to look for header files) and "-L" (which tells the compiler where to search for library files other than in the /usr/lib directory). This has already been tested on multiple platforms. See "help" texts for more on usage. See below in this text for some examples. 
 
@@ -193,3 +193,10 @@ The latest version of the analysis program and R package uses only the Lapack li
 The software (as well as the previously used underlying program library Hydrasub) is licenced as LGPL-based, meaning that anyone can modify and use it for other purposes than the original intent. 
 
 This information is also available as a web page on http://folk.uio.no/trondr/layered. The content of this page can sometimes be a bit newer as it represents "bleeding edge" rather than "leading edge" development of the package.
+
+
+Troubleshooting:
+    The layeranalyzer package requires the Rcpp, coda, and for installations with vignettes also knitr, rmarkdown and markdown. When you start installing layeranalyzer, these packages should be automatically included. However, there may be contexts where it pays off to install them in advance.
+    On Windows computers, you need the "rtools" program in addition to a standard R installation. Rtools can be found here: https://cran.r-project.org/bin/windows/Rtools/ .
+    On Windows machines where rtools is installed via a company software center and you do not have direct admin rights, rtools may not function as intended. This will cause an error message when installing layeranalyzer saying "make not found". The path needs to be updated to where rtools store its program library, typically "c:\rtools\usr\bin". Search for "make.exe" on your computer and you should be able to find it. You then either need temporary admin rights to change the enviromental variable called "Path" or you need your IT support to do it for you.
+    On Mac computers, the fortran compiler may be missing or outdated, see for instance https://stackoverflow.com/questions/58610155/problem-installing-r-package-ld-warning-directory-not-found-for-option and https://cran.r-project.org/bin/macosx/. This will cause a complaint about "gfortran not found" or similar messages. You then need to (re-)install fortran. A fortan compiler for Mac can be found at https://mac.r-project.org/tools/.
