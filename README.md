@@ -8,7 +8,7 @@ Originally, this was used for modelling phenotypic evolution towards a optima th
 
 Code:
 
-* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. See "troubleshooting" for technical issues. 
+* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
 
 * A new install file for upcoming versio has been added, which can be installed with install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.1.tar.gz",type="source"). The version already has a few debug changes due to changes in the "class" function. I have also added code for doing prediction as a separate task from parameter inference ("calibration"). However, the R interface hasn't been finished and then there is the testing, so more will come.
 
