@@ -25,8 +25,8 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
 {
   input=list(...)
 
-  if(class(input[[1]])!="layered")
-    if(class(input[[1]][[1]])=="layered")
+  if(sum(class(input[[1]])=="layered")==0)
+    if(sum(class(input[[1]][[1]])=="layered")>0)
       input=input[[1]]
   
   n=length(input)
@@ -34,7 +34,7 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
   all.ml=FALSE
   for(i in 1:n)
   {
-   if(class(input[[i]])!="layered")
+   if(sum(class(input[[i]])=="layered")==0)
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
    
    if(i==1)
@@ -122,7 +122,7 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
 
 nobs.layered=function(object,...)
 {
-  if(class(object)!="layered")
+  if(sum(class(object)=="layered")==0)
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
   
  n=length(object$data.structure)
@@ -150,7 +150,7 @@ nobs.layered=function(object,...)
 
 logLik.layered=function(object,...)
 {
-  if(class(object)!="layered")
+  if(sum(class(object)=="layered")==0)
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
   if(is.null(object$ML.loglik))
     stop("The 'layered' object need to be classically (ML) estimated!") 
@@ -172,7 +172,7 @@ logLik.layered=function(object,...)
 
 anova.layered=function(object,...)
 {
-  if(class(object)!="layered")
+  if(sum(class(object)=="layered")==0)
     stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
   
   input=list(...)
@@ -182,7 +182,7 @@ anova.layered=function(object,...)
     stop("All objects need to be classically (ML) estimated!") 
   for(i in 1:n)
   {
-    if(class(input[[i]])!="layered")
+    if(sum(class(input[[i]])=="layered")==0)
      stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.")
     if(is.null(input[[i]]$ML.loglik))
       stop("All objects need to be classically (ML) estimated!") 
@@ -203,7 +203,7 @@ anova.layered=function(object,...)
   if(n>0)
    for(i in 1:n)
    {
-    if(class(input[[i]])!="layered")
+    if(sum(class(input[[i]])=="layered")==0)
      stop("Function can only be used on objects of type \"layered\",\n  i.e. objects returned from the 'layer.analysis' method.") 
     
     res.df[1+i]=nobs.layered(input[[i]])-attr(logLik.layered(input[[i]]),"df")

@@ -54,7 +54,8 @@ layer.analyzer=function(... ,
       use.half.lives=use.half.lives, mcmc=mcmc,
       causal=causal,causal.symmetric=causal.symmetric,corr=corr,
       smoothing.specs=smoothing.specs, realization.specs=realization.specs,
-      return.residuals=return.residuals)
+      return.residuals=return.residuals, smooth.previous.run=FALSE,
+      previous.run=NULL)
   return(ret)
 }
 
@@ -80,7 +81,8 @@ layer.analyzer.timeseries.list=function(data.structure ,
   realization.specs=
     list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE)
+  return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL
+  )
 {
  # Number of time series/structures:
  n=length(data.structure)
@@ -216,7 +218,10 @@ layer.analyzer.timeseries.list=function(data.structure ,
   
   if(!is.null(data.structure[[i]]$lin.time))
   {
-    if(typeof(data.structure[[i]]$lin.time)!="logical")
+    if(typeof(data.structure[[i]]$lin.time)!="logical" &
+       (typeof(data.structure[[i]]$lin.time)!="integer" |
+       (typeof(data.structure[[i]]$lin.time)=="integer" &
+       (data.structure[[i]]$lin.time<0 | data.structure[[i]]$lin.time>1))))
       stop("Linear time indicator 'lin.time' must be a logical")
   }
   if(is.null(data.structure[[i]]$lin.time))
@@ -244,7 +249,10 @@ layer.analyzer.timeseries.list=function(data.structure ,
   
   if(!is.null(data.structure[[i]]$no.pull))
   {
-    if(typeof(data.structure[[i]]$no.pull)!="logical")
+    if(typeof(data.structure[[i]]$no.pull)!="logical" &
+       (typeof(data.structure[[i]]$no.pull)!="integer" |
+       (typeof(data.structure[[i]]$no.pull)=="integer" &
+       (data.structure[[i]]$no.pull<0 | data.structure[[i]]$no.pull>1))))
       stop("No pull indicator, 'no.pull', must be a logical")
   }
   if(is.null(data.structure[[i]]$no.pull))
@@ -272,7 +280,10 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
   if(!is.null(data.structure[[i]]$regional.mu))
   {
-    if(typeof(data.structure[[i]]$regional.mu)!="logical")
+    if(typeof(data.structure[[i]]$regional.mu)!="logical" &
+      (typeof(data.structure[[i]]$regional.mu)!="integer" |
+      (typeof(data.structure[[i]]$regional.mu)=="integer" & 
+      (data.structure[[i]]$regional.mu<0 | data.structure[[i]]$regional.mu>1))))
       stop("Regional expectation indicator, 'regional.mu', must be a logical")
   }
   if(is.null(data.structure[[i]]$regional.mu))
@@ -283,7 +294,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
   if(!is.null(data.structure[[i]]$regional.lin.time))
   {
-    if(typeof(data.structure[[i]]$regional.lin.time)!="logical")
+    if(typeof(data.structure[[i]]$regional.lin.time)!="logical" &
+       (typeof(data.structure[[i]]$regional.lin.time)!="integer" |
+       (typeof(data.structure[[i]]$regional.lin.time)=="integer" &
+       (data.structure[[i]]$regional.lin.time<0 |
+        data.structure[[i]]$regional.lin.time>1))))
       stop("Regional linear time indicator, 'regional.lin.time', must be a logical")
   }
   if(is.null(data.structure[[i]]$regional.lin.time))
@@ -440,7 +455,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
   if(!is.null(data.structure[[i]]$differentiate.mu))
   {
-    if(typeof(data.structure[[i]]$differentiate.mu)!="logical")
+    if(typeof(data.structure[[i]]$differentiate.mu)!="logical" &
+      (typeof(data.structure[[i]]$differentiate.mu)!="integer" |
+      (typeof(data.structure[[i]]$differentiate.mu)=="integer" &
+      (data.structure[[i]]$differentiate.mu<0 | 
+       data.structure[[i]]$differentiate.mu>1))))
       stop("Differentiated expectancy indicator, 'differentiate.mu', must be a logical")
   }
   if(is.null(data.structure[[i]]$differentiate.mu))
@@ -453,7 +472,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
   if(!is.null(data.structure[[i]]$differentiate.lin.time))
   {
-    if(typeof(data.structure[[i]]$differentiate.lin.time)!="logical")
+    if(typeof(data.structure[[i]]$differentiate.lin.time)!="logical" &
+      (typeof(data.structure[[i]]$differentiate.lin.time)!="integer" |
+      (typeof(data.structure[[i]]$differentiate.lin.time)=="integer" &
+      (data.structure[[i]]$differentiate.lin.time<0 |
+       data.structure[[i]]$differentiate.lin.time>1))))
       stop("Differentiated linear time indicator, 'differentiate.lin.time', must be a logical")
   }
   if(is.null(data.structure[[i]]$differentiate.lin.time))
@@ -464,7 +487,10 @@ layer.analyzer.timeseries.list=function(data.structure ,
   
   if(!is.null(data.structure[[i]]$init.0))
   {
-    if(typeof(data.structure[[i]]$init.0)!="logical")
+    if(typeof(data.structure[[i]]$init.0)!="logical" &
+      (typeof(data.structure[[i]]$init.0)!="integer" |
+      (typeof(data.structure[[i]]$init.0)=="integer" &
+      (data.structure[[i]]$init.0<0 | data.structure[[i]]$init.0>1))))
       stop("Initial value treatement indicator, 'init.0', must be a logical")
   }
   if(is.null(data.structure[[i]]$init.0))
@@ -495,7 +521,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
   
   if(!is.null(data.structure[[i]]$init.same.sites))
   {
-    if(typeof(data.structure[[i]]$init.same.sites)!="logical")
+    if(typeof(data.structure[[i]]$init.same.sites)!="logical" &
+      (typeof(data.structure[[i]]$init.same.sites)!="integer" |
+      (typeof(data.structure[[i]]$init.same.sites)=="integer" &
+      (data.structure[[i]]$init.same.sites<0 | 
+       data.structure[[i]]$init.same.sites>1))))
       stop("Initial value same for all sites indicator, 'init.same.sites', must be a logical")
   }
   if(is.null(data.structure[[i]]$init.same.sites))
@@ -506,7 +536,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
   
   if(!is.null(data.structure[[i]]$init.same.layers))
   {
-    if(typeof(data.structure[[i]]$init.same.layers)!="logical")
+    if(typeof(data.structure[[i]]$init.same.layers)!="logical" &
+      (typeof(data.structure[[i]]$init.same.layers)!="integer" |
+      (typeof(data.structure[[i]]$init.same.layers)=="integer" &
+      (data.structure[[i]]$init.same.layers<0 | 
+       data.structure[[i]]$init.same.layers>1))))
       stop("Initial value same for all sites indicator, 'init.same.layers', must be a logical")
   }
   if(is.null(data.structure[[i]]$init.same.layers))
@@ -530,7 +564,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
   
   if(!is.null(data.structure[[i]]$allow.pos.pull))
   {
-    if(typeof(data.structure[[i]]$allow.pos.pull)!="logical")
+    if(typeof(data.structure[[i]]$allow.pos.pull)!="logical" &
+      (typeof(data.structure[[i]]$allow.pos.pull)!="integer" |
+      (typeof(data.structure[[i]]$allow.pos.pull)=="integer" &
+      (data.structure[[i]]$allow.pos.pull<0 | 
+       data.structure[[i]]$allow.pos.pull>1))))
       stop("Indicator for allowing positive (unstable) pulls, 'allow.pos.pull', must be a logical")
   }
   if(is.null(data.structure[[i]]$allow.pos.pull))
@@ -613,7 +651,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
  
  if(!is.null(causal))
  {
-   if(class(causal)!="matrix")
+   if(sum(class(causal)=="matrix")==0)
      stop("The connection matrix 'causal' must be an integer matrix")
    if(dim(causal)[1]!=4)
      stop("The connection matrix 'causal' must have exactly four rows (representing cause and effect)!")
@@ -653,12 +691,12 @@ layer.analyzer.timeseries.list=function(data.structure ,
      }
  }
  if(is.null(causal))
-   causal=as.matrix(array(NA,c(2,0)))
+   causal=as.matrix(array(NA,c(4,0)))
  
  
  if(!is.null(causal.symmetric))
  {
-   if(class(causal.symmetric)!="matrix")
+   if(sum(class(causal.symmetric)=="matrix")==0)
      stop("The connection matrix 'causal.symmetric' must be an integer matrix")
    if(dim(causal.symmetric)[1]!=4)
      stop("The connection matrix 'causal.symmetric' must have exactly four rows (representing cause and effect)!")
@@ -698,13 +736,13 @@ layer.analyzer.timeseries.list=function(data.structure ,
      }
  }
  if(is.null(causal.symmetric))
-   causal.symmetric=as.matrix(array(NA,c(2,0)))
+   causal.symmetric=as.matrix(array(NA,c(4,0)))
  
  
  
  if(!is.null(corr))
  {
-   if(class(corr)!="matrix")
+   if(sum(class(corr)=="matrix")==0)
      stop("The connection matrix 'corr' must be an integer matrix")
    if(dim(corr)[1]!=4)
      stop("The connection matrix 'corr' must have exactly four rows (representing cause and effect)!")
@@ -744,7 +782,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
      }
  }
  if(is.null(corr))
-   corr=as.matrix(array(NA,c(2,0)))
+   corr=as.matrix(array(NA,c(4,0)))
  
  if(typeof(silent.mode)!="logical" & typeof(silent.mode)!="integer")
    stop("Option 'silent.mode' must be a logical!") 
@@ -776,6 +814,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
  if(typeof(return.residuals)!="logical" & typeof(return.residuals)!="integer")
    stop("Option 'return.residuals' must be a logical!") 
  ReturnResiduals=as.integer(return.residuals)
+
+ if(typeof(smooth.previous.run)!="logical" & typeof(smooth.previous.run)!="integer")
+   stop("Option 'smooth.previous.run' must be a logical!") 
+ smooth.previous.run=as.logical(smooth.previous.run)
+
 
  if(typeof(num.MCMC)!="integer" & typeof(num.MCMC)!="numeric" & 
    typeof(num.MCMC)!="double" )
@@ -833,7 +876,6 @@ layer.analyzer.timeseries.list=function(data.structure ,
  
  if(maximum.likelihood.numstart<1)
   stop("Option 'maximum.likelihood.numstart' must be 1 or larger!")
- 
  
  if(is.null(smoothing.specs))
  {
@@ -956,6 +998,10 @@ layer.analyzer.timeseries.list=function(data.structure ,
    }
  }
 
+ if(smooth.previous.run==TRUE & smoothing.specs$do.smoothing==FALSE)
+  {
+    stop("smooth.previous.run==TRUE and smoothing.specs$do.smoothing==FALSE does not make any sense!")
+  }
 
  if(is.null(realization.specs))
  {
@@ -1089,11 +1135,38 @@ layer.analyzer.timeseries.list=function(data.structure ,
  }
 
 
+  if(!is.null(previous.run))
+  {
+    if(sum(class(previous.run)=="layered")==0)
+      stop("Previous run class must be a 'layered' object!")
+  }
 
  #################################################
  # Call to C++ code for the actual analysis:
  #################################################
  
+ input.mcmc=matrix(as.numeric(c(0)),nrow=1) # used for indicating 
+      # that no input MCMC is used.
+      # Input MCMC is only used for later smoothing.
+
+ if(smooth.previous.run==TRUE)
+ {
+   if(is.null(previous.run))
+     stop("previous.run not given!")
+   
+   if(is.null(previous.run$mcmc.origpar))
+     stop("previous run has not MCMC samples (mcmc.origpar). Run again with the 'mcmc=TRUE' option!")
+
+   if(sum(class(previous.run$mcmc.origpar)=="mcmc")==0)
+   {
+     stop("MCMC sample structure 'previous.run$mcmc.origpar' is not an MCMC object!")
+   }
+
+   input.mcmc=previous.run$mcmc.origpar
+
+  #### todo: check if more needs to be done here
+ }
+
  out=.Call('layeranalyzer',data.structure,num.MCMC,burnin,spacing,num.temp,
       as.integer(do.model.likelihood),
       as.integer(do.maximum.likelihood),maximum.likelihood.numstart,
@@ -1104,13 +1177,34 @@ layer.analyzer.timeseries.list=function(data.structure ,
       as.integer(use.half.lives),
       as.integer(mcmc), as.integer(causal), 
       as.integer(causal.symmetric),as.integer(corr), smoothing.specs, 
-      realization.specs, ReturnResiduals)
- 
+      realization.specs, ReturnResiduals,
+      input.mcmc 
+     )
 
  # Store the list of input time series/structures, in addition
  # to what the analysis returned:
  out$data.structure=data.structure
 
+ # Store input options:
+ out$input.options=
+  list(num.MCMC=num.MCMC,burnin=burnin,
+      spacing=spacing,num.temp=num.temp,
+      do.model.likelihood=do.model.likelihood,
+      do.maximum.likelihood=do.maximum.likelihood,
+      maximum.likelihood.numstart=maximum.likelihood.numstart,
+      silent.mode=silent.mode,
+      talkative.burnin=talkative.burnin,
+      talkative.likelihood=talkative.likelihood,
+      id.strategy=id.strategy,
+      use.stationary.stdev=use.stationary.stdev,
+      T.ground=T.ground,
+      use.half.lives=use.half.lives,
+      mcmc=mcmc, causal=causal, 
+      causal.symmetric=causal.symmetric,corr=corr, 
+      smoothing.specs=smoothing.specs, 
+      realization.specs=realization.specs, 
+      ReturnResiduals=ReturnResiduals
+      )
 
  # If MCMC samples were asked for, also return that:
  if(!is.null(out$mcmc))
@@ -1118,6 +1212,12 @@ layer.analyzer.timeseries.list=function(data.structure ,
    out$mcmc=t(out$mcmc)
    colnames(out$mcmc)=out$parameter.names[1:dim(out$mcmc)[2]]
    out$mcmc=coda::mcmc(out$mcmc, start=burnin, thin=1)
+ }
+ if(!is.null(out$mcmc.origpar))
+ {
+   out$mcmc.origpar=t(out$mcmc.origpar)
+   colnames(out$mcmc.origpar)=out$parameter.names[1:dim(out$mcmc.origpar)[2]]
+   out$mcmc.origpar=coda::mcmc(out$mcmc.origpar, start=burnin, thin=1)
  }
 
  if(return.residuals & !is.null(out$standardized.residuals))
@@ -1154,3 +1254,135 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
 
 
+
+layer.predict.mcmc=function(... , analysis=NULL, 
+   smoothing.time.diff=0,
+   smoothing.start=NULL,smoothing.end=NULL,
+   num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE)
+{
+  new.data.list=list(...)
+
+  ret=layer.predict.mcmc.list(new.data.list, analysis, smoothing.time.diff,
+     smoothing.start, smoothing.end, num.smooth.per.mcmc, 
+     do.return.smoothing.samples)
+  return(ret)
+}
+
+
+layer.predict.mcmc.list=function(new.data.list , analysis=NULL, 
+   smoothing.time.diff=0,
+   smoothing.start=NULL,smoothing.end=NULL,
+   num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE)
+{
+  if(is.null(analysis))
+  {
+    stop("Analysis must be given!")
+  }
+
+  if(sum(class(analysis)=="layered")==0)
+  {
+    stop("Analysis must be a result of running 'layer.analyzer'!")
+  }
+  
+  n=length(new.data.list)
+  for(i in 1:n)
+  {
+    if(sum(class(new.data.list[[i]])=="layer.data.series")==0)
+    {
+      stop("List of inputs not is not layer.data.series objects!")
+    }
+  }
+
+  if(analysis$input.options$do.maximum.likelihood==TRUE & 
+     is.null(analysis$mcmc.origpar))
+  {
+    stop("MCMC-based predictions are not available for maxmimum likelihood analyses!")
+  }
+
+  if(is.null(analysis$mcmc.origpar))
+  {
+    stop("MCMC-based predictions cannot be made unless the analysis returned MCMC samples! (Use the mcmc=TRUE option)")
+  }
+  
+  if(sum(class(analysis$mcmc.origpar)=="mcmc")==0)
+  {
+    stop("MCMC sample structure 'mcmc.origpar' is not an MCMC object!")
+  }
+
+  ##### Todo: More checks may be needed!
+
+  new.data.structure=analysis$data.structure
+  n2=length(new.data.structure)
+  if(n2!=n)
+  {
+    stop("Number of input series do not match those in the analysis!")
+  }
+ 
+  for(i in 1:n)
+  {
+     new.data.structure[[i]]$timeseries=new.data.list[[i]]
+  }
+
+  #####################################################
+  #####################################################
+  # Add input mcmc from previous analysis!
+  #####################################################
+  #####################################################
+
+  ret=layer.analyzer.timeseries.list(new.data.structure,
+      num.MCMC=analysis$input.options$num.MCMC, 
+      spacing=analysis$input.options$spacing,
+      burnin=analysis$input.options$burnin,
+      num.temp=analysis$input.options$num.temp,
+      do.model.likelihood=FALSE,
+      do.maximum.likelihood=FALSE,
+      maximum.likelihood.numstart=10,
+      silent.mode=TRUE,talkative.burnin=FALSE,
+      talkative.likelihood=FALSE,
+      id.strategy=analysis$input.options$id.strategy,
+      use.stationary.stdev=analysis$input.options$use.stationary.stdev,
+      T.ground=analysis$input.options$T.ground, # start.parameters=0,
+      use.half.lives=analysis$input.options$use.half.lives, mcmc=FALSE,
+      causal=analysis$input.options$causal,
+      causal.symmetric=analysis$input.options$causal.symmetric,
+      corr=analysis$input.options$corr,
+      smoothing.specs=list(do.smoothing=TRUE,
+         smoothing.time.diff=smoothing.time.diff,
+         smoothing.start=smoothing.start,smoothing.end=smoothing.end,
+         num.smooth.per.mcmc=num.smooth.per.mcmc, 
+         do.return.smoothing.samples=do.return.smoothing.samples),
+      realization.specs=
+         list(do.realizations=FALSE,num.realizations=1000,strategy="N",
+         realization.time.diff=0,realization.start=NULL,realization.end=NULL),
+  return.residuals=FALSE,
+  smooth.previous.run=TRUE, previous.run=analysis)
+  
+  return(ret)
+}
+
+
+
+
+layer.predict.estimate=function(... , analysis=NULL, 
+   smoothing.time.diff=0,
+   smoothing.start=NULL,smoothing.end=NULL)
+{
+  new.data.list=list(...)
+  n=length(new.data.list)
+  for(i in 1:n)
+  {
+    if(sum(class(new.data.list[[i]])=="layer.data.series")==0)
+    {
+      stop("Estimate: List of inputs not is not layer.data.series objects!")
+    }
+  }
+
+  analysis2=analysis
+  analysis2$input.options$num.MCMC=1
+  analysis2$mcmc=analysis2$mcmc.origpar=coda::mcmc(matrix(analysis$est.origpar,nrow=1))
+  ret=layer.predict.mcmc.list(new.data.list, analysis2, smoothing.time.diff,
+   smoothing.start,smoothing.end,num.smooth.per.mcmc=1,
+   do.return.smoothing.samples=FALSE)
+
+  return(ret)
+}

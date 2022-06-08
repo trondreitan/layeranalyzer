@@ -14253,7 +14253,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 // *************************************************
 void show_parameter(double *par, int N, char *parname, int silent, char *filestart) 
 {
-  char cmd[1000], filename[1000]; // command string + file name string
+  char cmd[1000], filename[1000]; // file name string
   int i, len=N; 
   // calculate one-step autocorrelation:
   double rho=get_auto_correlation(par, len);
@@ -14386,7 +14386,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP ReturnMCMC, 
                               SEXP causal, SEXP causal_symmetric, SEXP corr,
 			      SEXP smooth_specs, SEXP realization_specs,
-			      SEXP ReturnResiduals)
+			      SEXP ReturnResiduals,
+			      SEXP input_mcmc)
 {  
   reset_global_variables();
   ser=new series[100];  
@@ -14416,6 +14417,11 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   int use_half_times=as<int>(UseHalfLives);
   int return_mcmc=as<int>(ReturnMCMC);
   int return_residuals=as<int>(ReturnResiduals);
+
+  NumericMatrix in_mcmc=as<NumericMatrix>(input_mcmc); 
+  int inmcmc_nummcmc=in_mcmc.nrow();
+  int inmcmc_numpar=in_mcmc.ncol();
+
   double **resids=NULL, *resids_time, **prior_expected_values=NULL;
   int resid_numcol=0, resid_len=0;
 
@@ -14534,7 +14540,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	{
 	  Rcout << "Length of 'time' array ("<< len_time <<
 	    ")!= length of 'value' array ("
-	       << len_value << ")!" << std::endl;
+		<< len_value << ")!" << std::endl;
 	  PutRNGstate();
 	  return NULL;
 	}
@@ -14917,7 +14923,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      //meas_tot[0].dt << endl;
 		      if(!meas_smooth[k].dt.legal())
 			{
-			  Rcout << ref << " " << t << " " << ((long int)t) << 
+			  Rcout << "Illegal date-time:" << ref << " " << 
+			    t << " " << ((long int)t) << 
 			    " " << meas_tot[0].dt << std::endl;
 			  return NULL;
 			}
@@ -15210,24 +15217,160 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     
   
   
-  double ***x; // smoothing results from the latent processes
-  
+  double ***x=NULL; // smoothing results from the latent processes
+  double ***P_k_smooth=NULL, **x_k_smooth=NULL;
+
   long int t0=clock();
   double model_loglik=MISSING_VALUE, 
     model_dic1, eff_num_param1, model_dic2, eff_num_param2;
-  params *pars=layer_mcmc(num_mcmc, burnin, spacing, numtemp, 
-			  do_importance ? true : false, 
-			  dosmooth | do_realizations, do_realizations,
-			  NULL, &x, NULL, T_ground, 
-			  &model_loglik, 
-			  &model_dic1, &eff_num_param1, 
-			  &model_dic2, &eff_num_param2);
+
+  params *pars=NULL;
+
+  if(inmcmc_numpar>0)
+    loglik(NULL); // gives us the global 'numpar', 
+
+  /* DEBUG 
+     Rcout << "inmcmc_numpar=" << inmcmc_numpar << " numpar=" << numpar << 
+     " inmcmc_nummcmc=" << inmcmc_nummcmc << std::endl; */
+  if(inmcmc_numpar!=numpar || (inmcmc_numpar==1 && inmcmc_nummcmc==1))
+    {
+      // DEBUG Rcout << "Doing MCMC" << std::endl;
+      pars=layer_mcmc(num_mcmc, burnin, spacing, numtemp, 
+		      do_importance ? true : false, 
+		      dosmooth | do_realizations, do_realizations,
+		      NULL, &x, NULL, T_ground, 
+		      &model_loglik, 
+		      &model_dic1, &eff_num_param1, 
+		      &model_dic2, &eff_num_param2);
+    }
+  else if(inmcmc_nummcmc==1 && num_smooth==1) 
+    // parameter-estimate-based smoothing
+    {
+      // DEBUG: Rcout << "Fetching smoothing for estimates" << std::endl;
+
+      num_mcmc=inmcmc_nummcmc;
+      pars=new params[1];
+      pars[0].numparam=numpar;
+      pars[0].param=new double[numpar];
+      for(i=0;i<numpar;i++)
+	pars[0].param[i]=in_mcmc(0,i);
+      loglik(pars[0].param, 1, 0);
+
+      P_k_smooth=new double **[meas_smooth_len];
+      x_k_smooth=new double *[meas_smooth_len];
+
+      for(int k=0;k<meas_smooth_len;k++)
+	{
+	  x_k_smooth[k]=new double[num_states];
+	  P_k_smooth[k]=Make_matrix(num_states,num_states);
+
+	  for(i=0;i<num_states;i++)
+	    {
+	      x_k_smooth[k][i]=x_k_s_kept[k][i];
+	      for(j=0;j<num_states;j++)
+		P_k_smooth[k][i][j]=P_k_s_kept[k][i][j];
+	    }
+	}
+      
+      cleanup_x_and_P(meas_smooth_len);
+    }
+  else
+    {
+      // DEBUG: Rcout << "Getting MCMC from inmcmc" << std::endl;
+
+      num_mcmc=inmcmc_nummcmc;
+      pars=new params[num_mcmc];
+      for(j=0;j<num_mcmc;j++)
+	{
+	  pars[j].numparam=numpar;
+	  pars[j].param=new double[numpar];
+	  for(i=0;i<numpar;i++)
+	    pars[j].param[i]=in_mcmc(j,i);
+	}
+      // DEBUG: Rcout << "Done getting MCMC from inmcmc" << std::endl;
+
+      x=new double**[num_states];
+      for(i=0;i<num_states;i++)
+	{
+	  x[i]=new double*[meas_smooth_len];
+	  for(int k=0;k<meas_smooth_len;k++)
+	    {
+	      x[i][k]=new double[num_smooth*num_mcmc];
+	      for(j=0;j<num_smooth*num_mcmc;j++)
+		x[i][k][j]=0.0;
+	    }
+	}
+
+      for(i=0;i<num_mcmc;i++)
+	{
+	  loglik(pars[i].param, 1, 0);
+
+	  for(int k=0;k<meas_smooth_len;k++)
+	    {
+	      double *xx=new double[num_states], 
+		**ss=Make_matrix(num_states,num_states);
+	      int ii,jj;
+	      
+	      for(ii=0;ii<num_states;ii++)
+		xx[ii]=x_k_s_kept[k][ii];
+	      for(ii=0;ii<num_states;ii++)
+		for(jj=0;jj<num_states;jj++)
+		  ss[ii][jj]=P_k_s_kept[k][ii][jj];
+		  
+	      int is_singular=0;
+	      
+
+	      double det=matrix_determinant(ss,num_states);
+	      double diagprod=1.0;
+	      for(ii=0;ii<num_states;ii++)
+		diagprod*=ss[ii][ii];
+	      is_singular=(det <= ABSVAL((diagprod*1e-8)) ? 1 : 0);
+
+
+	      // sample:
+	      double **new_x;
+	      if(!is_singular || num_states==1)
+		//new_x=sample_from_multinormal(num_smooth,xx,ss,
+		//			      num_states,rptr);
+		new_x=multinormal_sample(num_smooth,xx,ss,
+					 num_states);
+	      else
+		{
+		  new_x=new double*[num_smooth];
+		  for(ii=0;ii<num_smooth;ii++)
+		    {
+		      new_x[ii]=new double[num_states];
+		      double new_x_diag=sqrt(ss[0][0])*get_random_gauss();
+		      
+		      for(jj=0;jj<num_states;jj++)
+			{
+			  new_x[ii][jj]=xx[jj]+new_x_diag;
+			}
+		    }
+		}
+
+	      for(j=0;j<num_smooth;j++)
+		{
+		  for(ii=0;ii<num_states;ii++)
+		    x[ii][k][i*num_smooth+j]=new_x[j][ii];
+		}
+
+	      doubledelete(new_x,num_smooth);
+	      doubledelete(ss,numsites);
+	      delete [] xx;
+	    }
+
+	  cleanup_x_and_P(meas_smooth_len);
+	}
+    }
   long int t1=clock();
 
   
     
   
   int numsamples=num_mcmc;
+  // DEBUG: Rcout << "numsamples=" << numsamples << std::endl;
+
   double **parsample=Make_matrix(numpar,numsamples);
   double **parsample_repar=Make_matrix(numpar,numsamples);
   for(i=0;i<numpar;i++)
@@ -15237,6 +15380,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	parsample_repar[i][j]=pars[j].param[i];
       }
   
+  // DEBUG: Rcout << " parameter samples fetched" << std::endl;
+
   char **par_name_orig=new char*[numpar];
   char **par_name_new=new char*[numpar];
   for(i=0;i<numpar;i++)
@@ -15245,6 +15390,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       strcpy(par_name_orig[i],par_name[i]);
     }
   
+  // DEBUG: Rcout << " parameter names fetched" << std::endl;
+
   // transform the expectancies from logarithmic size to
   // original size:
   for(i=0;i<numpar;i++)
@@ -15272,6 +15419,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
     }
   
+  // DEBUG: Rcout << "Stationary stdev?" << std::endl;
+
   if(use_stationary_sdev)
     {
       for(s=0;s<num_series;s++)
@@ -15344,6 +15493,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
     }
   
+  // DEBUG: Rcout << "Add extra cycle info" << std::endl;
+
   int numpar2=numpar;
   bool has_cycles[10];
   if(num_series_feed>0)
@@ -15366,15 +15517,22 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   StringVector parnames(numpar2);
   
+  // DEBUG: Rcout << "best pars repar" << std::endl;
 
+  double *best_pars_repar=new double[numpar];
+  if(!do_ml)
+    for(j=0;j<numpar;j++)
+      best_pars_repar[j]=
+	find_statistics(parsample_repar[j], numsamples, MEDIAN);
       
+  // DEBUG: Rcout << "ML" << std::endl;
+
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
   double best_loglik=MISSING_VALUE;
   if(do_ml)
     {
       // traverse the number of wanted hill-climbs:
-      double *best_pars_repar=new double[numpar];
       
       for(i=0;i<num_optim;i++)
 	{
@@ -15460,7 +15618,6 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       //loglik(best_pars_repar, 0, 0,1,filestart);
       
-      delete [] best_pars_repar;
       
       int k=numpar;
       int nn=0;
@@ -15515,6 +15672,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		     Named("AICc",aicc),
 		     Named("BIC",bic));
   
+  // DEBUG: Rcout << "Start summary statistics (1)" << std::endl;
+
   // insert mean, median and 95% credibility interval for
   // each parameter into the return list:
   if(!silent)
@@ -15564,6 +15723,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(ml_pars)
     delete [] ml_pars;
   
+  // DEBUG: Rcout << "Start summary statistics (2)" << std::endl;
+
   if(num_series_feed>0)
     {
       double *iscomplex=new double[numsamples];
@@ -15618,8 +15779,11 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  }
     }
   
+  // DEBUG: Rcout << "Set parnames" << std::endl;
   
   out["parameter.names"]=parnames;
+
+  // DEBUG: Rcout << "Residuals" << std::endl;
 
   if(return_residuals==1)
     {
@@ -15656,7 +15820,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  doubledelete(prior_expected_values, resid_numcol);
 	}
     }
-  
+   
+  // DEBUG: Rcout << "Start smoothing" << std::endl;
+
   if(dosmooth && !do_realizations)
     {
       StringVector process_names(num_states);
@@ -15684,14 +15850,30 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  std::string pname(procname[i]);
 	  
           process_names(i)=pname;
-
-	  for(j=0;j<meas_smooth_len;j++)
+	  
+	  if(inmcmc_nummcmc==1 && num_smooth==1) 
+	    // parameter-estimate-based smoothing
 	    {
-	      process_mean(i,j)=find_statistics(x[i][j], num_smooth*numsamples, MEAN);
-	      process_lower95(i,j)=
-		find_statistics(x[i][j], num_smooth*numsamples, PERCENTILE_2_5);
-	      process_upper95(i,j)=
-		find_statistics(x[i][j], num_smooth*numsamples, PERCENTILE_97_5);
+	      // DEBUG: Rcout << "Making standard smoothing output" << std::endl;
+	      for(k=0;k<meas_smooth_len;k++)
+		{
+		  process_mean(i,k)=x_k_smooth[k][i];
+		  process_lower95(i,k)=x_k_smooth[k][i]-
+		    1.96*sqrt(P_k_smooth[k][i][i]);
+		  process_upper95(i,k)=x_k_smooth[k][i]+
+		    1.96*sqrt(P_k_smooth[k][i][i]);
+		}
+	    }
+	  else
+	    {
+	      for(k=0;k<meas_smooth_len;k++)
+		{
+		  process_mean(i,k)=find_statistics(x[i][k], num_smooth*numsamples, MEAN);
+		  process_lower95(i,k)=
+		    find_statistics(x[i][k], num_smooth*numsamples, PERCENTILE_2_5);
+		  process_upper95(i,k)=
+		    find_statistics(x[i][k], num_smooth*numsamples, PERCENTILE_97_5);
+		}
 	    }
 	}
       
@@ -15722,14 +15904,46 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  out["smoothing.samples"]=smooth_samples;
 	}
       
+      if(inmcmc_nummcmc==1 && num_smooth==1) 
+	// parameter-estimate-based smoothing
+	{
+	  // DEBUG: Rcout << "Making P_k smoothing output" << std::endl;
+	  // Rcout << "P_k_smooth" << (P_k_smooth ? 1 : 0) << std::endl;
+	  NumericMatrix firstmatrix(num_states, num_states);
+	  for(i=0;i<num_states;i++)
+	    for(j=0;j<num_states;j++)
+	      firstmatrix(i,j)=P_k_smooth[0][i][j];
+	  char strbuff[20]="P_k_00001";
+	  List P_k=List::create(Named(strbuff,firstmatrix));
+	  
+	  for(k=1;k<meas_smooth_len;k++)
+	    {
+	      NumericMatrix nextmatrix(num_states, num_states);
+	      for(i=0;i<num_states;i++)
+		for(j=0;j<num_states;j++)
+		  nextmatrix(i,j)=P_k_smooth[k][i][j];
+	      sprintf(strbuff, "P_k_%05d",k+1);
+	      P_k[strbuff]=nextmatrix;
+	    }
+	  
+	  out["P.k.smooth"]=P_k;
+	}
+
       doubledelete(procname,num_states);
     }
   
   if(x)
     tripledelete(x,num_states,meas_smooth_len);
   
+  if(x_k_smooth)
+    doubledelete(x_k_smooth,meas_smooth_len);
+  
+  if(P_k_smooth)
+    tripledelete(P_k_smooth,meas_smooth_len,num_states);
   
   
+  // DEBUG: Rcout << "Smoothing done" << std::endl;
+
   if(do_realizations && numit_realizations_made>0 && x_k_realized_all!=NULL)
     {
       NumericVector realization_time_points(meas_smooth_len);
@@ -15763,7 +15977,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       for(i=1;i<num_states;i++)
 	{
-	  Rcout << "state=" << i << std::endl;
+	  // DEBUG: Rcout << "state=" << i << std::endl;
 	  NumericMatrix nextmatrix(meas_smooth_len,numit_realizations_made);
 	  for(j=0;j<meas_smooth_len;j++)
 	    for(k=0;k<numit_realizations_made;k++)
@@ -15772,7 +15986,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  Rcout << "state=" << i << " j=" << j << " k=" << k << " x[k]=" << x_k_realized_all[k] << " x_k_j=" << x_k_realized_all[k][j] << std::endl;
 		nextmatrix(j,k)=x_k_realized_all[k][j][i];
 	      }
-	  Rcout << "Set realizations number " << i << std::endl;
+	  // DEBUG: Rcout << "Set realizations number " << i << std::endl;
 	  realizations[procname[i]]=nextmatrix;
 	}
       
@@ -15785,7 +15999,17 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       doubledelete(procname,num_states);
     }
   
+  // DEBUG: Rcout << "Realizations done" << std::endl;
   
+  NumericVector est_origpar(numpar);
+  for(i=0;i<numpar;i++)
+    est_origpar(i)=best_pars_repar[i];
+  out["est.origpar"]=est_origpar;
+
+  delete [] best_pars_repar;
+  
+  // DEBUG: Rcout << " Returning MCMC" << std::endl;
+
   if(return_mcmc)
     {
       NumericMatrix mcmcsamples(numpar,numsamples);
@@ -15793,8 +16017,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	for(j=0;j<numsamples;j++)
 	  mcmcsamples(i,j)=parsample[i][j];
       out["mcmc"]=mcmcsamples;
+      
+      NumericMatrix mcmcsamples2(numpar,numsamples);
+      for(i=0;i<numpar;i++)
+	for(j=0;j<numsamples;j++)
+	  mcmcsamples2(i,j)=parsample_repar[i][j];
+      out["mcmc.origpar"]=mcmcsamples2;
     }
   
+  // DEBUG: Rcout << " Returned MCMCg" << std::endl;
+
   doubledelete(par_name_orig,numpar);
   doubledelete(par_name_new,numpar);
   doubledelete(parsample,numpar);
@@ -15804,6 +16036,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   delete [] meas_buffer;
   reset_global_variables();
   
+  // DEBUG: Rcout << " Returning" << std::endl;
+
   PutRNGstate();
   return(out);
 }

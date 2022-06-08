@@ -358,6 +358,12 @@ causal.symmetric: Symmetric causal connections specified.
 
 mcmc: Only returned if "mcmc=TRUE" in the input. Contains MCMC samples for each parameter.
 
+mcmc.origpar: Only returned if "mcmc=TRUE" in the input. Contains MCMC samples for each parameter using the original parametrization, i.e. the parametrization used internally. (So log characteristic time instead of characteristic time, for instance.)
+ 
+est.origpar: Estimates for original parametrization (see 'mcmc.origpar').
+
+input.options: A full list of the options used in this analysis.
+
 process.time.points, process.mean, process.lower95, process.upper95: Process time points, means, upper and lower credibility bands for each process. (PS: There can be multiple prcoesses per serie, since number of layers can be greater than one).  Only returned if option "smoothing.specs=list(do.smoothing=TRUE,...)" is used.
 
 smoothing.samples: Smoothing samples for each MCMC sample for each process.  Only returned if option "smoothing.specs=list(do.smoothing=TRUE,...,do.return.smoothing.samples = TRUE)" is used.

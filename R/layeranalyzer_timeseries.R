@@ -88,6 +88,12 @@ layer.data.series=function(time.points, value.points, name, std.dev=NULL,
     if(length(std.dev)!=length(value))
       stop("Standard deviation array 'std.dev' must correspond with the 'value' and 'time' arrays, so the lengths must be the same!")
 
+    if(min(std.dev)<0)
+      stop("Negative standard deviations found!")
+
+    if(min(std.dev)==0)
+      stop("Standard deviations=0 found!") 
+
     if(sum(is.na(std.dev))>0)
       std.dev[is.na(std.dev)]=-10000000
 
