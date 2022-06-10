@@ -8,9 +8,9 @@ Originally, this was used for modelling phenotypic evolution towards a optima th
 
 Code:
 
-* The R package, layeranalyzer_0.1.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
+* The R package, layeranalyzer_0.1.1.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.1.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
 
-* A new install file for upcoming versio has been added, which can be installed with install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.1.tar.gz",type="source"). The version already has a few debug changes due to changes in the "class" function. I have also added code for doing prediction as a separate task from parameter inference ("calibration"). However, the R interface hasn't been finished and then there is the testing, so more will come.
+* Note that a new install file for upcoming version has been added. The old one can be installed with install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.0.tar.gz",type="source"). The new version already has a few debug changes due to changes in the "class" function and one due to maximum likelihood calculations that sometimes failed in a certain context. I have also added code for doing prediction as a separate task from parameter inference ("calibration"). However, the R interface hasn't been finished and then there is the testing, so more will come.
 
 * layeranalyzer.cpp. This is the current source version of the program. This version does not depend on any library but the Lapack library (for linear algebra operations), which typically can be found in an R installation. The program can then typically be compiled on a Linux machine like this: "g++ -DMAIN -DENGLISH_LANGUAGE -I/usr/include/R -I/usr/include/R/R_ext -o layeranalyzer layeranalyzer.cpp -lm -llapack". If the Lapack library files or header files are somewhere else on your computer, you should change the "-I" (which tells the compiler where to look for header files) and "-L" (which tells the compiler where to search for library files other than in the /usr/lib directory). This has already been tested on multiple platforms. See "help" texts for more on usage. See below in this text for some examples. 
 
@@ -110,6 +110,8 @@ Simulations can be used for testing the behaviour of the analysis.
 
 Updates and older versions
 Update history:
+
+    10/06-2022: New version, 1.1 is now default. Found in layeranalyzer_0.1.1.tar.gz.
 
     15/06-2019: Vignettes added.
 
