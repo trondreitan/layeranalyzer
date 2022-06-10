@@ -4203,6 +4203,16 @@ Complex **Make_Complex_matrix(int rows, int columns)
   return ret;
 }
 
+bool check_matrix(double **X, int n, int m)
+{
+  int i,j;
+  for(i=0;i<n;i++)
+    for(j=0;j<m;j++)
+      if(!(X[i][j]>=-1e+200 && X[i][j]<=1e+200))
+	return false;
+  return true;
+}
+
 void show_mat(const char *name, double **X, int n, int m)
 {
   int i,j;
@@ -12294,6 +12304,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	     show_mat_R("S_k",S_k,n,n);
 	  */
 
+	  if(!check_matrix(S_k,n,n))
+	    return -1e+200;
+	  
 	  // Calculate log(f(y_k | D-1)), which is
 	  // the likelihood contribution from the current measurement:
 	  ret -= pdf_multinormal(y_k, zeroes_k, S_k, n, true);
