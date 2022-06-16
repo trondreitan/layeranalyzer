@@ -4544,6 +4544,7 @@ extern "C" {
 #endif
 
 
+bool ml_started=false;
 Complex **matrix_eigenvectors(double **A, int size, Complex **eigen_values,
 			      Complex ***V_inv)
 {
@@ -10498,10 +10499,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
       for(i=0;i<num_series_corr;i++)
 	sigma_series[corr_from_index[i]][corr_to_index[i]]=
 	  sigma_series[corr_to_index[i]][corr_from_index[i]]=series_corr[i];
-     
-  
+
+      if(!check_matrix(sigma_series, num_tot_layers, num_tot_layers))
+	return -1e+200;
+	  
       double *sigma_lambda=double_eigenvalues(sigma_series,num_tot_layers);
-	
   		
       bool series_wrong=false;
       for(i=0;i<num_tot_layers;i++)
@@ -10606,6 +10608,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
       //V=get_complex_eigenvector_matrix(A,num_states,&lambda,0,1000000);
       //Vinv=inverse_complex_matrix(V,num_states);
 
+      if(!check_matrix(A,num_states,num_states))
+	return -1e+200;
       Vinv=matrix_eigenvectors(A,num_states,&lambda,&V);
       
       for(j=0;j<10;j++)
@@ -10702,6 +10706,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
     {
       //V=get_complex_eigenvector_matrix(A,num_states,&lambda,0,1000000);
       //Vinv=inverse_complex_matrix(V,num_states);
+
+      if(!check_matrix(A,num_states,num_states))
+	return -1e+200;
       
       Vinv=matrix_eigenvectors(A,num_states,&lambda,&V);
       Vinv_r=Make_matrix(num_states,num_states);
@@ -10955,6 +10962,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      {
 		
 		Complex *sigma_lambda, **sigma_V;
+		
+		if(!check_matrix(corr_layer[i], numsites, numsites))
+		  return -1e+200;
+		  
 		Complex **sigma_Vinv=matrix_eigenvectors(corr_layer[i],
 							 numsites,
 							 &sigma_lambda,&sigma_V);
@@ -11006,7 +11017,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 		      corr_sqrt_layer[i][j][k]=sqrtbuffer[j][k].Re();
 		    }
-
+		
 		doubledelete(sqrtbuffer,numsites);
 		doubledelete(sigma_V,numsites);
 		doubledelete(sigma_Vinv,numsites);
@@ -11049,7 +11060,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  doubledelete(sqrtprod,numsites);
 	}
-      
+
+      if(!check_matrix(corr, num_states, num_states))
+	return -1+200;
       Complex *sigma_lambda=Complex_eigenvalues(corr, num_states);
 			
       bool corr_wrong=false;
@@ -12619,7 +12632,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  for(l=0;l<num_states;l++)
 			    mean[i]+=Sk[i][l]*raw_mean[l];
 			}
-		      
+
+		      if(!check_matrix(Sk,num_states,num_states))
+			return -1e+200;
 		      double *e=double_eigenvalues(Sk, num_states);
 		      
 		      if(!e)
@@ -12660,6 +12675,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  
 			  if(!neg_eigen)
 			    {
+			      if(!check_matrix(Sk,num_states,num_states))
+				return -1e+200;
 			      double det=matrix_determinant(Sk, num_states);
 			      if(det<1e-200)
 				{
@@ -12883,7 +12900,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #else  
   Rcout << "ll=" << -ret << std::endl;
 #endif // MAIN
-
+  
   // return the loglikelihood:
   return -ret;
 }
@@ -13826,7 +13843,11 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 		cout << is_singular << std::endl;
 	      */
 
+	      if(ml_started)
+		Rcout << "det ss started" << std::endl;
 	      double det=matrix_determinant(ss,num_states);
+	      if(ml_started)
+		Rcout << "det ss ended" << std::endl;
 	      double diagprod=1.0;
 	      for(ii=0;ii<num_states;ii++)
 		diagprod*=ss[ii][ii];
@@ -15546,6 +15567,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(do_ml)
     {
       // traverse the number of wanted hill-climbs:
+
+      if(!silent)
+	Rcout << "ML started" << std::endl;
+      ml_started=true;
       
       for(i=0;i<num_optim;i++)
 	{
