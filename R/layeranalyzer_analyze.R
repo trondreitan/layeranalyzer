@@ -1272,7 +1272,8 @@ layer.predict.mcmc=function(... , analysis=NULL,
 layer.predict.mcmc.list=function(new.data.list , analysis=NULL, 
    smoothing.time.diff=0,
    smoothing.start=NULL,smoothing.end=NULL,
-   num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE)
+   num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE,
+  return.residuals=FALSE)
 {
   if(is.null(analysis))
   {
@@ -1354,7 +1355,7 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
       realization.specs=
          list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE,
+  return.residuals=return.residuals,
   smooth.previous.run=TRUE, previous.run=analysis)
   
   return(ret)
@@ -1365,7 +1366,8 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
 
 layer.predict.estimate=function(... , analysis=NULL, 
    smoothing.time.diff=0,
-   smoothing.start=NULL,smoothing.end=NULL)
+   smoothing.start=NULL,smoothing.end=NULL,
+  return.residuals=FALSE)
 {
   new.data.list=list(...)
   n=length(new.data.list)
@@ -1382,7 +1384,7 @@ layer.predict.estimate=function(... , analysis=NULL,
   analysis2$mcmc=analysis2$mcmc.origpar=coda::mcmc(matrix(analysis$est.origpar,nrow=1))
   ret=layer.predict.mcmc.list(new.data.list, analysis2, smoothing.time.diff,
    smoothing.start,smoothing.end,num.smooth.per.mcmc=1,
-   do.return.smoothing.samples=FALSE)
+   do.return.smoothing.samples=FALSE, return.residuals=return.residuals)
 
   return(ret)
 }

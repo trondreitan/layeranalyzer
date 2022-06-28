@@ -16,7 +16,8 @@ layer.predict.mcmc(... ,
    analysis=NULL, 
    smoothing.time.diff=0,
    smoothing.start=NULL,smoothing.end=NULL,
-   num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE)
+   num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE,
+  return.residuals=FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -66,6 +67,24 @@ layer.predict.mcmc(... ,
   not taken into account when sampling. Process realizations
   may perhaps be added later.
  }
+ \item(return.residuals}{
+  The difference between predicted and actual measurements are returned.
+  If set to 'TRUE', the standardized residuals for all observed series
+ as a matrix called 'standardized.residuals'
+ (one column for each measured series) and the returns the time points for
+ the residuals ('residuals.time'). Also returns the prior expected values from
+ the Kalman filter ('prior.expected.values'), which should be
+ independent of the residuals if the model assumptions are correct.
+ Note that the residuals are calculated for the Bayesian median
+ parameters if Bayesian analysis is used and maximum
+ likelihood estimated parameters if classic (ML)
+ analysis is used. Also note that the residuals for each observed
+ series is the measurement minus the expected value divided by the
+ uncertainty from the Kalman *filter* not the Kalman smoother (which
+ is used for process inference), as it is the deviations in the
+ Kalman filter that are assumed to be independent from measurement
+ to measurement.
+ }
 }
 \details{
 
@@ -91,6 +110,11 @@ process.time.points, process.mean, process.lower95, process.upper95: Process tim
 
 smoothing.samples: Smoothing samples for each MCMC sample for each process. Only returned if option "do.return.smoothing.samples = TRUE)" is used.
 
+standardized.residuals: Standardized residuals are measurements minus expected values from the Kalman filter, divided by the standard deviation also from the Kalman filter. Only returned if "return.residuals=TRUE" is set.
+
+prior.expected.values: Expected values from the Kalman filter. Only returned if "return.residuals=TRUE" is set.
+
+residuals.time: Time points for each residual. Only returned if "return.residuals=TRUE" is set.
 }
 \references{
 Reitan, T., Schweder, T., Henderiks, J. (2012),
