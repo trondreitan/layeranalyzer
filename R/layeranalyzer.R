@@ -1829,7 +1829,7 @@ summary.layered=function(object, ...)
     mat=matrix(NA,nrow=length(object$parameter.names),ncol=4)
     for(i in 1:length(object$parameter.names))
      for(j in 1:4)
-      mat[i,j]=as.numeric(object[[i+6]][j])
+      mat[i,j]=as.numeric(object[[which(object$parameter.names[[i]]==names(object))]][j])
     dimnames(mat)=list(object$parameter.names, c("Mean","Median",
      "Lower 95%", 
      "Upper 95%"))
