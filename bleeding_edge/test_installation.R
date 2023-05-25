@@ -1,4 +1,4 @@
-install.packages("~/www_docs/R/layeranalyzer_0.1.2.tar.gz",type="source",verbose=T)
+install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/bleeding_edge/layeranalyzer_0.1.2.tar.gz",type="source",verbose=T)
 
 # If this went well, load the package:
 library(layeranalyzer)
