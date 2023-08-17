@@ -5,6 +5,8 @@ In addition to the R package itself, this page presents the C++ code (used in a 
 
 Originally, this was used for modelling phenotypic evolution towards a optima that itself could be a stochastic process depending responding to layers below it (climate or primary optimum). However, the method have be used for other applications as well.
 
+Note that there has been some compilation issues lately on Mac and Linux, due to a change in the Lapack library (which layeranalyzer uses for linear algebra). For Linux, there is a version out that seems to be working, try install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/bleeding_edge/layeranalyzer_0.1.2.tar.gz",type="source",verbose=T) . This solution does however not work for Mac. On Windows, the normal version (see below) still works. In autumn 2023, I'll work on a new version where I put all the linear algebra operations I need inside the code, so I do not have to rely on Lapack, which turned out to be less stable than I had anticipated.
+
 
 Code:
 
