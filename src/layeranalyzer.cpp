@@ -1,4 +1,4 @@
-#include <cmath>
+//#include <lapacke.h>
 #include <sys/types.h>
 
 #ifdef MAIN
@@ -10,23 +10,29 @@
 #include <Rcpp.h>
 #include <RcppCommon.h>
 
+#include <stdlib.h>
+#include <stdarg.h>
+#include <inttypes.h>
+
 using namespace Rcpp;
 
-#include <R_ext/Lapack.h> 
+//#include <R_ext/Lapack.h> 
 
 #else // MAIN
 
-#include <Lapack.h> 
+//#include <R_ext/Lapack.h> 
 
 #endif //MAIN
 
+
+#include <cmath>
 
 // 
 // Made by Trond Reitan, University of Oslo, 15/1-2009.
 // LGPL licenced.
 //
 
-
+#include <lapack.h>
 
 // *******************
 // *******************
@@ -35,11 +41,11 @@ using namespace Rcpp;
 // *******************
 
 #ifndef doubledelete
-#define doubledelete(array,len) {if(array) { for(register int count=0;count<len;count++) if(array[count]) delete [] array[count]; delete [] array; array=NULL;}}
+#define doubledelete(array,len) {if(array) { for(int count=0;count<len;count++) if(array[count]) delete [] array[count]; delete [] array; array=NULL;}}
 #endif // doubledelete
 
 #ifndef tripledelete
-#define tripledelete(array,len,len2) {if(array) { for(register int count=0;count<len;count++){ if(array[count]){ for(register int count2=0;count2<len2;count2++) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
+#define tripledelete(array,len,len2) {if(array) { for(int count=0;count<len;count++){ if(array[count]){ for(int count2=0;count2<len2;count2++) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
 #endif // tripledelete
 
 #define MAXIM(a, b) ((a) > (b) ? (a) : (b))
@@ -508,7 +514,6 @@ public:
 		       const HydDateTime &start2, const HydDateTime &end2);
 
     friend ostream& operator<<(ostream&, const HydDateTime &);
-    friend istream& operator>>(istream&,  HydDateTime &);
     void Print();
     void getHydDateTime(yearType &yyyy , monthType &mm, dayType &dd, 
 		     hourType &hh, minuteType &mn, secondType &ss);
@@ -1108,7 +1113,7 @@ char *HydDate::getChHydDate() const
 {
   static char date[100];
   
-  for(register int i = 0; i < 12; i++) date[i] = 0;
+  for(int i = 0; i < 12; i++) date[i] = 0;
   if (*this == NoHydDate)
     sprintf(date, "null");
   else 
@@ -1153,7 +1158,7 @@ int HydDate::daysInYear() const
 int HydDate::firstDayOfMonth() const 
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yyyy = 0; 
-  register int d = 0, i;
+  int d = 0, i;
   jday2date(dd, mm, yyyy);
   for (i = 1; i < mm; i++) 
     d += day_tab[leap()][i];
@@ -1439,25 +1444,6 @@ void HydDateTime::now()
 int HydDateTime::legal() const 
 {
   return (HydDate::legal() && CTime::legal()) ? 1: 0;
-}
-
-istream &operator>>(istream& is, HydDateTime& dt) 
-{
-  char date[9], time[7], temp[5], temp1[3];
-  date[8] = time[6] = temp[4] = temp1[2] = '\0';
-  skipDelim(is);
-  is.getline(date,9,'/');
-  skipDelim(is);
-  is.getline(time,7);
-  
-  dt.julnum = dt.date2jday((dayType) atoi(strncpy(temp1,date+6,2)),
-			   (monthType) atoi(strncpy(temp1,date+4,2)),
-			   (yearType) atoi(strncpy(temp,date,4)));
-  
-  dt.tsec = dt.time2totSec(atoi(strncpy(temp1,time,2)), 
-			   atoi(strncpy(temp1,time+2,2)),
-			   atoi(strncpy(temp1,time+4,2)));
-  return is;
 }
 
 HydDateTime& HydDateTime::operator=(const HydDateTime &dt2) 
@@ -3164,7 +3150,7 @@ void double_linked_list::removefromlist(void)
 // Fetches the last object in a list
 double_linked_list *double_linked_list::getlast(void)
 {
-  register double_linked_list *pt;
+  double_linked_list *pt;
   for(pt=this;pt->getnext();pt=pt->getnext()); // get the last item
   return pt;
 } // double_linked_list::getlast
@@ -3174,7 +3160,7 @@ double_linked_list *double_linked_list::getlast(void)
 // Fetches the first object in a list
 double_linked_list *double_linked_list::gethead(void)
 {
-  register double_linked_list *pt;
+  double_linked_list *pt;
   for(pt=this;pt->getprev();pt=pt->getprev()); // get the last item
   return pt;
 } // double_linked_list::getlast
@@ -3184,7 +3170,7 @@ double_linked_list *double_linked_list::gethead(void)
 // Gets the element 'num' places next to this element
 double_linked_list * double_linked_list::get_rel_next(int num)
 {
-  register int i;
+  int i;
   double_linked_list *pt=this;
   for(i=1;i<=num && pt;i++)
     pt=pt->getnext();
@@ -3195,7 +3181,7 @@ double_linked_list * double_linked_list::get_rel_next(int num)
 // Gets the element 'num' places next to the head of the list
 double_linked_list *double_linked_list::get_from_start(int num)
 {
-  register int i;
+  int i;
   double_linked_list *pt=this->gethead();
   for(i=1;i<=num && pt;i++)
     pt=pt->getnext();
@@ -3207,7 +3193,7 @@ double_linked_list *double_linked_list::get_from_start(int num)
 // Gets the element 'num' places previous to this element
 double_linked_list *double_linked_list::get_rel_prev(int num)
 {
-  register int i;
+  int i;
   double_linked_list *pt=this;
   for(i=1;i<=num && pt;i++)
     pt=pt->getprev();
@@ -3218,7 +3204,7 @@ double_linked_list *double_linked_list::get_rel_prev(int num)
 // Gets the element 'num' places previous to the end of the list
 double_linked_list *double_linked_list::get_from_end(int num)
 {
-  register int i;
+  int i;
   double_linked_list *pt=this->getlast();
   for(i=1;i<=num && pt;i++)
     pt=pt->getprev();
@@ -3258,7 +3244,7 @@ void double_linked_list::append(double_linked_list *item)
 int double_linked_list::number_of_elements(void)
 {
   int i=0;
-  for(register double_linked_list *pt=this; pt; pt=pt->getnext())
+  for(double_linked_list *pt=this; pt; pt=pt->getnext())
     i++;
   return i;
 }
@@ -3713,7 +3699,7 @@ bool enough(double *data, int len, double procent_needed)
 {
   int miss_found=0;
 
-  for(register int i=0;i<len;i++)
+  for(int i=0;i<len;i++)
     if(data[i]==MISSING_VALUE)
       miss_found++;
   
@@ -3736,7 +3722,7 @@ double find_mean(double *data, int len, double procent_needed)
   int requiredlen=(int) (((double) len)*procent_needed/100.0);
 
   // loop through the data...
-  for(register int i=0;i<len;i++)
+  for(int i=0;i<len;i++)
     if(data[i]!=MISSING_VALUE)
       {
 	meanval+=data[i]; // increment the mean value
@@ -3787,7 +3773,7 @@ double find_stdev(double *data, int len,
     return MISSING_VALUE;
 
   // loop through the data...
-  for(register int i=0;i<len;i++)
+  for(int i=0;i<len;i++)
     if(data[i]!=MISSING_VALUE)
       {
 	// increment the variance
@@ -3845,7 +3831,7 @@ double find_statistics(double *data, int len, METHOD met,
     }
 
   double val=MISSING_VALUE;
-  register int i;
+  int i;
       
   if((met>=SEVERAL_YEAR_PERCENTILE_2_5 && met<=SEVERAL_YEAR_PERCENTILE_97_5) ||
      (met>=PERCENTILE_2_5 && met<=PERCENTILE_97_5))
@@ -4383,7 +4369,8 @@ double **matrix_inverse(double **X, int dimension)
 
   int i,j,n=dimension;
   double *lapack_matrix=new double[n*n];
-  double *I=new double[n*n];
+  double *ret_matrix=new double[n*n];
+  int info=0;
   double **ret=Make_matrix(n,n);
   int *ipv=new int[n];
   
@@ -4395,21 +4382,86 @@ double **matrix_inverse(double **X, int dimension)
       for(j=0;j<n;j++)
 	{
 	  lapack_matrix[i+j*n]=X[i][j];
-	  I[i+j*n]=0.0;
+	  if(i==j)
+	    ret_matrix[i+j*n]=1.0;
+	  else
+	    ret_matrix[i+j*n]=0.0;
 	}
-      I[i+i*n]=1.0;
     }
   
-  int n1=n,n2=n,n3=n,n4=n,info=0;
-  
-  F77_NAME(dgesv)(&n1,&n2,lapack_matrix,&n3,ipv,I,&n4,&info);
+  int n1=n,n2=n,n3=n,n4=n;
+
+  /* Reminder:
+  subroutine dgesv 	( 	integer  	N,
+		integer  	NRHS,
+		double precision, dimension( lda, * )  	A,
+		integer  	LDA,
+		integer, dimension( * )  	IPIV,
+		double precision, dimension( ldb, * )  	B,
+		integer  	LDB,
+		integer  	INFO 
+	)
+	N	
+
+  Where:
+          N is INTEGER
+          The number of linear equations, i.e., the order of the
+          matrix A.  N >= 0.
+
+[in]	NRHS	
+
+          NRHS is INTEGER
+          The number of right hand sides, i.e., the number of columns
+          of the matrix B.  NRHS >= 0.
+
+[in,out]	A	
+
+          A is DOUBLE PRECISION array, dimension (LDA,N)
+          On entry, the N-by-N coefficient matrix A.
+          On exit, the factors L and U from the factorization
+          A = P*L*U; the unit diagonal elements of L are not stored.
+
+[in]	LDA	
+
+          LDA is INTEGER
+          The leading dimension of the array A.  LDA >= max(1,N).
+
+[out]	IPIV	
+
+          IPIV is INTEGER array, dimension (N)
+          The pivot indices that define the permutation matrix P;
+          row i of the matrix was interchanged with row IPIV(i).
+
+[in,out]	B	
+
+          B is DOUBLE PRECISION array, dimension (LDB,NRHS)
+          On entry, the N-by-NRHS matrix of right hand side matrix B.
+          On exit, if INFO = 0, the N-by-NRHS solution matrix X.
+
+[in]	LDB	
+
+          LDB is INTEGER
+          The leading dimension of the array B.  LDB >= max(1,N).
+
+[out]	INFO	
+
+          INFO is INTEGER
+          = 0:  successful exit
+          < 0:  if INFO = -i, the i-th argument had an illegal value
+          > 0:  if INFO = i, U(i,i) is exactly zero.  The factorization
+                has been completed, but the factor U is exactly
+                singular, so the solution could not be computed.
+  */
+    
+  dgesv_(&n1,&n2,lapack_matrix,&n3,ipv,ret_matrix,&n4,&info);
+  //LAPACKE_dgesv(LAPACK_COL_MAJOR, n1, n2, lapack_matrix, n3, ipv, info, n);
   
   for(i=0;i<n;i++)
     for(j=0;j<n;j++)
-      ret[i][j]=I[i+j*n];
+      ret[i][j]=ret_matrix[i+j*n];
   
   delete [] lapack_matrix;
-  delete [] I;
+  delete [] ret_matrix;
   delete [] ipv;
   
   return ret;
@@ -4535,8 +4587,138 @@ extern "C" {
 		  double *vr, double *work, int *info)
   {  
     int N=n,N2=n,N3=n,N4=n,N5=4*n;
+
     
-    F77_NAME(dgeev)("V", "V", &N, X, &N2, wr, wi, vl, &N3, vr, &N4, work, &N5, info);
+    /*
+      subroutine dgeev 	( 	character  	JOBVL,
+		character  	JOBVR,
+		integer  	N,
+		double precision, dimension( lda, * )  	A,
+		integer  	LDA,
+		double precision, dimension( * )  	WR,
+		double precision, dimension( * )  	WI,
+		double precision, dimension( ldvl, * )  	VL,
+		integer  	LDVL,
+		double precision, dimension( ldvr, * )  	VR,
+		integer  	LDVR,
+		double precision, dimension( * )  	WORK,
+		integer  	LWORK,
+		integer  	INFO 
+	)
+
+[in]	JOBVL	
+
+          JOBVL is CHARACTER*1
+          = 'N': left eigenvectors of A are not computed;
+          = 'V': left eigenvectors of A are computed.
+
+[in]	JOBVR	
+
+          JOBVR is CHARACTER*1
+          = 'N': right eigenvectors of A are not computed;
+          = 'V': right eigenvectors of A are computed.
+
+[in]	N	
+
+          N is INTEGER
+          The order of the matrix A. N >= 0.
+
+[in,out]	A	
+
+          A is DOUBLE PRECISION array, dimension (LDA,N)
+          On entry, the N-by-N matrix A.
+          On exit, A has been overwritten.
+
+[in]	LDA	
+
+          LDA is INTEGER
+          The leading dimension of the array A.  LDA >= max(1,N).
+
+[out]	WR	
+
+          WR is DOUBLE PRECISION array, dimension (N)
+
+[out]	WI	
+
+          WI is DOUBLE PRECISION array, dimension (N)
+          WR and WI contain the real and imaginary parts,
+          respectively, of the computed eigenvalues.  Complex
+          conjugate pairs of eigenvalues appear consecutively
+          with the eigenvalue having the positive imaginary part
+          first.
+
+[out]	VL	
+
+          VL is DOUBLE PRECISION array, dimension (LDVL,N)
+          If JOBVL = 'V', the left eigenvectors u(j) are stored one
+          after another in the columns of VL, in the same order
+          as their eigenvalues.
+          If JOBVL = 'N', VL is not referenced.
+          If the j-th eigenvalue is real, then u(j) = VL(:,j),
+          the j-th column of VL.
+          If the j-th and (j+1)-st eigenvalues form a complex
+          conjugate pair, then u(j) = VL(:,j) + i*VL(:,j+1) and
+          u(j+1) = VL(:,j) - i*VL(:,j+1).
+
+[in]	LDVL	
+
+          LDVL is INTEGER
+          The leading dimension of the array VL.  LDVL >= 1; if
+          JOBVL = 'V', LDVL >= N.
+
+[out]	VR	
+
+          VR is DOUBLE PRECISION array, dimension (LDVR,N)
+          If JOBVR = 'V', the right eigenvectors v(j) are stored one
+          after another in the columns of VR, in the same order
+          as their eigenvalues.
+          If JOBVR = 'N', VR is not referenced.
+          If the j-th eigenvalue is real, then v(j) = VR(:,j),
+          the j-th column of VR.
+          If the j-th and (j+1)-st eigenvalues form a complex
+          conjugate pair, then v(j) = VR(:,j) + i*VR(:,j+1) and
+          v(j+1) = VR(:,j) - i*VR(:,j+1).
+
+[in]	LDVR	
+
+          LDVR is INTEGER
+          The leading dimension of the array VR.  LDVR >= 1; if
+          JOBVR = 'V', LDVR >= N.
+
+[out]	WORK	
+
+          WORK is DOUBLE PRECISION array, dimension (MAX(1,LWORK))
+          On exit, if INFO = 0, WORK(1) returns the optimal LWORK.
+
+[in]	LWORK	
+
+          LWORK is INTEGER
+          The dimension of the array WORK.  LWORK >= max(1,3*N), and
+          if JOBVL = 'V' or JOBVR = 'V', LWORK >= 4*N.  For good
+          performance, LWORK must generally be larger.
+
+          If LWORK = -1, then a workspace query is assumed; the routine
+          only calculates the optimal size of the WORK array, returns
+          this value as the first entry of the WORK array, and no error
+          message related to LWORK is issued by XERBLA.
+
+[out]	INFO	
+
+          INFO is INTEGER
+          = 0:  successful exit
+          < 0:  if INFO = -i, the i-th argument had an illegal value.
+          > 0:  if INFO = i, the QR algorithm failed to compute all the
+                eigenvalues, and no eigenvectors have been computed;
+                elements i+1:N of WR and WI contain eigenvalues which
+                have converged.
+
+    */
+    
+    int irrel1=4*n,irrel2=4*n;
+    dgeev_("V", "V", &N, X, &N2, wr, wi, vl, &N3, vr, &N4, work,
+	   &N5, info, irrel1, irrel2);
+			
+    //LAPACKE_dgeev(LAPACK_COL_MAJOR, 'V', 'V', N, X, N2, wr, wi, vl, N3, vr, N4);  
   }
 
 #ifdef __cplusplus
@@ -4713,13 +4895,15 @@ double **get_cholesky(double **matrix_, int dimension)
   
   double **ret=Make_matrix(dimension,dimension);
   int i,j,n=dimension,lda=n,info;
+  size_t size_of_something_mysterious=0;
   double *X=new double[n*n];
   
   for(i=0;i<n;i++)
     for(j=0;j<n;j++)
       X[i+j*n]=matrix_[i][j];
   
-  F77_NAME(dpotrf)("U",&n,X,&lda,&info);
+  dpotrf_("U",&n,X,&lda,&info,size_of_something_mysterious);
+  //LAPACKE_dpotrf(LAPACK_COL_MAJOR,'U',lapack_int(n),X,lda);
   
   for(i=0;i<n;i++)
     for(j=0;j<i;j++)
@@ -13843,11 +14027,11 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 		cout << is_singular << std::endl;
 	      */
 
-	      if(ml_started)
-		Rcout << "det ss started" << std::endl;
+	      //if(ml_started)
+	      //Rcout << "det ss started" << std::endl;
 	      double det=matrix_determinant(ss,num_states);
-	      if(ml_started)
-		Rcout << "det ss ended" << std::endl;
+	      //if(ml_started)
+	      //Rcout << "det ss ended" << std::endl;
 	      double diagprod=1.0;
 	      for(ii=0;ii<num_states;ii++)
 		diagprod*=ss[ii][ii];
@@ -13919,8 +14103,6 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 
       if(do_realization)
 	{
-	  char filename[2000],cmd[2100];
-	  
 	  if(!x_k_realized)
 	    {
 #ifdef MAIN
@@ -13950,6 +14132,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  else
 	    {
 #ifdef MAIN
+	      char filename[1000], cmd[1000];
 	      sprintf(filename, "%s_%08d.txt", realization_file_start, i+1);
 	      FILE *f=fopen(filename,"w");
 	      
@@ -14178,9 +14361,9 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  // show debug info, if wanted:
 	  if(!silent && contrib<prob)
 	    {
+#ifdef MAIN
 	      double ll1=loglik(par.param);
 	      double pp=(double) prob;
-#ifdef MAIN
 	      printf("%5d logpropg=%f p=%g lik=%g prior=%g w*p=%g probsum=%g\n", 
 		     i, log_prop_g, (double) pp, 
 		     exp(ll1), pp/exp(ll1),
@@ -14205,7 +14388,6 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
       
       // Show the model marginal data density:
       double lprobsum=log(probsum)+lp0;
-      printf("lprobsum=%g\n", lprobsum);
       if(!silent)
 #ifndef MAIN
         Rcout << "lprobsum=" << lprobsum << std::endl;
@@ -14287,8 +14469,12 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 // *************************************************
 void show_parameter(double *par, int N, char *parname, int silent, char *filestart) 
 {
+#ifdef MAIN
   char cmd[1000], filename[1000]; // file name string
-  int i, len=N; 
+  int i;
+#endif // MAIN
+  
+  int len=N; 
   // calculate one-step autocorrelation:
   double rho=get_auto_correlation(par, len);
   // number of independent samples, using 
@@ -14501,7 +14687,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   List realizespecs=as<List>(realization_specs);
   int do_realizations=as<int>(realizespecs["do.realizations"]);
-  int do_realize_start_end=0, do_realize_start_end_dt=0; 
+  int do_realize_start_end=0; // , do_realize_start_end_dt=0; 
   double realize_start=MISSING_VALUE,realize_end=MISSING_VALUE;
   HydDateTime realize_start_dt=NoHydDateTime, realize_end_dt=NoHydDateTime;
   double realize_diff=MISSING_VALUE; 
@@ -14523,7 +14709,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       do_realize_start_end=as<int>(realizespecs["start.end.given"]);
       if(do_realize_start_end)
 	{
-	  do_realize_start_end_dt=as<int>(realizespecs["start.end.datetime"]);
+	  //do_realize_start_end_dt=as<int>(realizespecs["start.end.datetime"]);
 	  if(do_start_end_dt)
 	    {
 	      HydDateTime dt1(1970,1,1,0,0);

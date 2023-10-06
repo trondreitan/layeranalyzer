@@ -145,7 +145,6 @@ nobs.layered=function(object,...)
  return(len)
 }
 
-
 # Returns the ML log-likelihood for an object returned from an analysis:
 
 logLik.layered=function(object,...)

@@ -275,7 +275,7 @@ read.layer.data.series=function(filename,column.type=c("time","value"),
                 strip.white = FALSE, blank.lines.skip = TRUE,
                 comment.char = "#",
                 allowEscapes = FALSE, flush = FALSE,
-                stringsAsFactors = default.stringsAsFactors(),
+                stringsAsFactors = FALSE,
                 fileEncoding = "", encoding = "unknown", text, skipNul = FALSE)
 {
   tab=read.table(filename,header=header,sep=sep,dec=dec,quote=quote,numerals=numerals, 
