@@ -1,3 +1,5 @@
+#define DETAILED_TIMERS
+
 //#include <lapacke.h>
 #include <sys/types.h>
 
@@ -97,6 +99,32 @@ param_type *par_type=NULL; // parameter type
 int *par_layer=NULL;  // parameter belonging to which layer
 int *par_region=NULL; // parameter belonging to which site
 int *par_series=NULL; // parameter belonging to which series
+
+#ifdef DETAILED_TIMERS
+long int timers[100][3];
+// Timer 1: loglikelihood
+// Timer 2: Initialization of loglikelihood
+// Timer 3: main loop in loglikelihood
+// Timer 4: Kalman smoothing in loglikelihood
+// Timer 5: Kalman sampling in loglikelihood
+// Timer 9: log_prior
+// Timer 10: matrix_inverse. Usses dgesv.
+// Timer 11: complex_matrix_inverse
+// Timer 12: matrix_eigenvectors. Uses dgeev. Used in Complex_eigenvalues,
+//           matrix_determinant, log_matrix_determinant.
+// Timer 13: multinormal_sample. Uses dpotrf in get_cholesky.
+// Timer 14: pdf_multinormal, pdf_multi_t (all)
+// Timer 15: mean_of_vectors/estimated_variance
+// Timer 20: Initialization of MCMC:
+// Timer 21: Burnin
+// Timer 22: MCMC sampling
+// Timer 23: Bayesian model log-likelihood or ML optimization
+// Timer 24: test_OU
+// Timer 25: runs_test
+// Timer 26: analyze_residuals
+#endif // DETAILED_TIMERS
+
+
 
 // Transformation of parameters:
 
@@ -4156,8 +4184,9 @@ int almost_equal(double v1, double v2)
 }
 
 
-
+//////////////////////////////////////////
 // Matrix operations:
+//////////////////////////////////////////
 
 double **Make_matrix(int rows, int columns)
 {
@@ -4367,6 +4396,10 @@ double **matrix_inverse(double **X, int dimension)
 {
   //Rcout << "matrix_inverse" << std::endl;
 
+#ifdef DETAILED_TIMERS
+  timers[10][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i,j,n=dimension;
   double *lapack_matrix=new double[n*n];
   double *ret_matrix=new double[n*n];
@@ -4452,7 +4485,7 @@ double **matrix_inverse(double **X, int dimension)
                 has been completed, but the factor U is exactly
                 singular, so the solution could not be computed.
   */
-    
+
   dgesv_(&n1,&n2,lapack_matrix,&n3,ipv,ret_matrix,&n4,&info);
   //LAPACKE_dgesv(LAPACK_COL_MAJOR, n1, n2, lapack_matrix, n3, ipv, info, n);
   
@@ -4463,6 +4496,11 @@ double **matrix_inverse(double **X, int dimension)
   delete [] lapack_matrix;
   delete [] ret_matrix;
   delete [] ipv;
+  
+#ifdef DETAILED_TIMERS
+  timers[10][1]=clock();
+  timers[10][2]+=(timers[10][1]-timers[10][0]);
+#endif // DETAILED_TIMERS
   
   return ret;
 }
@@ -4475,6 +4513,10 @@ Complex **Complex_matrix_inverse(Complex **X, int dimension)
 {
   //Rcout << "Complex_matrix_inverse" << std::endl;
 
+#ifdef DETAILED_TIMERS
+  timers[11][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i,j,k,n=dimension;
   Complex c(1,45.0,false);
   Complex **cX=Make_Complex_matrix(n,n);
@@ -4574,6 +4616,13 @@ Complex **Complex_matrix_inverse(Complex **X, int dimension)
   doubledelete(invIm,n);
   doubledelete(plusRe,n);
   doubledelete(minusIm,n);
+
+  
+#ifdef DETAILED_TIMERS
+  timers[11][1]=clock();
+  timers[11][2]+=(timers[11][1]-timers[11][0]);
+#endif // DETAILED_TIMERS
+  
   
   return ret;
 }
@@ -4716,7 +4765,7 @@ extern "C" {
     
     int irrel1=4*n,irrel2=4*n;
     dgeev_("V", "V", &N, X, &N2, wr, wi, vl, &N3, vr, &N4, work,
-	   &N5, info, irrel1, irrel2);
+	   &N5, info, 1, 1);
 			
     //LAPACKE_dgeev(LAPACK_COL_MAJOR, 'V', 'V', N, X, N2, wr, wi, vl, N3, vr, N4);  
   }
@@ -4732,6 +4781,10 @@ Complex **matrix_eigenvectors(double **A, int size, Complex **eigen_values,
 {
   int i,j,n=size;
   
+#ifdef DETAILED_TIMERS
+  timers[12][0]=clock();
+#endif // DETAILED_TIMERS
+
   //Rcout << "matrix_eigenvectors" << std::endl;
   
   int info;
@@ -4811,6 +4864,11 @@ Complex **matrix_eigenvectors(double **A, int size, Complex **eigen_values,
     doubledelete(vl_complex,n);
   *eigen_values=lambda;
   
+#ifdef DETAILED_TIMERS
+  timers[12][1]=clock();
+  timers[12][2]+=(timers[12][1]-timers[12][0]);
+#endif // DETAILED_TIMERS
+
   return vr_complex;
   
 }    
@@ -4932,6 +4990,10 @@ double **multinormal_sample(int number_of_samples, double *expectation,
 
   //Rcout << "multinormal_sample" << std::endl;
   
+#ifdef DETAILED_TIMERS
+  timers[13][0]=clock();
+#endif // DETAILED_TIMERS
+
   if(dimension==1)
     {
       double **ret=new double*[number_of_samples];
@@ -5061,6 +5123,11 @@ double **multinormal_sample(int number_of_samples, double *expectation,
   delete [] u;
   visited=1;
 
+#ifdef DETAILED_TIMERS
+  timers[13][1]=clock();
+  timers[13][2]+=(timers[13][1]-timers[13][0]);
+#endif // DETAILED_TIMERS
+
   return ret;
 }
 
@@ -5148,6 +5215,12 @@ double pdf_multinormal(double *x, double *expectation, double **sigma, int dimen
 {
   //Rcout << "pdf_multinormal" << std::endl;
 
+  
+#ifdef DETAILED_TIMERS
+  timers[14][0]=clock();
+#endif // DETAILED_TIMERS
+  
+  
   double n=double(dimension);
   double ret=logarithmic ? -n/2.0*log(2.0*M_PI) : pow(2.0*M_PI, -n/2.0);
   double **inv_sigma=matrix_inverse(sigma, dimension);
@@ -5182,6 +5255,11 @@ double pdf_multinormal(double *x, double *expectation, double **sigma, int dimen
 
   doubledelete(inv_sigma, dimension);
 
+#ifdef DETAILED_TIMERS
+  timers[14][1]=clock();
+  timers[14][2]+=(timers[14][1]-timers[14][0]);
+#endif // DETAILED_TIMERS
+  
   return ret;
 }
 
@@ -5189,6 +5267,10 @@ double pdf_multinormal(double *x, double *expectation,
 		       int dimension, double **inv_sigma, double det_sigma,
 		       bool logarithmic)
 {
+#ifdef DETAILED_TIMERS
+  timers[14][0]=clock();
+#endif // DETAILED_TIMERS
+  
   double n=double(dimension);
   double ret=logarithmic ? -n/2.0*log(2.0*M_PI) : pow(2.0*M_PI, -n/2.0);
   int j,k,len=dimension;
@@ -5209,6 +5291,11 @@ double pdf_multinormal(double *x, double *expectation,
     ret-=0.5*det_sigma; // it is assumed that the determinant is now 
 			// given in logarithmic form
 
+#ifdef DETAILED_TIMERS
+  timers[14][1]=clock();
+  timers[14][2]+=(timers[14][1]-timers[14][0]);
+#endif // DETAILED_TIMERS
+  
   return ret;
 }
 
@@ -5217,6 +5304,10 @@ double pdf_multi_t(double *x, double *expectation, double **sigma, double nu,
 		   int dimension,
 		   bool logarithmic)
 {
+#ifdef DETAILED_TIMERS
+  timers[14][0]=clock();
+#endif // DETAILED_TIMERS
+  
   double n=double(dimension);
   double ret=lgamma(0.5*(nu+n))-lgamma(0.5*nu)-0.5*n*log(M_PI*nu);
   if(!logarithmic)
@@ -5246,6 +5337,11 @@ double pdf_multi_t(double *x, double *expectation, double **sigma, double nu,
 
   doubledelete(inv_sigma, dimension);
 
+#ifdef DETAILED_TIMERS
+  timers[14][1]=clock();
+  timers[14][2]+=(timers[14][1]-timers[14][0]);
+#endif // DETAILED_TIMERS
+  
   return ret;
 }
 
@@ -5253,6 +5349,10 @@ double pdf_multi_t(double *x, double *expectation, double nu,
 		   int dimension, double **inv_sigma, double det_sigma,
 		   bool logarithmic)
 {
+#ifdef DETAILED_TIMERS
+  timers[14][0]=clock();
+#endif // DETAILED_TIMERS
+  
   double n=double(dimension);
   double ret=lgamma(0.5*(nu+n))-lgamma(0.5*nu)-0.5*n*log(M_PI*nu);
   if(!logarithmic)
@@ -5275,11 +5375,20 @@ double pdf_multi_t(double *x, double *expectation, double nu,
     ret-=0.5*det_sigma; // it is assumed that the determinant is now 
 			// given in logarithmic form
 
+#ifdef DETAILED_TIMERS
+  timers[14][1]=clock();
+  timers[14][2]+=(timers[14][1]-timers[14][0]);
+#endif // DETAILED_TIMERS
+  
   return ret;
 }
 
 double *mean_of_vectors(int number_of_samples, double **samples, int dimension)
 {
+#ifdef DETAILED_TIMERS
+  timers[15][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i,j,len=dimension;
   double *ret=new double[len];
 
@@ -5295,6 +5404,11 @@ double *mean_of_vectors(int number_of_samples, double **samples, int dimension)
   for(j=0;j<len;j++)
     ret[j]/=double(number_of_samples);
   
+#ifdef DETAILED_TIMERS
+  timers[15][1]=clock();
+  timers[15][2]+=(timers[15][1]-timers[15][0]);
+#endif // DETAILED_TIMERS
+  
   return ret;
 }
 
@@ -5303,6 +5417,10 @@ double **estimated_variance(int number_of_samples,
 				 double **samples /* a sample of vectors */,
 				 double *mean, int dimension)
 {
+#ifdef DETAILED_TIMERS
+  timers[15][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i,j,k,len=dimension;
   double **sigma=new double*[len];
 
@@ -5330,6 +5448,11 @@ double **estimated_variance(int number_of_samples,
     for(k=0;k<j;k++)
       sigma[j][k]=sigma[k][j];
 
+#ifdef DETAILED_TIMERS
+  timers[15][1]=clock();
+  timers[15][2]+=(timers[15][1]-timers[15][0]);
+#endif // DETAILED_TIMERS
+  
   return sigma;
 }
 
@@ -5360,12 +5483,14 @@ double *quasi_newton(double (*func)(double *),
 		     int dimension,
 		     double *start, double enddiff, 
 		     int &maxiter, bool do_min=true,
-		     bool hillclimb=false);
+		     bool hillclimb=false,
+		     bool silent=true);
 double *quasi_newton(double (*func)(double *), 
 		     int dimension,
 		     double *start, double enddiff, 
 		     int &maxiter, bool do_min=true,
-		     bool hillclimb=false);
+		     bool hillclimb=false,
+		     bool silent=true);
 
 // Static global variable used inside the multivariate
 // Newton-Raphson methods;
@@ -5409,17 +5534,34 @@ double *quasi_newton(double (*func)(double *),
 		     int dimension,
 		     double *start, double enddiff, 
 		     int &maxiter, bool do_min,
-		     bool hillclimb)
+		     bool hillclimb, bool silent)
 {
+#ifdef DETAILED_TIMERS
+  timers[23][0]=clock();
+#endif // DETAILED_TIMERS
+  
   double *x=new double[dimension]; // argument vector
   double *x1=new double[dimension]; // argument vector buffer
   int i=0,j,k,l, m;
 
+  /*
+  if(!silent)
+#ifdef MAIN
+    cout << "quasi_newton, enddiff=" << enddiff << " maxiter=" <<
+      maxiter << " do_min=" << do_min << " hillclimb=" << hillclimb <<
+      std::endl;
+#else
+    Rcout << "quasi_newton, enddiff=" << enddiff << " maxiter=" <<
+      maxiter << " do_min=" << do_min << " hillclimb=" << hillclimb <<
+      std::endl;
+#endif MAIN
+  */
+  
   for(k=0;k<dimension;k++)
     x[k]=start[k];
 
   // find the derivated vector;
-  double f0=(*func)(x), f1=f0+1000.0*enddiff;
+  double f0=(*func)(x), f1=MISSING_VALUE;
   double *df=(*derivated)(x);
   double **H=new double*[dimension];
   double **Hnew=new double*[dimension];
@@ -5452,10 +5594,7 @@ double *quasi_newton(double (*func)(double *),
       df=(*derivated)(x); // fetch the derivated vector
       f0=(*func)(x);
 
-      //cout << "#############" << std::endl;
-      //cout << "iteration " << i << std::endl;
-      //cout << df[0] << " " << f0 << std::endl;
-
+      
       // s=H*df;
       if(!hillclimb)
 	{
@@ -5486,6 +5625,7 @@ double *quasi_newton(double (*func)(double *),
 
       // Minimize/maximize func(x-lambda*s)
       int mindex=0;
+      double llmax=0.0;
       for(k=0;k<dimension;k++)
 	x1[k]=x[k]-lambda[0]*s[k];
       double ex=(*func)(x1); 
@@ -5501,8 +5641,33 @@ double *quasi_newton(double (*func)(double *),
 	      sign=1.0;
 	      mindex=j;
 	      ex=f2;
+	      llmax=lambda[j];
 	    }
 	}
+      if(mindex==12)
+	{
+	  double ll=lambda[12];
+	  double f2=ex;
+	  bool docont=true;
+	  
+	  do
+	    {
+	      docont=false;
+	      ll*=10.0;
+	      for(k=0;k<dimension;k++)
+		x1[k]=x[k]-ll*s[k];
+	      f2=(*func)(x1);
+	      if(f2!=MISSING_VALUE &&
+		 ((do_min && f2<ex) || (!do_min && f2>ex)))
+		{
+		  sign=1.0;
+		  ex=f2;
+		  llmax=ll;
+		  docont=true;
+		}
+	    } while(docont);
+	}
+      
       for(j=0;j<13;j++)
 	{
 	  for(k=0;k<dimension;k++)
@@ -5514,11 +5679,35 @@ double *quasi_newton(double (*func)(double *),
 	      sign=-1.0;
 	      mindex=j;
 	      ex=f2;
+	      llmax=lambda[j];
 	    }
+	}
+      if(sign<0.0 && mindex==12)
+	{
+	  double ll=lambda[12];
+	  double f2=ex;
+	  bool docont=true;
+	  
+	  do
+	    {
+	      docont=false;
+	      ll*=10.0;
+	      for(k=0;k<dimension;k++)
+		x1[k]=x[k]+ll*s[k];
+	      f2=(*func)(x1);
+	      if(f2!=MISSING_VALUE &&
+		 ((do_min && f2<ex) || (!do_min && f2>ex)))
+		{
+		  sign=-1.0;
+		  ex=f2;
+		  llmax=ll;
+		  docont=true;
+		}
+	    } while(docont);
 	}
       
       for(k=0;k<dimension;k++)
-	x1[k]=x[k]-sign*lambda[mindex]*s[k];
+	x1[k]=x[k]-sign*llmax*s[k];
       double *df2=(*derivated)(x1); 
 
       //cout << lambda[mindex] << " " << x1[0] << endl;
@@ -5566,6 +5755,22 @@ double *quasi_newton(double (*func)(double *),
       
       f1=(*func)(x1);
 
+      /*
+      if(!silent)
+	{
+#ifdef MAIN
+	  cout << "iteration " << i << " df0=" << df[0] << " f0=" << f0 <<
+	    " f1=" << f1 << std::endl;
+#else
+	  Rcout << "iteration " << i << " df0=" << df[0] << " f0=" << f0 <<
+	    " f1=" << f1 << std::endl;
+#endif // MAIN
+	  show_vec("x",x,dimension);
+	  show_vec("x1",x1,dimension);
+	  show_vec("s",s,dimension);
+	}
+      */
+      
       delete [] df2;
       delete [] df;
       i++;
@@ -5583,6 +5788,11 @@ double *quasi_newton(double (*func)(double *),
 
   maxiter=i; // set the number of ieterations done
   
+#ifdef DETAILED_TIMERS
+  timers[23][1]=clock();
+  timers[23][2]+=(timers[23][1]-timers[23][0]);
+#endif // DETAILED_TIMERS
+  
   return x; // return the argument vector  
 }
 
@@ -5590,7 +5800,7 @@ double *quasi_newton(double (*func)(double *),
 		     int dimension,
 		     double *start, double enddiff, 
 		     int &maxiter, bool do_min,
-		     bool hillclimb)
+		     bool hillclimb, bool silent)
 {
   // Set the global function used for calculating numeric derivated to
   // the one given;
@@ -5599,7 +5809,8 @@ double *quasi_newton(double (*func)(double *),
 
   // Use this derivated to calculate the Newton Raphson argument;
   return quasi_newton(func, quasi_numeric_derivated, dimension,
-		      start, enddiff, maxiter, do_min, hillclimb);
+		      start, enddiff, maxiter, do_min,
+		      hillclimb, silent);
 }
 
 
@@ -5972,6 +6183,10 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
   for(t=0;t<numtemp;t++)
     swaps[t]=0;
   
+#ifdef DETAILED_TIMERS
+  timers[20][0]=clock();
+#endif // DETAILED_TIMERS
+  
   // **************************************************************
   // initialization of the samples:
   for(t=0;t<numtemp;t++) // traverse the chains
@@ -5992,7 +6207,16 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 #else
     Rcout << "done getting initial values" << std::endl;
 #endif // MAIN
+    
+#ifdef DETAILED_TIMERS
+  timers[20][1]=clock();
+  timers[20][2]+=(timers[20][1]-timers[20][0]);
+#endif // DETAILED_TIMERS
 
+  
+#ifdef DETAILED_TIMERS
+  timers[21][0]=clock();
+#endif // DETAILED_TIMERS
   
   // **************************************************************
   // burn-in phase:
@@ -6107,8 +6331,16 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 	    }
 	}
     }
+#ifdef DETAILED_TIMERS
+  timers[21][1]=clock();
+  timers[21][2]+=(timers[21][1]-timers[21][0]);
+#endif // DETAILED_TIMERS
+
   
-  
+#ifdef DETAILED_TIMERS
+  timers[22][0]=clock();
+#endif // DETAILED_TIMERS
+
   // **************************************************************
   // MCMC sampling:
   for(i=0;i<numsamples;i++) // traverse the wanted number of samples
@@ -6122,26 +6354,35 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 		      acc, rw, logprob, T, swaps, tempering_prob,
 		      num_hyperparameters, hyper_parameters,
 		      log_prior, log_lik, update_prev_log_prob, silent);
-	  if(!silent)
-	    {
+	}
+      
+      if(!silent && i%10==0)
+	{
 #ifdef MAIN
-	      cout << "sample i=" << i+1 << " of " << numsamples << 
-		" j=" << j+1 << " of " << indep << " logprob=" << 
-		logprob[0] << " ";
+	  cout << "sample i=" << i+1 << " of " << numsamples << 
+	    " j=" << j+1 << " of " << indep << " logprob=" << 
+	    logprob[0] << " ";
 #else 
-	      Rcout << "sample i=" << i+1 << " of " << numsamples << 
-		" j=" << j+1 << " of " << indep << " logprob=" << 
-		logprob[0] << " ";
+	  Rcout << "sample i=" << i+1 << " of " << numsamples << 
+	    " j=" <<
+	    j+1 << " of " << indep << " logprob=" << 
+	    logprob[0] << " ";
 #endif // MAIN
-	      show_parameter_value(params[0], numparams, param_names, 10);
-	    }
-	} 
-
+	  show_parameter_value(params[0], numparams, param_names, 10);
+#ifndef MAIN
+	  Rcout << "test" << std::endl;
+#endif // MAIN
+	}
+  
       // copy the result to the return array:
       for(k=0;k<numparams;k++)
 	ret[i][k]=params[0][k];
-   
+    
     }
+#ifdef DETAILED_TIMERS
+  timers[22][1]=clock();
+  timers[22][2]+=(timers[22][1]-timers[22][0]);
+#endif // DETAILED_TIMERS
 
   // Show tempering swapping info, if wanted:
   if(!silent)
@@ -6230,6 +6471,10 @@ double log_model_likelihood_multinormal(int num_importance_samples,
 			    bool silent,
                             bool dont_keep_cholesky)
 {
+#ifdef DETAILED_TIMERS
+  timers[23][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i, num_imp=num_importance_samples;
   
   //Rcout << "log_model_likelihood_multinormal" << std::endl;
@@ -6266,6 +6511,11 @@ double log_model_likelihood_multinormal(int num_importance_samples,
 	  delete [] mu_coefs;
 	  doubledelete(sigma_coefs,numparams);
 	  //gsl_rng_free(rptr);
+#ifdef DETAILED_TIMERS
+	  timers[23][1]=clock();
+	  timers[23][2]+=(timers[23][1]-timers[23][0]);
+#endif // DETAILED_TIMERS
+  
 	  return MISSING_VALUE;
 	}
 
@@ -6283,6 +6533,10 @@ double log_model_likelihood_multinormal(int num_importance_samples,
 	  delete [] mu_coefs;
 	  doubledelete(sigma_coefs,numparams);
 	  //gsl_rng_free(rptr);
+#ifdef DETAILED_TIMERS
+	  timers[23][1]=clock();
+	  timers[23][2]+=(timers[23][1]-timers[23][0]);
+#endif // DETAILED_TIMERS
 	  return MISSING_VALUE;
 	}
 
@@ -6329,6 +6583,11 @@ double log_model_likelihood_multinormal(int num_importance_samples,
   delete [] mu_coefs;
   doubledelete(sigma_coefs,numparams);
 
+#ifdef DETAILED_TIMERS
+  timers[23][1]=clock();
+  timers[23][2]+=(timers[23][1]-timers[23][0]);
+#endif // DETAILED_TIMERS
+  
   return lprobsum;
 }
 
@@ -6918,7 +7177,9 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 
-
+#ifdef __linux__  
+  #include <flexiblas/flexiblas_api.h>
+#endif // __linux__
 
 // *************************************************
 // Purging mechanism for global variables, so that
@@ -6927,6 +7188,17 @@ void show_scatter(double *par1, double *par2, int N,
 
 void reset_global_variables(void)
 {
+#ifdef DETAILED_TIMERS
+  for(int i=0;i<100;i++)
+    for(int j=0;j<3;j++)
+      timers[i][j]=0;
+#endif // DETAILED_TIMERS
+
+#ifdef __linux__  
+  mkl_set_num_threads(1);
+#endif // __linux__
+  
+  
   if(par_name)
     doubledelete(par_name,LARGE_ENOUGH_ARRAY);
   par_name=NULL;
@@ -9475,6 +9747,11 @@ double ml_OU(double *residuals, double *tm, int len,double *mu1, double *sd1, do
 
 void test_OU(double *residuals, double *tm,  int len)
 {
+  
+#ifdef DETAILED_TIMERS
+  timers[24][0]=clock();
+#endif // DETAILED_TIMERS
+  
   double mu0,sd0;
   double mu1,sd1,dt1;
   double ml0=ml_indep(residuals,len,&mu0,&sd0);
@@ -9499,6 +9776,12 @@ void test_OU(double *residuals, double *tm,  int len)
   Rcout << "Deviance: " << dev << std::endl;
   Rcout << "p-value : " << p_value << std::endl;
 #endif // MAIN
+  
+#ifdef DETAILED_TIMERS
+  timers[24][1]=clock();
+  timers[24][2]+=(timers[24][1]-timers[24][0]);
+#endif // DETAILED_TIMERS
+  
 }
 
 void autocorr_analyzer(double *residuals, int len, 
@@ -9566,6 +9849,11 @@ void autocorr_analyzer(double *residuals, int len,
 
 void runs_test(double *residuals, int len)
 {
+  
+#ifdef DETAILED_TIMERS
+  timers[25][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i,R1=1,R2=1, l1=0,l2=0;
   double n=double(len);
   double median=find_statistics(residuals, len, MEDIAN);
@@ -9633,11 +9921,21 @@ void runs_test(double *residuals, int len)
     upper_limit1 << " , statistics=+/-1.96 " << std::endl; 
   Rcout << "p-value : " << p_value1 << std::endl;
 #endif // MAIN
+  
+#ifdef DETAILED_TIMERS
+  timers[25][1]=clock();
+  timers[25][2]+=(timers[25][1]-timers[25][0]);
+#endif // DETAILED_TIMERS
+  
 }
 
 void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
 		       char *filestart)
 {
+#ifdef DETAILED_TIMERS
+  timers[26][0]=clock();
+#endif // DETAILED_TIMERS
+  
   int i;
   double *abs_res=new double[len];
 
@@ -9758,6 +10056,11 @@ void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
   test_OU(abs_res,tm,len);
   runs_test(abs_res,len);
 
+#ifdef DETAILED_TIMERS
+  timers[26][1]=clock();
+  timers[26][2]+=(timers[26][1]-timers[26][0]);
+#endif // DETAILED_TIMERS
+  
   delete [] abs_res;
   delete [] resid_ordered;
 }
@@ -9826,6 +10129,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      double ***prior_expected_values, 
 	      int *resid_numcolumns, int *resid_len)
 {
+  
+
+#ifdef DETAILED_TIMERS
+  timers[1][0]=clock();
+  timers[2][0]=clock();
+#endif // DETAILED_TIMERS
+  
+  
   int s,i,j,k,l,/*l2,*/ t=0,t_0=0;
   numpar=0;
   bool pairwise_wrong=false;
@@ -10632,29 +10943,76 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // it's time to return with the number of parameters 
   // as output:
   if(!pars) 
-    return (double) numpar; 
-  
+    {
+#ifdef DETAILED_TIMERS
+      timers[1][1]=clock();
+      timers[1][2]+=(timers[1][1]-timers[1][0]);
+      timers[2][1]=clock();
+      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+      return (double) numpar; 
+    }
   
   
   
   // Sanity check on the parameters:
   if(pairwise_wrong)
-    return -1e+200;
+    {
+#ifdef DETAILED_TIMERS
+      timers[1][1]=clock();
+      timers[1][2]+=(timers[1][1]-timers[1][0]);
+      timers[2][1]=clock();
+      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+      return -1e+200;
+    }
   
   for(s=0;s<num_series;s++)
     for(i=0;i<numsites;i++)
       { 
 	if(!(ser[s].mu[i]>-1e+200 && ser[s].mu[i]<1e+200))
-	  return -1e+200;
+	  {
+#ifdef DETAILED_TIMERS
+	    timers[1][1]=clock();
+	    timers[1][2]+=(timers[1][1]-timers[1][0]);
+	    timers[2][1]=clock();
+	    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	    return -1e+200;
+	  }
 	for(l=0;l<ser[s].numlayers;l++)
 	  if(!(ser[s].sigma[l][i]>-1e+200 && ser[s].sigma[l][i]<1e+200))
-	    return -1e+200;
+	    {
+#ifdef DETAILED_TIMERS
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[2][1]=clock();
+	      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	      return -1e+200;
+	    }
 	for(l=0;l<ser[s].numlayers;l++)
 	  if(!(ser[s].pull[l][i]>-1e+200 && ser[s].pull[l][i]<1e+200))
-	    return -1e+200;
+	    {
+#ifdef DETAILED_TIMERS
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[2][1]=clock();
+	      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	      return -1e+200;
+	    }
 	for(l=0;l<ser[s].numlayers;l++)
 	  if(!(ser[s].corr[l]>-1e+200 && ser[s].corr[l]<1e+200))
-	    return -1e+200;
+	    {
+#ifdef DETAILED_TIMERS
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[2][1]=clock();
+	      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	      return -1e+200;
+	    }
 	
 	if(id_strategy!=ID_NONE)
 	  // Is a layer tracking a process slower than the speed 
@@ -10664,11 +11022,27 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      for(i=0;i<numsites;i++)
 		if(ser[s].pull[l][i]<ser[s].pull[l+1][i] &&
 		   !ser[s].time_integral[l])
-		  return -1e+200;
+		  {
+#ifdef DETAILED_TIMERS
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[2][1]=clock();
+		    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+		    return -1e+200;
+		  }
 	    }
       }
   if(!(ser[0].beta>-1e+200 && ser[0].beta<1e+200))
-    return -1e+200;
+    {
+#ifdef DETAILED_TIMERS
+      timers[1][1]=clock();
+      timers[1][2]+=(timers[1][1]-timers[1][0]);
+      timers[2][1]=clock();
+      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+      return -1e+200;
+    }
   
   //Rcout << "loglik corrtest" << std::endl;
   if(num_series_corr>0)
@@ -10685,8 +11059,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  sigma_series[corr_to_index[i]][corr_from_index[i]]=series_corr[i];
 
       if(!check_matrix(sigma_series, num_tot_layers, num_tot_layers))
-	return -1e+200;
-	  
+	{
+#ifdef DETAILED_TIMERS
+	  timers[1][1]=clock();
+	  timers[1][2]+=(timers[1][1]-timers[1][0]);
+	  timers[2][1]=clock();
+	  timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	  return -1e+200;
+
+	}
+      
       double *sigma_lambda=double_eigenvalues(sigma_series,num_tot_layers);
   		
       bool series_wrong=false;
@@ -10697,13 +11080,29 @@ double loglik(double *pars, int dosmooth, int do_realize,
       delete [] sigma_lambda;
 
       if(series_wrong)
-	return -1e+200;
+	{
+#ifdef DETAILED_TIMERS
+	  timers[1][1]=clock();
+	  timers[1][2]+=(timers[1][1]-timers[1][0]);
+	  timers[2][1]=clock();
+	  timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	  return -1e+200;
+	}
     }
 
 
   if(nodata)
-    return 0.0;
-
+    {
+#ifdef DETAILED_TIMERS
+      timers[1][1]=clock();
+      timers[1][2]+=(timers[1][1]-timers[1][0]);
+      timers[2][1]=clock();
+      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+      return 0.0;
+    }
+  
 #ifdef MAIN
   FILE **f=NULL;
   if(simulation_files)
@@ -10793,7 +11192,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
       //Vinv=inverse_complex_matrix(V,num_states);
 
       if(!check_matrix(A,num_states,num_states))
-	return -1e+200;
+	{
+#ifdef DETAILED_TIMERS
+	  timers[1][1]=clock();
+	  timers[1][2]+=(timers[1][1]-timers[1][0]);
+	  timers[2][1]=clock();
+	  timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	  return -1e+200;
+	}
       Vinv=matrix_eigenvectors(A,num_states,&lambda,&V);
       
       for(j=0;j<10;j++)
@@ -10823,6 +11230,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    doubledelete(V,num_states);
 	    doubledelete(Vinv,num_states);
 	    delete [] lambda;
+#ifdef DETAILED_TIMERS
+	    timers[1][1]=clock();
+	    timers[1][2]+=(timers[1][1]-timers[1][0]);
+	    timers[2][1]=clock();
+	    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
 	    return(-1e+200);
 	  }
       
@@ -10846,6 +11259,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		//  VinvLambdaV_A[i][j] << "!=" << "A[" << i << "," << j << "]=" <<
 		//  A[i][j] << endl;
 		//cout << "counter=" << numtrav << endl;
+#ifdef DETAILED_TIMERS
+		timers[1][1]=clock();
+		timers[1][2]+=(timers[1][1]-timers[1][0]);
+		timers[2][1]=clock();
+		timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
 		return(-1e+200);
 	      }
 	  }
@@ -10892,7 +11311,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
       //Vinv=inverse_complex_matrix(V,num_states);
 
       if(!check_matrix(A,num_states,num_states))
-	return -1e+200;
+	{
+#ifdef DETAILED_TIMERS
+	  timers[1][1]=clock();
+	  timers[1][2]+=(timers[1][1]-timers[1][0]);
+	  timers[2][1]=clock();
+	  timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	  return -1e+200;
+	}
       
       Vinv=matrix_eigenvectors(A,num_states,&lambda,&V);
       Vinv_r=Make_matrix(num_states,num_states);
@@ -10924,6 +11351,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    doubledelete(V_r,num_states);
 	    doubledelete(Vinv_r,num_states);
 	    delete [] lambda_r;
+#ifdef DETAILED_TIMERS
+	    timers[1][1]=clock();
+	    timers[1][2]+=(timers[1][1]-timers[1][0]);
+	    timers[2][1]=clock();
+	    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+  
 	    return(-1e+200);
 	  } 
     }
@@ -11148,8 +11582,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		Complex *sigma_lambda, **sigma_V;
 		
 		if(!check_matrix(corr_layer[i], numsites, numsites))
+		  {
+#ifdef DETAILED_TIMERS
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[2][1]=clock();
+		    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
 		  return -1e+200;
-		  
+		  }
+		
 		Complex **sigma_Vinv=matrix_eigenvectors(corr_layer[i],
 							 numsites,
 							 &sigma_lambda,&sigma_V);
@@ -11246,7 +11688,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
 
       if(!check_matrix(corr, num_states, num_states))
-	return -1+200;
+	{
+#ifdef DETAILED_TIMERS
+	  timers[1][1]=clock();
+	  timers[1][2]+=(timers[1][1]-timers[1][0]);
+	  timers[2][1]=clock();
+	  timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+	  return -1+200;
+	}
       Complex *sigma_lambda=Complex_eigenvalues(corr, num_states);
 			
       bool corr_wrong=false;
@@ -11557,6 +12007,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      doubledelete(prior_expectancy, numobs);
 	      doubledelete(resids, numobs);
 	      delete [] resids_time;
+#ifdef DETAILED_TIMERS
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[2][1]=clock();
+	      timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
 	      return(-1e+200);
 	      //exit(0);
 	    }
@@ -11690,6 +12146,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		doubledelete(prior_expectancy, numobs);
 		doubledelete(resids, numobs);
 		delete [] resids_time;
+#ifdef DETAILED_TIMERS
+		timers[1][1]=clock();
+		timers[1][2]+=(timers[1][1]-timers[1][0]);
+		timers[2][1]=clock();
+		timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
 		return(-1e+200);
 	      }
 	    
@@ -11739,7 +12201,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
       Rcout << std::endl;
 #endif // MAIN
     }
+
   
+#ifdef DETAILED_TIMERS
+  timers[2][1]=clock();
+  timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+  
+  
+#ifdef DETAILED_TIMERS
+  timers[3][0]=clock();
+#endif // DETAILED_TIMERS
   
   
   // *********************************
@@ -11917,6 +12389,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    doubledelete(prior_expectancy, numobs);
 		    doubledelete(resids, numobs);
 		    delete [] resids_time;
+#ifdef DETAILED_TIMERS
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[3][1]=clock();
+		    timers[3][2]+=(timers[3][1]-timers[3][0]);
+#endif // DETAILED_TIMERS
 		    return(-1e+200);
 		  }
 		
@@ -12002,6 +12480,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			doubledelete(prior_expectancy, numobs);
 			doubledelete(resids, numobs);
 			delete [] resids_time;
+#ifdef DETAILED_TIMERS
+			timers[1][1]=clock();
+			timers[1][2]+=(timers[1][1]-timers[1][0]);
+			timers[3][1]=clock();
+			timers[3][2]+=(timers[3][1]-timers[3][0]);
+#endif // DETAILED_TIMERS
 			return(-1e+200);
 			//exit(0);
 		      }
@@ -12150,6 +12634,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    doubledelete(prior_expectancy, numobs);
 		    doubledelete(resids, numobs);
 		    delete [] resids_time;
+#ifdef DETAILED_TIMERS
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[3][1]=clock();
+		    timers[3][2]+=(timers[3][1]-timers[3][0]);
+#endif // DETAILED_TIMERS
 		    return (-1e+200);
 		    
 		    //exit(0);
@@ -12221,6 +12711,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      doubledelete(prior_expectancy, numobs);
 	      doubledelete(resids, numobs);
 	      delete [] resids_time;
+#ifdef DETAILED_TIMERS
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[3][1]=clock();
+	      timers[3][2]+=(timers[3][1]-timers[3][0]);
+#endif // DETAILED_TIMERS
 	      return(-1e+200);
 	    }
 
@@ -12502,7 +12998,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  */
 
 	  if(!check_matrix(S_k,n,n))
-	    return -1e+200;
+	    {
+#ifdef DETAILED_TIMERS
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[3][1]=clock();
+	      timers[3][2]+=(timers[3][1]-timers[3][0]);
+#endif // DETAILED_TIMERS
+	      return -1e+200;
+	    }
 	  
 	  // Calculate log(f(y_k | D-1)), which is
 	  // the likelihood contribution from the current measurement:
@@ -12589,10 +13093,19 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
     }
   
-
+#ifdef DETAILED_TIMERS
+  timers[3][1]=clock();
+  timers[3][2]+=(timers[3][1]-timers[3][0]);
+#endif // DETAILED_TIMERS
+  
 
   if(dosmooth)
     {
+#ifdef DETAILED_TIMERS
+  timers[4][0]=clock();
+#endif // DETAILED_TIMERS
+  
+
       // Smoother:
       for(i=0;i<num_states;i++)
 	{
@@ -12693,6 +13206,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		x_k_s[k][i]+=ser[s].beta_sin[j]*sin(2.0*M_PI*t_k[k]/ser[s].Tper[j])-
 		  ser[s].beta_cos[j]*cos(2.0*M_PI*t_k[k]/ser[s].Tper[j]);
 	  }
+#ifdef DETAILED_TIMERS
+  timers[4][1]=clock();
+  timers[4][2]+=(timers[4][1]-timers[4][0]);
+#endif // DETAILED_TIMERS
     }
   
   
@@ -12701,6 +13218,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   if(do_realize)
     {
+#ifdef DETAILED_TIMERS
+      timers[5][0]=clock();
+#endif // DETAILED_TIMERS
+  
       //Rcout << "loglik realizations" << std::endl;
       
       if(!x_k_realized)
@@ -12818,7 +13339,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			}
 
 		      if(!check_matrix(Sk,num_states,num_states))
-			return -1e+200;
+			{
+#ifdef DETAILED_TIMERS
+			  timers[1][1]=clock();
+			  timers[1][2]+=(timers[1][1]-timers[1][0]);
+			  timers[5][1]=clock();
+			  timers[5][2]+=(timers[5][1]-timers[5][0]);
+#endif // DETAILED_TIMERS
+			  return -1e+200;
+			}
+		      
 		      double *e=double_eigenvalues(Sk, num_states);
 		      
 		      if(!e)
@@ -12860,7 +13390,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  if(!neg_eigen)
 			    {
 			      if(!check_matrix(Sk,num_states,num_states))
-				return -1e+200;
+				{
+#ifdef DETAILED_TIMERS
+				  timers[1][1]=clock();
+				  timers[1][2]+=(timers[1][1]-timers[1][0]);
+				  timers[5][1]=clock();
+				  timers[5][2]+=(timers[5][1]-timers[5][0]);
+#endif // DETAILED_TIMERS
+				  return -1e+200;
+				}
+			      
 			      double det=matrix_determinant(Sk, num_states);
 			      if(det<1e-200)
 				{
@@ -12969,9 +13508,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
       else
 	ret += log(double(numit+1))+log(double(numit+2));
+      
+#ifdef DETAILED_TIMERS
+      timers[5][1]=clock();
+      timers[5][2]+=(timers[5][1]-timers[5][0]);
+#endif // DETAILED_TIMERS
     }
-  
-  
 
   if(residual_analysis)
     analyze_residuals(resids[0], t_k, dt_k,len, res_filestart);
@@ -13085,6 +13627,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   Rcout << "ll=" << -ret << std::endl;
 #endif // MAIN
   
+#ifdef DETAILED_TIMERS
+  timers[1][1]=clock();
+  timers[1][2]+=(timers[1][1]-timers[1][0]);
+#endif // DETAILED_TIMERS
+  
   // return the loglikelihood:
   return -ret;
 }
@@ -13116,6 +13663,11 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
     return -1e+200;
 
 
+  
+#ifdef DETAILED_TIMERS
+  timers[9][0]=clock();
+#endif // DETAILED_TIMERS
+  
 
   // handle the pull priors separately, according to the identification
   // prior handling strategy:
@@ -13243,7 +13795,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 			      double ldt_old=-log(ser[s].pull[l+1][i]);
 			      
 			      if(ldt > ldt_old)
-				return -1e+200;
+				{
+#ifdef DETAILED_TIMERS
+				  timers[9][1]=clock();
+				  timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS
+				  return -1e+200;
+				}
 			      
 			      if(id_strategy==ID_CUT_LOWER)
 				prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
@@ -13287,7 +13845,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				      ldt_old=MINIM(ldt_old,-log(ser[s].pull[l+1][i]));
 				  
 				  if(ldt > ldt_old)
-				    return -1e+200;
+				    {
+#ifdef DETAILED_TIMERS
+				      timers[9][1]=clock();
+				      timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS    
+				      return -1e+200;
+				    }
 				  
 				  if(id_strategy==ID_CUT_LOWER)
 				    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
@@ -13333,7 +13897,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				ldt_old=MINIM(ldt_old,-log(ser[s].pull[l+1][i]+1e-100));
 			      
 			      if(ldt > ldt_old)
-				return -1e+200;
+				{
+#ifdef DETAILED_TIMERS
+				  timers[9][1]=clock();
+				  timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS
+				  return -1e+200;
+				}
 			      
 			      if(id_strategy==ID_CUT_LOWER)
 				prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
@@ -13381,7 +13951,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 			      double ldt_old=-log(ser[s].pull[l-1][i]);
 			      
 			      if(ldt < ldt_old)
-				return -1e+200;
+				{
+#ifdef DETAILED_TIMERS
+				  timers[9][1]=clock();
+				  timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS
+				  return -1e+200;
+				}
 			      
 			      if(id_strategy==ID_CUT_UPPER)
 				prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
@@ -13423,8 +13999,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 						    -log(ser[s].pull[l-1][i]));
 				  
 				  if(ldt < ldt_old)
-				    return -1e+200;
-				  
+				    {
+#ifdef DETAILED_TIMERS
+				      timers[9][1]=clock();
+				      timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS
+				      return -1e+200;
+				    }
 				  
 				  if(id_strategy==ID_CUT_UPPER)
 				    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
@@ -13464,7 +14045,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 			    ldt_old=MAXIM(ldt_old,-log(ser[s].pull[l-1][i]));
 			  
 			  if(ldt < ldt_old)
-			    return -1e+200;
+			    {
+#ifdef DETAILED_TIMERS
+			      timers[9][1]=clock();
+			      timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS
+			      return -1e+200;
+			    }
 			  
 			  if(id_strategy==ID_CUT_UPPER)
 			    prp += -0.5*log(2.0*M_PI) - log(pr->ldt_s) -
@@ -13593,6 +14180,13 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 	  }
 	}
     }
+
+  
+#ifdef DETAILED_TIMERS
+  timers[9][1]=clock();
+  timers[9][2]+=(timers[9][1]-timers[9][0]);
+#endif // DETAILED_TIMERS
+  
 
   // sanity check on the prior:
   if(prp<=-1e+200)
@@ -13790,6 +14384,10 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
     rw.param[i]=1.0;
   
   
+#ifdef DETAILED_TIMERS
+  timers[20][0]=clock();
+#endif // DETAILED_TIMERS
+  
   
   // **************************************************************
   // initialization of the samples:
@@ -13867,6 +14465,12 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
   Rcout << "done getting initial values" << std::endl;
 #endif // MAIN
   
+#ifdef DETAILED_TIMERS
+  timers[20][1]=clock();
+  timers[20][2]+=(timers[20][1]-timers[20][0]);
+#endif // DETAILED_TIMERS
+
+  
   double ***XX=NULL;
   if(dosmooth && !do_realization)
     {
@@ -13882,6 +14486,11 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    }
 	}
     }
+  
+  
+#ifdef DETAILED_TIMERS
+  timers[21][0]=clock();
+#endif // DETAILED_TIMERS
   
   
   // **************************************************************
@@ -13956,6 +14565,17 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	}
     }
   
+#ifdef DETAILED_TIMERS
+  timers[21][1]=clock();
+  timers[21][2]+=(timers[21][1]-timers[21][0]);
+#endif // DETAILED_TIMERS
+  
+  
+  
+  
+#ifdef DETAILED_TIMERS
+  timers[22][0]=clock();
+#endif // DETAILED_TIMERS
   
   
   // **************************************************************
@@ -14158,6 +14778,11 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	}
     }
   
+#ifdef DETAILED_TIMERS
+  timers[22][1]=clock();
+  timers[22][2]+=(timers[22][1]-timers[22][0]);
+#endif // DETAILED_TIMERS
+  
   // Show tempering swapping info, if wanted:
   if(!silent)
     {
@@ -14179,6 +14804,10 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 
   if(do_importance)
     {
+#ifdef DETAILED_TIMERS
+  timers[23][0]=clock();
+#endif // DETAILED_TIMERS
+  
       //Rcout << "loglik importance" << std::endl;
 
       // **************************************************************
@@ -14346,10 +14975,10 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    {
 #ifdef MAIN
 	      cout << "noe er galt3!" << endl;
-	      cout << "prob=" << prob << " logprob=" << lp-lp0-log_prop_g << endl;
+	      cout << "prob=" << prob << " logprob=lp-lp0-log_prop_g=" << lp-lp0-log_prop_g << " lp=" << lp << " lp0=" << lp0 << "log_prop_g=" << log_prop_g << endl;
 #else
 	      Rcout << "noe er galt3!" << std::endl;
-	      Rcout << "prob=" << prob << " logprob=" << lp-lp0-log_prop_g << std::endl;
+	      Rcout << "prob=" << prob << " logprob=lp-lp0-log_prop_g=" << lp-lp0-log_prop_g << " lp=" << lp << " lp0=" << lp0 << "log_prop_g=" << log_prop_g << std::endl;
 #endif // MAIN
 	      prob=exp(lp-lp0-log_prop_g);
 	    }
@@ -14440,6 +15069,12 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
       
       delete [] mu_coefs;
       doubledelete(sigma_coefs,numpar2);
+      
+#ifdef DETAILED_TIMERS
+      timers[23][1]=clock();
+      timers[23][2]+=(timers[23][1]-timers[23][0]);
+#endif // DETAILED_TIMERS
+  
     }
   else
     {
@@ -15439,7 +16074,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   double ***x=NULL; // smoothing results from the latent processes
   double ***P_k_smooth=NULL, **x_k_smooth=NULL;
-
+  
   long int t0=clock();
   double model_loglik=MISSING_VALUE, 
     model_dic1, eff_num_param1, model_dic2, eff_num_param2;
@@ -15760,6 +16395,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       for(i=0;i<num_optim;i++)
 	{
+	  if(!silent)
+	    Rcout << "Optimization nr. " << i << std::endl;
+	  
 	  double *curr_par=new double[numpar];
 	  
 	  for(j=0;j<numpar;j++)
@@ -15780,14 +16418,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  double *pars2=quasi_newton(minusloglik,
 				     numpar /* number of parameters */, 
 				     curr_par /* starting values */, 
-				     0.001 /* precision */, 
-				     maxiter /* Maximum number of
+				     0.00000001 /* precision */, 
+				     maxiter, /* Maximum number of
 						iterations. The number
 						of iterations
 						neccessary will be
 						stored here after the
 						optimization and can 
-						be checked */);
+						be checked */
+				     true,true,
+				     silent);
 	  
 	  // Fetch the log-likelihood for the optimized parameters:
 	  double curr_loglik=loglik(pars2);
@@ -15874,11 +16514,58 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       delete [] medpar;
     }
 
+
+#ifdef DETAILED_TIMERS
+  List alltimers=List::create(
+		     Named("loglik.time",double(timers[1][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("loglik.init.time",double(timers[2][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("loglik.mainloop.time",double(timers[3][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("loglik.smoother.time",double(timers[4][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("loglik.realization.time",double(timers[5][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("logprior.time",double(timers[9][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("matrix.inverse.time",double(timers[10][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("complex.matrix.inverse.time",double(timers[11][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("matrix.eigenvectors.time",double(timers[12][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("multinormal.sample.time",double(timers[13][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("pdf.multinormal.time",double(timers[14][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("variance.estimation.time",double(timers[15][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("mcmc.init.time",double(timers[20][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("mcmc.burnin.time",double(timers[21][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("mcmc.mainloop.time",double(timers[22][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("model.fit.estimation.time",double(timers[23][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("test.ou.time",double(timers[24][2])/
+			   double(CLOCKS_PER_SEC)),
+		     Named("runs.test.time",double(timers[25][2])/
+		     	   double(CLOCKS_PER_SEC)),
+		     Named("analyze.residuals.time",double(timers[26][2])/
+			   double(CLOCKS_PER_SEC)));
+#endif // DETAILED_TIMERS
+  
+  
   List out;
   if(!do_ml)
     out=List::create(Named("model.log.lik",model_loglik),
 		     Named("computing.time", double(t1-t0)/
 			   double(CLOCKS_PER_SEC)),
+#ifdef DETAILED_TIMERS
+		     Named("all.timers",alltimers),
+#endif // DETAILED_TIMERS
 		     Named("model.dic1",model_dic1),
 		     Named("eff.num.param1",eff_num_param1),
 		     Named("model.dic2",model_dic2),
@@ -15887,6 +16574,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     out=List::create(Named("model.log.lik",model_loglik),
 		     Named("computing.time", double(t1-t0)/
 			   double(CLOCKS_PER_SEC)),
+#ifdef DETAILED_TIMERS
+		     Named("all.timers",alltimers),
+#endif // DETAILED_TIMERS
 		     Named("model.dic1",model_dic1),
 		     Named("eff.num.param1",eff_num_param1),
 		     Named("model.dic2",model_dic2),
