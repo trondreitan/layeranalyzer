@@ -16426,7 +16426,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 						stored here after the
 						optimization and can 
 						be checked */
-				     true,true,
+				     true,false,
 				     silent);
 	  
 	  // Fetch the log-likelihood for the optimized parameters:
