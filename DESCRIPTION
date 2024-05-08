@@ -1,7 +1,7 @@
 Package: layeranalyzer
 Type: Package
 Title: Time series analysis tool using linear layered SDEs
-Version: 0.1.1
+Version: 0.2.1
 Date: 2016-09-22
 Encoding: UTF-8
 Author: Trond Reitan (trond.reitan@ibv.uio.no)
@@ -14,7 +14,7 @@ Description: Time series analysis tool using linear layered SDEs. Allows
  eigenvalue decompositions) allows for complex numbers. In this case,
  cyclic behavior can be expected.
 License: LGPL-3
-Suggests: Rcpp, coda, knitr, rmarkdown, markdown
+Suggests: knitr, rmarkdown, markdown
 VignetteBuilder: knitr
 Imports:
     methods,

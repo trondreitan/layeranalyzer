@@ -15,14 +15,20 @@ summary.layered=function(object, ...)
 {
   input=list(...)
 
+  np=length(object$parameter.names)
+  index=rep(0,np)
+  for(i in 1:np)
+    index[i]=which(names(object)==object$parameter.names[i])
+  
+
   #show("summary called")
 
   if(is.null(object$ML.loglik))
   {
-    mat=matrix(NA,nrow=length(object$parameter.names),ncol=4)
-    for(i in 1:length(object$parameter.names))
+    mat=matrix(NA,nrow=np,ncol=4)
+    for(i in 1:np)
      for(j in 1:4)
-      mat[i,j]=as.numeric(object[[i+6]][j])
+      mat[i,j]=as.numeric(object[[index[i]]][j])
     dimnames(mat)=list(object$parameter.names, c("Mean","Median",
      "Lower 95%", 
      "Upper 95%"))
@@ -35,17 +41,17 @@ summary.layered=function(object, ...)
   if(!is.null(object$ML.loglik))
   {
     par=object$parameter.names[object$parameter.names!="complex.eigen"]
-
+    np=length(par)
+    for(i in 1:np)
+      index[i]=which(names(object)==par[i])
+  
     k=0
-    mat=matrix(NA,nrow=length(par),ncol=3)
-    for(i in 1:length(object$parameter.names))
+    mat=matrix(NA,nrow=np,ncol=3)
+    for(i in 1:np)
     {
-     if(object$parameter.names[i]!="complex.eigen")
-     {
       k=k+1
       for(j in 1:3)
-       mat[k,j]=as.numeric(object[[i+10]][c(1,4,5)[j]])
-     }
+       mat[k,j]=as.numeric(object[[index[i]]][c(1,4,5)[j]])
     }
     dimnames(mat)=list(par, c("ML estimate",
      "Bayesian Lower 95%", "Bayesian Upper 95%"))

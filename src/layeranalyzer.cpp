@@ -4763,7 +4763,7 @@ extern "C" {
 
     */
     
-    int irrel1=4*n,irrel2=4*n;
+    //int irrel1=4*n,irrel2=4*n;
     dgeev_("V", "V", &N, X, &N2, wr, wi, vl, &N3, vr, &N4, work,
 	   &N5, info, 1, 1);
 			
@@ -15229,6 +15229,23 @@ void show_scatter(double *par1, double *par2, int N,
 #include <Rcpp.h>
 #include <RcppCommon.h>
 
+
+
+const double loglikwrapper(const NumericVector &vals)
+{
+  int len=vals.size();
+  double *val2=new double[len];
+
+  for(int i=0;i<len;i++)
+    val2[i]=vals[i];
+
+  double ret=-minusloglik(val2);
+  delete [] val2;
+
+  return -ret;
+}
+
+
 RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP Spacing,SEXP NumTemp,
 			      SEXP do_model_likelihood,
@@ -16411,23 +16428,54 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      else
 		curr_par[j]=parsample_repar[j][(i-2)*(numsamples-1)/(num_optim-3)];
 	    }
-	  
+
+
+
+	  /*
 	  // do the optimization:
 	  int maxiter=1000;
 	  //double *pars2=gsl_optimization_cover(minusloglik, 
 	  double *pars2=quasi_newton(minusloglik,
-				     numpar /* number of parameters */, 
-				     curr_par /* starting values */, 
-				     0.00000001 /* precision */, 
-				     maxiter, /* Maximum number of
-						iterations. The number
-						of iterations
-						neccessary will be
-						stored here after the
-						optimization and can 
-						be checked */
+				     numpar, // number of parameters 
+				     curr_par, // starting values  
+				     0.00000001, // precision 
+				     maxiter, // Maximum number of
+				     // iterations. The number of iterations
+				     // neccessary will be stored here after the
+				     // optimization and can be checked 
 				     true,false,
 				     silent);
+	  */
+
+	  
+	  NumericVector initpars(numpar);
+	  for(j=0;j<numpar;j++)
+	    initpars[j]=curr_par[j];
+	  Environment stats("package:stats");
+	  Function optim=stats["optim"];
+	  List optres=optim(Rcpp::_["par"]= initpars,
+			    Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
+			    Rcpp::_["method"]="BFGS");
+	  NumericVector outpars=as<NumericVector>(optres["par"]);
+	  double *pars2=new double[numpar];
+	  for(j=0;j<numpar;j++)
+	    pars2[j]=outpars[j];
+	  
+	  
+	  /* RInside R;
+	  R["loglikwrapper"] = Rcpp::InternalFunction(&loglikwrapper);
+	  R["initpars"] = initpars;
+	  
+	  NumericVector initpars(numpar);
+	  for(j=0;j<numpar;j++)
+	    initpars[j]=curr_par[j];
+	  List optres=R.parseEval("optim(initpars,loglikwrapper)");
+	  NumericVector outpars=as<NumericVector>(optres["par"]);
+	  double *pars2=new double[numpar];
+	  for(j=0;j<numpar;j++)
+	    pars2[j]=outpars[j];
+	  */
+	  
 	  
 	  // Fetch the log-likelihood for the optimized parameters:
 	  double curr_loglik=loglik(pars2);
