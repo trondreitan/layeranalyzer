@@ -22,10 +22,12 @@ Documentation:
 
 Presentations:
 
+* layeranalyzer_phab2024c.pptx - A new (2024) presentation meant to be a bit pedagogical (so not so much focusing on code).
 * BISP_small.pdf/pptx is a presentation made for the Seventh Conference on Bayesian Inference in Stochastic Processes in Madrid, Spain, BISP7.
 * stoch_layers7.pdf/pptx is a simpler presentation made for CEES, UiO of the basic modelling framework and how it connects to the application can be found here.
 * layer_analyzer_complex.pptx is a how-to concerning the program usage (an older version called 'layer_analyzer_complex' is used, but it has the same input structure as the current 'layeranalyzer' program), with a short intro to continuous time modelling. 
 * linkoping2021.pptx - A presentation I did over Zoom for the statistics department at the university of Linköping. Focuses slightly more on the mathematics than the other presentations.
+
     
 Papers on theory and application:
 
