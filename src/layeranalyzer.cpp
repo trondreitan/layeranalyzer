@@ -431,12 +431,10 @@ public:
   friend ostream& operator<<(ostream&, HydDate &);
     //  void print();
     
-  char *getChHydDate() const;		// yyyy mm dd
   char *charHydDate() const;  // yyyy.mm.dd
   yearType getYear() const;
   monthType getMonth() const;
   dayType getDay() const;
-  char *getMonthString() const;
   int getDayOfWeek() const; // sunday = 0, saturday = 6
     
   int leap() const; // whether the current date-object's year is leap
@@ -459,10 +457,6 @@ public:
 
   int Get_weekday_index(void);
   WEEKDAY Get_weekday(void);
-  char *Get_weekday_name_eng(void);
-  char *Get_weekday_name_norw(void);
-  char *Get_weekday_name_eng_short(void);
-  char *Get_weekday_name_norw_short(void);
 };
 
 HydDate NoHydDate;
@@ -545,10 +539,6 @@ public:
     void Print();
     void getHydDateTime(yearType &yyyy , monthType &mm, dayType &dd, 
 		     hourType &hh, minuteType &mn, secondType &ss);
-  
-    char *getChHydDateTime() const;
-
-    char *getRfc822Str(int UT_offset = 1) const;
 
     char *syCh(int form = 0) const;		// Sybase format
     // 0 - MM/dd/yyyy hh:mm:ss
@@ -563,8 +553,6 @@ public:
 
     
     
-
-    void internal(char str[13]);
 
     int  isNull() const;
 
@@ -733,7 +721,7 @@ ostream& operator<<(ostream& os, const CTime &t)
   static char buffer[100];
   
   t.totSec2time(hh, mm, ss);
-  sprintf(buffer, "%02d:%02d", hh, mm);
+  snprintf(buffer, 99, "%02d:%02d", hh, mm);
   os << buffer;
   
   return os;
@@ -746,7 +734,7 @@ char *CTime::getChTime() const
   static hourType h = 0;  static minuteType mn = 0;  static secondType s = 0;
   
   totSec2time(h, mn, s);
-  sprintf(ctime, "%02d:%02d", h, mn);
+  snprintf(ctime, 99, "%02d:%02d", h, mn);
   return ctime;
  }
 
@@ -819,23 +807,6 @@ static int firstdayinmonthtab[2][13] = {
     {0, 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}
 };
 
-static char *month_names[12] = { (char *) "Jan", (char *) "Feb", (char *) "Mar", 
-				 (char *) "Apr", (char *) "Mai", (char *) "Jun", 
-				 (char *) "Jul", (char *) "Aug", (char *) "Sep",
-				 (char *) "Okt", (char *) "Nov", (char *) "Des"};
-
-static char *weekday_name[]={(char *) "Monday",(char *) "Tuesday",(char *) "Wednesday",
-			     (char *) "Thursday", (char *) "Friday",(char *) "Saturday",
-			     (char *) "Sunday"};
-static char *weekday_navn[]={(char *) "Mandag",(char *) "Tirsdag",(char *) "Onsdag",
-			      (char *) "Torsdag",(char *) "Fredag",(char *) "Lørdag",
-			     (char *) "Søndag"};
-static char *weekday_name_short[]={(char *) "Mon",(char *) "Tue",(char *) "Wed",
-				   (char *) "Thu",(char *) "Fri",(char *) "Sat",
-				   (char *) "Sun"};
-static char *weekday_navn_kort[]={(char *) "Man",(char *) "Tir",(char *) "Ons",
-				  (char *) "Tor",(char *) "Fre",(char *) "Lør",
-				  (char *) "Søn"};
 
 int leap(yearType y) 
 {
@@ -1018,7 +989,7 @@ ostream& operator<<(ostream& os,  HydDate &d)
       static char buffer[100];
 
       d.jday2date(dd, mm, yyyy);
-      sprintf(buffer, "%02d.%02d.%d ", dd, mm, yyyy);
+      snprintf(buffer, 99, "%02d.%02d.%d ", dd, mm, yyyy);
       os << buffer;
     }
   
@@ -1044,29 +1015,6 @@ WEEKDAY HydDate::Get_weekday(void)
   return (WEEKDAY) Get_weekday_index();
 } 
 
-
-char *HydDate::Get_weekday_name_eng(void)
-{
-  return weekday_name[Get_weekday_index()];
-}
-
-
-char *HydDate::Get_weekday_name_norw(void)
-{
-  return weekday_navn[Get_weekday_index()];
-}
-
-
-char *HydDate::Get_weekday_name_eng_short(void)
-{
-  return weekday_name_short[Get_weekday_index()];
-}
-
-
-char *HydDate::Get_weekday_name_norw_short(void)
-{
-  return weekday_navn_kort[Get_weekday_index()];
-}
 
 
 void HydDate::now() 
@@ -1124,37 +1072,7 @@ int HydDate::leap() const
 
 
 
-char *HydDate::getMonthString() const 
-{
-  if(*this == NoHydDate)
-    return (char *) "null";
-  else 
-    {
-      static dayType d = 0;  static monthType m = 0; static yearType y = 0;
-      jday2date(d, m, y);
-      return month_names[m - 1];
-    }
-}
 
-
-char *HydDate::getChHydDate() const 
-{
-  static char date[100];
-  
-  for(int i = 0; i < 12; i++) date[i] = 0;
-  if (*this == NoHydDate)
-    sprintf(date, "null");
-  else 
-    {
-      static dayType d = 0; static monthType m = 0; static yearType y = 0;
-      
-      jday2date(d, m, y);
-      
-      sprintf(date, "%d %s %02d", y, getMonthString(), d);
-    }
-    
-  return date;
-}
 
 
 int HydDate::dayOfYear() const 
@@ -1208,9 +1126,9 @@ char *HydDate::charHydDate() const
 {
   char *pt = new char[100];
   if(*this == NoHydDate)
-    sprintf(pt, "null");
+    snprintf(pt, 99, "null");
   else
-    sprintf(pt, "%d.%d.%d", getYear(), getDay(), getMonth());
+    snprintf(pt, 99, "%d.%d.%d", getYear(), getDay(), getMonth());
   return (pt);
 }
 
@@ -1670,16 +1588,6 @@ void HydDateTime::getHydDateTime(yearType &yyyy, monthType &mm, dayType &dd,
   totSec2time(hh, mn, ss);
 }
 
-char *HydDateTime::getChHydDateTime() const 
-{
-  static char datetime[21];
-  
-  sprintf(datetime, "%s", this->getChHydDate());
-  if (strcmp(datetime, "null") != 0)
-    sprintf(datetime + 11, " %s", this->getChTime());
-  
-  return datetime;
-}
 
 char *HydDateTime::syCh(int form) const 
 {
@@ -1687,7 +1595,7 @@ char *HydDateTime::syCh(int form) const
 
 
   if(*this == NoHydDateTime)
-    sprintf(pt, "null");
+    snprintf(pt, 99, "null");
   else 
     {
       static yearType y = 0; static monthType m = 0; static dayType d = 0;
@@ -1697,49 +1605,35 @@ char *HydDateTime::syCh(int form) const
       switch(form) 
 	{
 	case 1:
-	  sprintf(pt, "%02d.%02d.%d %02d:%02d", d, m, y, h, min);
+	  snprintf(pt, 99, "%02d.%02d.%d %02d:%02d", d, m, y, h, min);
 	  break;
 	case 2:
-	  sprintf(pt, "%d%02d%02d%02d%02d", y, m, d, h, min);
+	  snprintf(pt, 99, "%d%02d%02d%02d%02d", y, m, d, h, min);
 	  break;
 	case 3:
-	  sprintf(pt, "%d.%02d.%02d %02d:%02d", y, m, d, h, min);
+	  snprintf(pt, 99, "%d.%02d.%02d %02d:%02d", y, m, d, h, min);
 	  break;
 	case 4:
-	  sprintf(pt, "%02d.%02d.%d",d,m,y);
+	  snprintf(pt, 99, "%02d.%02d.%d",d,m,y);
 	  break;
 	case 5:
-	  sprintf(pt, "%04d%02d%02d/%02d%02d",y,m,d,h,min);
+	  snprintf(pt, 99, "%04d%02d%02d/%02d%02d",y,m,d,h,min);
 	  break;
 	case 6:
-	  sprintf(pt, "%02d.%02d %02d:%02d",d,m,h,min);
+	  snprintf(pt, 99, "%02d.%02d %02d:%02d",d,m,h,min);
 	  break;
 	case 7:
-	  sprintf(pt, "%02d.%02d.%d %02d:%02d:%02d", 
+	  snprintf(pt, 99, "%02d.%02d.%d %02d:%02d:%02d", 
 		  d, m, y, h, min, s);
 	  break;
 	default:
-	  sprintf(pt, "%d/%d/%d %d:%d:%d", m, d, y, h, min, s);
+	  snprintf(pt, 99, "%d/%d/%d %d:%d:%d", m, d, y, h, min, s);
 	  break;
 	};
     }
   return (pt);
 }
 
-void HydDateTime::internal(char str[13]) 
-{
-  static yearType y = 0; static monthType m = 0; static dayType d = 0;
-  static hourType h = 0; static minuteType min = 0; static secondType s = 0;
-  
-  if (isNull())
-    sprintf(str, "%s", "null");
-  else 
-    {
-      jday2date(d, m, y);
-      totSec2time(h, min, s);
-      sprintf(str, "%d%02d%02d%02d%02d", y, m, d, h, min);
-    }
-}
 
 HydDateTime HydDateTime::StartOfDay() const 
 {
@@ -1869,21 +1763,6 @@ double HydDateTime::as_floating_point_year(void)
 }
 
 
-char* HydDateTime::getRfc822Str(int UT_offset) const
-{
-  char *month_names_eng[12] = { (char *) "Jan", (char *) "Feb", (char *) "Mar", 
-				(char *) "Apr", (char *) "May", (char *) "Jun", 
-				(char *) "Jul", (char *) "Aug", (char *) "Sep", 
-				(char *) "Oct", (char *) "Nov", (char *) "Dec"};
-  char* strPtr = new char[100];
-  
-  sprintf(strPtr, "%02d %3s %04d %02d:%02d:%02d %c%02d00",
-	  getDay(), month_names_eng[getMonth()-1], getYear(),
-	  getHour(), getMinute(), getSecond(), 
-	  UT_offset >= 0 ? '+' : '-', abs(UT_offset));
-  
-  return strPtr;
-}
 
 int overlap(const HydDateTime &start1, const HydDateTime &end1,  
 	    const HydDateTime &start2, const HydDateTime &end2)
@@ -2904,7 +2783,7 @@ ostream& operator<<(ostream &out,  Complex &c)
   double re=c.Re();
   double im=c.Im();
 
-  sprintf(line, "%8.4g+%8.4gi", re,im);
+  snprintf(line, 99, "%8.4g+%8.4gi", re,im);
   out << line;
 
   return out;
@@ -4291,7 +4170,7 @@ void show_mat_R(const char *name, double **X, int n, int m)
   int i,j;
   
   char str[1000];
-  sprintf(str,"%10s=(",name);
+  snprintf(str,999,"%10s=(",name);
 #ifdef MAIN
   cout << str;
 #else
@@ -4301,7 +4180,7 @@ void show_mat_R(const char *name, double **X, int n, int m)
     {
       for(j=0;j<m;j++)
 	{
-	  sprintf(str,"%9.5f  ", X[i][j]);
+	  snprintf(str,999,"%9.5f  ", X[i][j]);
 #ifdef MAIN
 	  cout << str;
 #else
@@ -4309,9 +4188,9 @@ void show_mat_R(const char *name, double **X, int n, int m)
 #endif // MAIN
 	}
       if(i<(n-1))
-        sprintf(str," )\n%11s("," ");
+        snprintf(str,999," )\n%11s("," ");
       else
-	sprintf(str," )\n\n");
+	snprintf(str,99," )\n\n");
 #ifdef MAIN
       cout << str;
 #else
@@ -4325,7 +4204,7 @@ void show_Complex_mat_R(const char *name, Complex **X, int n, int m)
   int i,j;
   
   char str[1000];
-  sprintf(str,"%10s=(",name);
+  snprintf(str,999,"%10s=(",name);
 #ifdef MAIN
   cout << str;
 #else
@@ -4335,7 +4214,7 @@ void show_Complex_mat_R(const char *name, Complex **X, int n, int m)
     {
       for(j=0;j<m;j++)
 	{
-	  sprintf(str,"%9.5f+%9.5fi  ", X[i][j].Re(),X[i][j].Im());
+	  snprintf(str,999,"%9.5f+%9.5fi  ", X[i][j].Re(),X[i][j].Im());
 #ifdef MAIN
 	  cout << str;
 #else
@@ -4343,9 +4222,9 @@ void show_Complex_mat_R(const char *name, Complex **X, int n, int m)
 #endif // MAIN
 	}
       if(i<(n-1))
-	sprintf(str," )\n%11s("," ");
+	snprintf(str,999," )\n%11s("," ");
       else
-	sprintf(str," )\n\n");
+	snprintf(str,999," )\n\n");
 #ifdef MAIN
       cout << str;
 #else
@@ -6675,12 +6554,12 @@ void show_mcmc_parameter(double *par, int N, char *parname,
   // show sampling history using 'vvgraph':
   if(!filestart || !*filestart)
     {
-      sprintf(cmd, "vvgraph -x \"%s\" 2> /dev/null > /dev/null", parname);
+      snprintf(cmd, 999, "vvgraph -x \"%s\" 2> /dev/null > /dev/null", parname);
       p=popen(cmd,"w");
     }
   else
     {
-      sprintf(filename, "%s_%s_ts.txt", filestart, parname);
+      snprintf(filename, 999, "%s_%s_ts.txt", filestart, parname);
       p=fopen(filename,"w");
     }
   fprintf(p,"# Column 1: %s\n",  parname);
@@ -6695,13 +6574,14 @@ void show_mcmc_parameter(double *par, int N, char *parname,
   // show histogram using 'histogramme':
   if(!filestart || !*filestart)
     {
-      sprintf(cmd, "histogramme -x \"%s\" -t \"%s\" 2> /dev/null > /dev/null", 
-	      parname,  parname); 
+      snprintf(cmd, 999,
+	       "histogramme -x \"%s\" -t \"%s\" 2> /dev/null > /dev/null", 
+	       parname,  parname); 
       p=popen(cmd, "w");
     }
   else
     {
-      sprintf(filename, "%s_%s_hist.txt", filestart, parname);
+      snprintf(filename, 999, "%s_%s_hist.txt", filestart, parname);
       p=fopen(filename,"w");
     }
   for(i=0;i<len;i++)
@@ -6733,12 +6613,12 @@ void show_mcmc_scatter(double *par1, double *par2, int N,
 
   if(!filestart || !*filestart)
     {
-      sprintf(cmd, "vvgraph -x \"%s\" -y \"%s\"", parname1, parname2);
+      snprintf(cmd, 999, "vvgraph -x \"%s\" -y \"%s\"", parname1, parname2);
       p=popen(cmd,"w");
     }
   else
     {
-      sprintf(filename, "%s_%s_%s_scatter.txt", filestart, parname1,parname2);
+      snprintf(filename, 999, "%s_%s_%s_scatter.txt", filestart, parname1,parname2);
       p=fopen(filename,"w");
     }
   fprintf(p, "# Column 1: %s vs %s\n", parname1, parname2);
@@ -7186,13 +7066,18 @@ void show_scatter(double *par1, double *par2, int N,
 // they can be reused.
 // *************************************************
 
+bool detailed_loglik=false;
+
 void reset_global_variables(void)
 {
+  detailed_loglik=false;
+  
 #ifdef DETAILED_TIMERS
   for(int i=0;i<100;i++)
     for(int j=0;j<3;j++)
       timers[i][j]=0;
 #endif // DETAILED_TIMERS
+
 
 #ifdef __linux__  
   mkl_set_num_threads(1);
@@ -7700,7 +7585,7 @@ void prior::copy(prior *orig)
 void prior::show(void)
 {
   char str[1000];
-  sprintf(str,"mu  in (%7.3f,%7.3f),  m =%7.3f s =%7.3f),\n"
+  snprintf(str,999,"mu  in (%7.3f,%7.3f),  m =%7.3f s =%7.3f),\n"
 	  "dt  in (%7.3f,%7.3f),  lm=%7.3f ls=%7.3f),\n"
 	  "s   in (%7.3f,%7.3f),  lm=%7.3f ls=%7.3f),\n"
 	  "lin in (%7.3f,%7.3f),  m =%7.3f s =%7.3f),\n" 
@@ -8865,6 +8750,9 @@ double transform_parameter(double val, transform_type type)
 {
   double minus_mincorr=numsites>1 ? 1.0/double(numsites-1) : 1.0;
 
+  if(val==MISSING_VALUE)
+    return MISSING_VALUE;
+  
   switch(type)
     {
     case T_LIN:
@@ -8908,6 +8796,9 @@ double invtransform_parameter(double val, transform_type type)
 {
   double minus_mincorr=numsites>1 ? 1.0/double(numsites-1) : 1.0;
 
+  if(val==MISSING_VALUE)
+    return MISSING_VALUE;
+  
   switch(type)
     {
     case T_LIN:
@@ -9813,9 +9704,9 @@ void autocorr_analyzer(double *residuals, int len,
       else
 	{
 	  if(!absvalues)
-	    sprintf(filename,"%s_res_autocorr.txt", filestart);
+	    snprintf(filename,999,"%s_res_autocorr.txt", filestart);
 	  else
-	    sprintf(filename,"%s_absres_autocorr.txt", filestart);
+	    snprintf(filename,999,"%s_absres_autocorr.txt", filestart);
 	  p=fopen(filename,"w");
 	}
       fprintf(p,"# Column 1: auto-correlation\n");
@@ -9961,17 +9852,17 @@ void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
       if(!filestart || !*filestart)
 	{
 	  if(dt && dt[0]!=NoHydDateTime)
-	    sprintf(cmd, "timeseriegraph -x t -y res");
+	    snprintf(cmd, 999,"timeseriegraph -x t -y res");
 	  else
-	    sprintf(cmd, "vvgraph -x t -y res");
+	    snprintf(cmd, 999,"vvgraph -x t -y res");
 	  p=popen(cmd,"w"); 
 	  p2=popen("histogramme","w");
 	}
       else
 	{
-	  sprintf(filename, "%s_residuals.txt",filestart);
+	  snprintf(filename, 999,"%s_residuals.txt",filestart);
 	  p=fopen(filename,"w");
-	  sprintf(filename, "%s_res_hist.txt",filestart);
+	  snprintf(filename, 999,"%s_res_hist.txt",filestart);
 	  p2=fopen(filename,"w");
 	}
       
@@ -10001,12 +9892,12 @@ void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
       
       if(!filestart || !*filestart)
 	{
-	  sprintf(cmd, "vvgraph -x \"normal quantiles\" -y \"residuals\"");
+	  snprintf(cmd, 999,"vvgraph -x \"normal quantiles\" -y \"residuals\"");
 	  p=popen(cmd,"w");
 	}
       else
 	{
-	  sprintf(filename, "%s_res_qqplot.txt", filestart);
+	  snprintf(filename, 999,"%s_res_qqplot.txt", filestart);
 	  p=fopen(filename,"w");
 	}
       fprintf(p,"# Column 1: residuals\n");
@@ -10130,7 +10021,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      int *resid_numcolumns, int *resid_len)
 {
   
-
 #ifdef DETAILED_TIMERS
   timers[1][0]=clock();
   timers[2][0]=clock();
@@ -10154,7 +10044,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
     }
   */
 
-      
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "loglik started" << std::endl;
+#endif // MAIN
+  
   // **************************************************
   // If the parameter value array is missing, that means
   // that the global variables for storing parameter
@@ -10184,8 +10078,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	delete [] par_series;
       par_series=new int[LARGE_ENOUGH_ARRAY];
       for(i=0;i<LARGE_ENOUGH_ARRAY;i++)
-	par_name[i]=new char[100];
-      
+	par_name[i]=new char[300];
+    
       for(s=0;s<num_series;s++)
 	if(ser)
 	  {
@@ -10230,7 +10124,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    par_layer[i+numpar]=ser[0].numlayers+1;
 	    par_region[i+numpar]=i;
 	    par_series[i+numpar]=0;
-	    sprintf(par_name[i+numpar], "indicator%d",i);
+	    snprintf(par_name[i+numpar], 99, "indicator%d",i);
 	  }
       numpar+=numsites; // update the number of parameters
     }
@@ -10239,7 +10133,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // **************************************************
   // Read the parameters while handling the model type:
 
-  //Rcout << "loglik start" << std::endl;
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "start reading parameters" << std::endl;
+#endif // MAIN
+  
   for(s=0;s<num_series;s++)
     {
       if(ser[s].regional_mu) // regional expectancy?
@@ -10256,7 +10154,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		par_layer[i+numpar]=ser[s].numlayers+1;
 		par_region[i+numpar]=i;
 		par_series[i+numpar]=s;
-		sprintf(par_name[i+numpar], "mu_%s_%d",ser[s].name,i);
+		snprintf(par_name[i+numpar], 250,"mu_%s_%d",ser[s].name,i);
 	      }
 	  numpar+=numsites; // update the number of parameters
 	}
@@ -10284,7 +10182,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  par_layer[numpar+i]=ser[s].numlayers+1;
 		  par_region[numpar+i]=-1; // global
 		  par_series[numpar+i]=s;
-		  sprintf(par_name[numpar+i], "mu_%s_%d", ser[s].name,i);
+		  snprintf(par_name[numpar+i], 250, "mu_%s_%d", ser[s].name,i);
 		}
 	    }
 	  
@@ -10305,7 +10203,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      par_layer[numpar]=ser[s].numlayers+1;
 	      par_region[numpar]=-1;
 	      par_series[numpar]=s;
-	      sprintf(par_name[numpar], "mu_%s",ser[s].name);
+	      snprintf(par_name[numpar], 250, "mu_%s",ser[s].name);
 	    }
       
 	  numpar++; // update the number of parameters
@@ -10328,7 +10226,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    par_layer[i+numpar]=ser[s].numlayers+1;
 		    par_region[i+numpar]=i;
 		    par_series[i+numpar]=s;
-		    sprintf(par_name[i+numpar], "lin_t_%s_%d",ser[s].name,i);
+		    snprintf(par_name[i+numpar], 250,
+			     "lin_t_%s_%d",ser[s].name,i);
 		  }
 	      numpar+=numsites; // update the number of parameters
 	    }
@@ -10356,7 +10255,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      par_layer[numpar+i]=ser[s].numlayers+1;
 		      par_region[numpar+i]=-1;
 		      par_series[numpar+i]=s;
-		      sprintf(par_name[numpar+i], "lin_t_%s_%d", ser[s].name,i);
+		      snprintf(par_name[numpar+i], 250,
+			       "lin_t_%s_%d", ser[s].name,i);
 		    }
 		}
 	      
@@ -10377,7 +10277,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
-		  sprintf(par_name[numpar], "lin_t_%s",ser[s].name);
+		  snprintf(par_name[numpar], 250, "lin_t_%s",ser[s].name);
 		}
 	      
 	      numpar++; // update the number of parameters
@@ -10424,7 +10324,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  par_layer[i+numpar]=l+1;
 			  par_region[i+numpar]=i;
 			  par_series[i+numpar]=s;
-			  sprintf(par_name[i+numpar], "dt_%s_%d_%d",ser[s].name,l+1,i);
+			  snprintf(par_name[i+numpar], 250,
+				   "dt_%s_%d_%d",ser[s].name,l+1,i);
 			}
 		    
 		    numpar+=numsites; // update the number of parameters
@@ -10464,8 +10365,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			    par_layer[numpar+i]=l+1;
 			    par_region[numpar+i]=-1;
 			    par_series[numpar+i]=s;
-			    sprintf(par_name[numpar+i], 
-				    "dt_%s_%d_I%d",ser[s].name, l+1,i);
+			    snprintf(par_name[numpar+i],250, 
+				     "dt_%s_%d_I%d",ser[s].name, l+1,i);
 			  }
 		      }
 		    
@@ -10494,7 +10395,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			par_layer[numpar]=l+1;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
-			sprintf(par_name[numpar], "dt_%s_%d",ser[s].name,l+1);
+			snprintf(par_name[numpar], 250,
+				 "dt_%s_%d",ser[s].name,l+1);
 		      }
 		    
 		    numpar++; // update the number of parameters
@@ -10518,8 +10420,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			      par_layer[i+numpar]=l+1;
 			      par_region[i+numpar]=i;
 			      par_series[i+numpar]=s;
-			      sprintf(par_name[i+numpar], "sigma_%s_%d_%d",
-				      ser[s].name,l+1,i);
+			      snprintf(par_name[i+numpar], 250,
+				       "sigma_%s_%d_%d",ser[s].name,l+1,i);
 			    }
 			
 			numpar+=numsites; // update the number of parameters
@@ -10546,8 +10448,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				par_layer[numpar+i]=l+1;
 				par_region[numpar+i]=-1;
 				par_series[numpar+i]=s;
-				sprintf(par_name[numpar+i], "sigma%s_%d_I%d",
-					ser[s].name, l+1,i);
+				snprintf(par_name[numpar+i], 250,
+					 "sigma%s_%d_I%d",
+					 ser[s].name, l+1,i);
 			      }
 			  }
 			numpar+=2; // update the number of parameters
@@ -10567,7 +10470,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			    par_layer[numpar]=l+1;
 			    par_region[numpar]=-1;
 			    par_series[numpar]=s;
-			    sprintf(par_name[numpar], "sigma_%s_%d",
+			    snprintf(par_name[numpar], 250,
+				     "sigma_%s_%d",
 				    ser[s].name,l+1);
 			  }
 			
@@ -10648,9 +10552,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			      par_layer[numpar]=l+1;
 			      par_region[numpar]=i;
 			      par_series[numpar]=s;
-			      sprintf(par_name[numpar], 
-				      "corr_%s_%d_%d,%d",
-				      ser[s].name,l+1,i,j);
+			      snprintf(par_name[numpar],250, 
+				       "corr_%s_%d_%d,%d",
+				       ser[s].name,l+1,i,j);
 			      numpar++;
 			    }
 		      }
@@ -10670,7 +10574,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			par_layer[numpar]=l+1;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
-			sprintf(par_name[numpar], "corr_%s_%d",ser[s].name,l+1);
+			snprintf(par_name[numpar], 250,
+				 "corr_%s_%d",ser[s].name,l+1);
 		      }
 		    
 		    numpar++; // update the number of parameters
@@ -10728,7 +10633,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      par_layer[numpar]=0;
 	      par_region[numpar]=-1;
 	      par_series[numpar]=s;
-	      sprintf(par_name[numpar], "obs_sd_%s",ser[s].name);
+	      snprintf(par_name[numpar], 250, "obs_sd_%s",ser[s].name);
 	    }
 	  
 	  numpar++;
@@ -10755,7 +10660,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
-		  sprintf(par_name[numpar], "beta_sin%d_%s",i+1,ser[s].name);
+		  snprintf(par_name[numpar], 250,
+			   "beta_sin%d_%s",i+1,ser[s].name);
 		  numpar++; // update the number of parameters
 		  // Set global parameter arrays with
 		  // appropriate contents:
@@ -10765,13 +10671,19 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
-		  sprintf(par_name[numpar], "beta_cos%d_%s",i+1,ser[s].name);
+		  snprintf(par_name[numpar], 250,
+			   "beta_cos%d_%s",i+1,ser[s].name);
 		  numpar++; // update the number of parameters
 		}
 	    }
 	}
 
     }
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "start useext" << std::endl;
+#endif //MAIN
   
   if(useext) // external timeseries 
     {
@@ -10787,13 +10699,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  par_layer[numpar]=2;
 	  par_region[numpar]=-1;
 	  par_series[numpar]=0;
-	  sprintf(par_name[numpar], "beta");
+	  snprintf(par_name[numpar], 99, "beta");
 	}
       
       numpar++; // update the number of parameters
     }
   else
     ser[0].beta=0.0; // set the regression coefficient to zero
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "end useext, start init treatment" << std::endl;
+#endif // MAIN
   
   for(s=0;s<num_series;s++)
     if(!ser[s].no_layers)
@@ -10814,8 +10731,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  par_layer[numpar]=l;
 			  par_region[numpar]=i;
 			  par_series[numpar]=s;
-			  sprintf(par_name[numpar], "init_%s_l%d_s%d",
-				  ser[s].name,l+1,i);
+			  snprintf(par_name[numpar], 250,
+				   "init_%s_l%d_s%d",
+				   ser[s].name,l+1,i);
 			}
 		      numpar++;
 		    }
@@ -10836,8 +10754,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			par_layer[numpar]=0;
 			par_region[numpar]=i;
 			par_series[numpar]=s;
-			sprintf(par_name[numpar], "init_%s_s%d",
-				ser[s].name,i);
+			snprintf(par_name[numpar], 250,
+				 "init_%s_s%d",
+				 ser[s].name,i);
 		      }
 		    numpar++;
 		  }
@@ -10858,8 +10777,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			par_layer[numpar]=l;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
-			sprintf(par_name[numpar], "init_%s_l%d",
-				ser[s].name,l+1);
+			snprintf(par_name[numpar], 250,
+				 "init_%s_l%d",
+				 ser[s].name,l+1);
 		      }
 		    numpar++;
 		  }
@@ -10879,7 +10799,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    par_layer[numpar]=0;
 		    par_region[numpar]=-1;
 		    par_series[numpar]=s;
-		    sprintf(par_name[numpar], "init_%s",ser[s].name);
+		    snprintf(par_name[numpar], 250,
+			     "init_%s",ser[s].name);
 		  }
 		numpar++;
 	      }
@@ -10891,6 +10812,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		ser[s].init_mu[l][i]=ser[s].pr->init_m;
 	  }
       }
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "start correlations" << std::endl;
+#endif // MAIN
   
   for(i=0;i<num_series_corr;i++)
     {
@@ -10906,7 +10832,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  par_layer[numpar]=corr_from_layer[i];
 	  par_region[numpar]=-1;
 	  par_series[numpar]=corr_from_series[i];
-	  sprintf(par_name[numpar], "corr_%s,%d_%s,%d",
+	  snprintf(par_name[numpar], 250, "corr_%s,%d_%s,%d",
 		  ser[corr_from_series[i]].name,corr_from_layer[i]+1,
 		  ser[corr_to_series[i]].name,corr_to_layer[i]+1);
 	}
@@ -10914,6 +10840,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
       numpar++; // update the number of parameters
     }
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "start feedback" << std::endl;
+#endif // MAIN
+  
   for(i=0;i<num_series_feed;i++)
     {
       if(pars)  // parameter value array is given?
@@ -10928,7 +10859,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  par_layer[numpar]=feed_to_layer[i];
 	  par_region[numpar]=-1;
 	  par_series[numpar]=feed_to_series[i];
-	  sprintf(par_name[numpar], "beta_%s,%d_%s,%d",
+	  snprintf(par_name[numpar], 250, "beta_%s,%d_%s,%d",
 		  ser[feed_from_series[i]].name,
 		  feed_from_layer[i]+1,ser[feed_to_series[i]].name,
 		  feed_to_layer[i]+1);
@@ -10937,7 +10868,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
       numpar++; // update the number of parameters
     }
 
-
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "timer stuff starting" << std::endl;
+#endif // MAIN
+  
   // If no parameter values were given, the global
   // parameter arrays should now have been filled and
   // it's time to return with the number of parameters 
@@ -11043,6 +10978,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif // DETAILED_TIMERS
       return -1e+200;
     }
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "correlation2 starting" << std::endl;
+#endif // MAIN
   
   //Rcout << "loglik corrtest" << std::endl;
   if(num_series_corr>0)
@@ -11123,6 +11063,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // (assumes numsites sites and numlayers=sum_series 
   // series.numlayers*numsites state variables):
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "filling in matrices" << std::endl;
+#endif // MAIN
+  
   double **var=Make_matrix(num_states,num_states); // diffusion matrix
 
   double **A=Make_matrix(num_states,num_states);
@@ -11175,6 +11120,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
     }
   
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "eigenvector stuff" << std::endl;
+#endif // MAIN
 
   // V=eigenvector matrix, Vinv=V^{-1},
   Complex *lambda=NULL, **V=NULL, **Vinv=NULL, **VinvLambdaV_A=NULL;
@@ -11362,6 +11311,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  } 
     }
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "m vector stuff" << std::endl;
+#endif // MAIN
+  
   double *m=new double[num_states]; // expectation vector
   for(i=0;i<num_states;i++)
     {
@@ -11381,8 +11335,19 @@ double loglik(double *pars, int dosmooth, int do_realize,
     }
   
   int len = dosmooth ? meas_smooth_len : meas_tot_len;
+  
   measurement_cluster *me = (dosmooth ? meas_smooth : meas_tot);
   
+#ifndef MAIN
+  if(detailed_loglik)
+    {
+      Rcout << "dosmooth=" << dosmooth << std::endl;
+      Rcout << "me=" << me << " meas_smooth=" << meas_smooth <<
+	" meas_tot=" << meas_tot << std::endl;
+      Rcout << " me[0].tm=" << me[0].tm << std::endl;
+      Rcout << "omega/Lambda matrix stuff" << std::endl;
+    }
+#endif // MAIN
   
   // Omega=V*sigma^2*V', Vvar=V*var
   Complex **Omega=NULL, 
@@ -11415,6 +11380,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
       eLambda_k_r=new double[num_states];  
     }
   
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Making P, Q, x matrices" << std::endl;
+#endif // MAIN
+  
   // P_k_buffer=F_k*P_k_now:  
   double **P_k_buffer=Make_matrix(num_states,num_states);
   // Q_k = Qbuffer*Vinv=Vinv*Lambda_k*Vinv is the 
@@ -11436,6 +11406,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(ser[0].meas[0].dt!=NoHydDateTime)
     dt_k=new HydDateTime[len];
 
+  
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Making residual and prior expectancy matrices" << std::endl;
+#endif // MAIN
+  
   // count number of observed series:
   int numobs=num_series*numsites;
   double **resids=new double*[numobs];
@@ -11459,6 +11435,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   // smoothing information
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Making smoothing matrices" << std::endl;
+#endif // MAIN
+  
   // x_k_now=state expectancy given observations up until 
   // and including now: 
   double **x_k_now=new double*[len];
@@ -11509,6 +11490,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
     }
   
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Correlation3 starting" << std::endl;
+#endif // MAIN
 
   // Fill out correlation matrix:
 
@@ -11722,6 +11707,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // ********************************************
   // Fill out the covariance matrix, Sigma^2:
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Sigma matrix starting" << std::endl;
+#endif // MAIN
+  
   // First fill out the standard deviation vector:
   double *sd_vector=new double[num_states];
   for(i=0;i<num_states;i++)
@@ -11754,6 +11744,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // Done filling out the diffusion matrix
 
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Finding V*Sigma^2" << std::endl;
+#endif // MAIN
   
   // ******************
   // Find V*Sigma^2
@@ -11775,6 +11769,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  }
       }
 
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Finding V*Sigma^2*V'" << std::endl;
+#endif // MAIN
+  
   // *************************
   // Find Omega=V*sigma^2*V'
   for(i=0;i<num_states;i++)
@@ -11795,6 +11795,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
       }
 	
 
+
+#ifndef MAIN
+  if(detailed_loglik)
+    {
+      Rcout << "Initialize x,u,P,F" << std::endl;
+      Rcout << "num_states=" << num_states << " num_series=" << num_series << std::endl;
+      for(s=0;s<num_series;s++)
+	Rcout << "mean time " << s << ":" << ser[s].mean_time << std::endl;
+      Rcout << "is_complex=" << is_complex << std::endl;
+    }
+#endif // MAIN
   
   // ********************************************
   // Initialization of x_k_k, u_k, P_k_k and F_k:
@@ -11809,14 +11820,32 @@ double loglik(double *pars, int dosmooth, int do_realize,
     }
   else
     {
+#ifndef MAIN
+      if(detailed_loglik)
+	Rcout << "num_states=" << num_states << std::endl;
+#endif // MAIN
       W_r=new double[num_states];
+#ifndef MAIN
+      if(detailed_loglik)
+	Rcout << "W initialized" << std::endl;
+#endif // MAIN
       u_k_buff_r=new double[num_states];
     }
+  
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "W,u initialized" << std::endl;
+#endif // MAIN
   
   double meantime=0.0;
   for(s=0;s<num_series;s++)
     meantime+=ser[s].mean_time;
   meantime/=double(num_series);
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "meantime filled" << std::endl;
+#endif // MAIN
   
 #ifdef MAIN
   if(simulation_files)
@@ -11872,6 +11901,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
     }
 #endif // MAIN
 
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Fill W, initialize x, u" << std::endl;
+#endif // MAIN
+  
   for(i=0;i<num_states;i++)
     {
       s=state_series[i];
@@ -11926,7 +11960,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
     }
   
-  for(i=0;i<num_states;i++) // traverse the sites
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "Fill u" << std::endl;
+#endif // MAIN
+  
+  for(i=0;i<num_states;i++) // traverse the states
     {
       if(is_complex)
 	{
@@ -12030,7 +12069,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
     }
   
-  
   if(simulation_files)
     {
 #ifdef MAIN
@@ -12055,6 +12093,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	P_k_now[0][i][j]=0.0;
 	F_k[0][i][j]=0.0;
       }
+  
+
+#ifndef MAIN
+  if(detailed_loglik)
+    Rcout << "useext2 starting" << std::endl;
+#endif // MAIN
   
   // ************************************************************
   // If there is an external timeseries,
@@ -12212,12 +12256,38 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #ifdef DETAILED_TIMERS
   timers[3][0]=clock();
 #endif // DETAILED_TIMERS
-  
+
+  if(detailed_loglik)
+    {
+      show_mat("sigma^2",var,num_states,num_states);
+      if(is_complex)
+	show_Complex_mat("Omega", Omega,num_states,num_states);
+      else
+	show_mat("Omega_r", Omega_r,num_states,num_states);
+      
+      show_mat("A",A,num_states,num_states);
+      if(!is_complex)
+	show_vec("lambda_r",lambda_r,num_states);
+      else
+	show_Complex_vec("lambda",lambda,num_states);
+      if(!is_complex)
+	show_mat("V_r",V_r,num_states,num_states);
+      else
+	show_Complex_mat("V",V,num_states,num_states);
+      
+      if(is_complex)
+	show_Complex_mat("VinvLambdaV_A",VinvLambdaV_A,num_states,num_states);
+    }
   
   // *********************************
   // Traverse the measurements:
   for(k=0;k<len;k++)
     {
+#ifndef MAIN
+      if(detailed_loglik)
+	Rcout << "k=" << k << std::endl;
+#endif // MAIN
+  
       // fetch the time of the current measurement:
       t_k[k]=me[k].tm;
       
@@ -12728,7 +12798,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
       Rcout << "k=" << k << " me[k].num_measurements=" <<
 	me[k].num_measurements << " ret=" << ret << std::endl;
 #endif // MAIN
-
       
       if(me[k].num_measurements==1)
 	{
@@ -12822,6 +12891,21 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  // compensate for a log-transform in the likelihood
 	  if(ser[s].pr->is_log==1) // log transformed but not pre-log transformed
 	    ret -= me[k].meanval[0];
+
+	  if(detailed_loglik)
+	    {
+#ifdef MAIN
+	      cout << "k=" << k << " meas=" << me[k].meanval[0] <<
+		" x_k_prev[" << me[k].index[0] << "]=" <<
+		x_k_prev[me[k].index[0]] << " y_k=" << y_k << " S_k= " <<
+		S_k << " ret= " << ret << endl;
+#else
+	      Rcout << "k=" << k << " meas=" << me[k].meanval[0] <<
+		" x_k_prev[" << me[k].index[0] << "]=" <<
+		x_k_prev[me[k].index[0]] << " y_k=" << y_k << " S_k= " <<
+		S_k << " ret= " << ret << endl;
+#endif
+	    }
 	  
 #ifdef MAIN
 	  if(simulation_files)
@@ -13020,6 +13104,26 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		ret -= me[k].meanval[i];
 	    }
 
+	  if(detailed_loglik)
+	    {
+#ifdef MAIN
+	      cout << "k=" << k << " ret= " << ret << endl;
+#else
+	      Rcout << "k=" << k << " ret= " << ret << endl;
+#endif
+	      double *x_k_prev_buffer=new double[n];
+	      for(i=0;i<n;i++)
+		x_k_prev_buffer[i]=x_k_prev[me[k].index[i]];
+	      
+	      y_k[i]=me[k].meanval[i]-x_k_prev[me[k].index[i]];
+	      show_vec("meas",me[k].meanval,n);
+	      show_vec("x_k_prev", x_k_prev_buffer,n);
+	      show_vec("y_k", y_k,n);
+	      show_mat("S_k", S_k, n, n);
+	      
+	      delete [] x_k_prev_buffer;
+	    }
+	  
 #ifdef MAIN
 	  if(simulation_files)
 	    {
@@ -14322,7 +14426,39 @@ void newsample(params *sample, double *log_prob, params *acc, params *rw,
     logprob(sample[0], T[0]);
 }
 
+double init_par(int i) // i=parameter number
+{
+  double ret=0.0;
+  
+  switch(par_type[i])
+    {
+      // fetch parameter suggestions according to 
+      // the parameter type:
+    case INDICATOR:
+      ret=floor(2.0*drand());
+      break;
+    case MU:
+    case LIN_T:
+    case TRIG:
+      ret=-3.0+6.0*drand();
+      break;
+    case DT:
+    case SIGMA:
+    case OBS_SD:
+    case CORR:
+    case INIT:
+      ret=-4.0+8.0*drand();
+      break;
+    case PAIR_CORR:
+    case SERIES_CORR:
+      ret=-0.1+0.2*drand();
+      break;
+    case BETA:
+      ret=-1.0+2.0*drand();
+    }
 
+  return ret;
+}
 
 // ***************************************************
 // mcmc: Perform Markov Chain Monte Carlo sampling.
@@ -14408,32 +14544,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  if(!startpar || t!=0 || !first)
 	    {
 	      for(i=0;i<numpar;i++) // traverse the parameters
-		switch(par_type[i])
-		  {
-		    // fetch parameter suggestions according to 
-		    // the parameter type:
-		  case INDICATOR:
-		    pars[t].param[i]=floor(2.0*drand());
-		    break;
-		  case MU:
-		  case LIN_T:
-		  case TRIG:
-		    pars[t].param[i]=-3.0+6.0*drand();
-		    break;
-		  case DT:
-		  case SIGMA:
-		  case OBS_SD:
-		  case CORR:
-		  case INIT:
-		    pars[t].param[i]=-4.0+8.0*drand();
-		    break;
-		  case PAIR_CORR:
-		  case SERIES_CORR:
-		    pars[t].param[i]=-0.1+0.2*drand();
-		    break;
-		  case BETA:
-		    pars[t].param[i]=-1.0+2.0*drand();
-		  }
+		pars[t].param[i]=init_par(i);
 	    }
 	  else
 	    {
@@ -14752,8 +14863,9 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	  else
 	    {
 #ifdef MAIN
-	      char filename[1000], cmd[1000];
-	      sprintf(filename, "%s_%08d.txt", realization_file_start, i+1);
+	      char filename[1000], cmd[2000];
+	      snprintf(filename, 999,
+		       "%s_%08d.txt", realization_file_start, i+1);
 	      FILE *f=fopen(filename,"w");
 	      
 	      for(k=0;k<meas_smooth_len;k++)
@@ -14767,7 +14879,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	      
 	      fclose(f);
 	      
-	      sprintf(cmd,"gzip %s", filename);
+	      snprintf(cmd,1500,"gzip %s", filename);
 	      int sint=system(cmd);
 	      if(sint)
 		{
@@ -15143,12 +15255,12 @@ void show_parameter(double *par, int N, char *parname, int silent, char *filesta
   // show sampling history using 'vvgraph':
   if(!filestart || !*filestart)
     {
-      sprintf(cmd, "vvgraph -x \"%s\" 2> /dev/null > /dev/null", parname);
+      snprintf(cmd, 999, "vvgraph -x \"%s\" 2> /dev/null > /dev/null", parname);
       p=popen(cmd,"w");
     }
   else
     {
-      sprintf(filename, "%s_%s_ts.txt", filestart, parname);
+      snprintf(filename, 999, "%s_%s_ts.txt", filestart, parname);
       p=fopen(filename,"w");
     }
   fprintf(p,"# Column 1: %s\n",  parname);
@@ -15163,13 +15275,14 @@ void show_parameter(double *par, int N, char *parname, int silent, char *filesta
   // show histogram using 'histogramme':
   if(!filestart || !*filestart)
     {
-      sprintf(cmd, "histogramme -x \"%s\" -t \"%s\" 2> /dev/null > /dev/null", 
-	      parname,  parname); 
+      snprintf(cmd, 999,
+	       "histogramme -x \"%s\" -t \"%s\" 2> /dev/null > /dev/null", 
+	       parname,  parname); 
       p=popen(cmd, "w");
     }
   else
     {
-      sprintf(filename, "%s_%s_hist.txt", filestart, parname);
+      snprintf(filename, 999, "%s_%s_hist.txt", filestart, parname);
       p=fopen(filename,"w");
     }
   for(i=0;i<len;i++)
@@ -15203,12 +15316,13 @@ void show_scatter(double *par1, double *par2, int N,
 
   if(!filestart || !*filestart)
     {
-      sprintf(cmd, "vvgraph -x \"%s\" -y \"%s\"", parname1, parname2);
+      snprintf(cmd, 999, "vvgraph -x \"%s\" -y \"%s\"", parname1, parname2);
       p=popen(cmd,"w");
     }
   else
     {
-      sprintf(filename, "%s_%s_%s_scatter.txt", filestart, parname1,parname2);
+      snprintf(filename, 999,
+	       "%s_%s_%s_scatter.txt", filestart, parname1,parname2);
       p=fopen(filename,"w");
     }
   fprintf(p, "# Column 1: %s vs %s\n", parname1, parname2);
@@ -15246,6 +15360,33 @@ const double loglikwrapper(const NumericVector &vals)
 }
 
 
+double *partial_par=NULL;
+const double partial_loglikwrapper(const NumericVector &vals)
+{
+  if(partial_par==NULL)
+    return MISSING_VALUE;
+  
+  double *val2=new double[numpar];
+
+  int i=0,j;
+  for(j=0;j<numpar;j++)
+    {
+      if(partial_par[j]!=MISSING_VALUE)
+	val2[j]=partial_par[j];
+      else
+	{
+	  val2[j]=vals[i];
+	  i++;
+	}
+    }
+  
+  double ret=-minusloglik(val2);
+  delete [] val2;
+  
+  return -ret;
+}
+
+
 RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP Spacing,SEXP NumTemp,
 			      SEXP do_model_likelihood,
@@ -15259,7 +15400,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
                               SEXP causal, SEXP causal_symmetric, SEXP corr,
 			      SEXP smooth_specs, SEXP realization_specs,
 			      SEXP ReturnResiduals,
-			      SEXP input_mcmc)
+			      SEXP input_param_values)
 {  
   reset_global_variables();
   ser=new series[100];  
@@ -15289,14 +15430,15 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   int use_half_times=as<int>(UseHalfLives);
   int return_mcmc=as<int>(ReturnMCMC);
   int return_residuals=as<int>(ReturnResiduals);
-
-  NumericMatrix in_mcmc=as<NumericMatrix>(input_mcmc); 
-  int inmcmc_nummcmc=in_mcmc.nrow();
-  int inmcmc_numpar=in_mcmc.ncol();
-
+  
+  NumericMatrix in_pars=as<NumericMatrix>(input_param_values); 
+  int inpars_numsets=in_pars.nrow();
+  int inpars_numpars=in_pars.ncol();
+  bool no_inpars = (inpars_numsets==1 && inpars_numpars==1) ? true : false;
+  
   double **resids=NULL, *resids_time, **prior_expected_values=NULL;
   int resid_numcol=0, resid_len=0;
-
+  
   // DEBUG: Rcout << "return_residuals=" << return_residuals << std::endl;
   
   List smoothspecs=as<List>(smooth_specs);
@@ -16097,14 +16239,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     model_dic1, eff_num_param1, model_dic2, eff_num_param2;
 
   params *pars=NULL;
-
-  if(inmcmc_numpar>0)
+  double *lliks=NULL, *lpriors=NULL;
+  int num_lliks=0, num_lpriors=0;
+  
+  if(inpars_numpars>0)
     loglik(NULL); // gives us the global 'numpar', 
 
-  /* DEBUG 
-     Rcout << "inmcmc_numpar=" << inmcmc_numpar << " numpar=" << numpar << 
-     " inmcmc_nummcmc=" << inmcmc_nummcmc << std::endl; */
-  if(inmcmc_numpar!=numpar || (inmcmc_numpar==1 && inmcmc_nummcmc==1))
+  // DEBUG 
+  Rcout << "inpars_numpars=" << inpars_numpars << " numpar=" << numpar << 
+    " inpars_numsets=" << inpars_numsets << " no_inpars=" << no_inpars <<
+    std::endl;
+  
+  if(no_inpars)
     {
       // DEBUG Rcout << "Doing MCMC" << std::endl;
       pars=layer_mcmc(num_mcmc, burnin, spacing, numtemp, 
@@ -16114,18 +16260,149 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      &model_loglik, 
 		      &model_dic1, &eff_num_param1, 
 		      &model_dic2, &eff_num_param2);
+
+      if(return_mcmc)
+	{
+	  num_lliks=num_lpriors=num_mcmc;
+	  lliks=new double[num_mcmc];
+	  lpriors=new double[num_mcmc];
+	  for(j=0;j<num_mcmc;j++)
+	    {
+	      lliks[j]=pars[j].log_lik;
+	      lpriors[j]=pars[j].log_prob-pars[j].log_lik;
+	    }
+	}
     }
-  else if(inmcmc_nummcmc==1 && num_smooth==1) 
+  else if(inpars_numsets>=1 && !dosmooth && !do_realizations)
+    {
+      Rcout << "*********************************" << std::endl;
+      Rcout << "*********************************" << std::endl;
+      Rcout << " Starting loglik treatment" << std::endl;
+      Rcout << "*********************************" << std::endl;
+      Rcout << "*********************************" << std::endl;
+	
+      if(!silent && inpars_numsets==1)
+	detailed_loglik=true;
+      
+      num_lliks=num_lpriors=inpars_numsets;
+      lliks=new double[inpars_numsets];
+      lpriors=new double[inpars_numsets];
+      
+      for(int k=0;k<inpars_numsets;k++)
+	{
+	  int num_missing=0;
+	  for(j=0;j<inpars_numpars;j++)
+	    if(in_pars(k,j)==MISSING_VALUE)
+	      num_missing++;
+	    
+	  pars=new params[1];
+	  pars[0].numparam=inpars_numpars;
+	  pars[0].param=new double[inpars_numpars];
+
+	  Rcout << "k=" << k << std::endl;
+	
+	  if(num_missing>0)
+	    {
+	      Rcout << "optim started" << std::endl;
+
+	      bool detailed_loglik_buffer=detailed_loglik;
+	      double lbest=-1e+200;
+	      NumericVector outpars(inpars_numpars);
+	      
+	      detailed_loglik=false;
+	      for(i=0;i<num_optim;i++)
+		{
+		  NumericVector initpars(num_missing);
+		  int jj=0;
+		  for(j=0;j<inpars_numpars;j++)
+		    if(in_pars(k,j)==MISSING_VALUE)
+		      {
+			initpars[jj]=init_par(j);
+			jj++;
+		      }
+		  partial_par=new double[inpars_numpars];
+		  for(j=0;j<inpars_numpars;j++)
+		    partial_par[j]=transform_parameter(in_pars(k,j),
+						       par_trans_type[j]);
+		  Environment stats("package:stats");
+		  Function optim=stats["optim"];
+		  List optres=optim(Rcpp::_["par"]= initpars,
+				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
+				    Rcpp::_["method"]="BFGS");
+		  NumericVector outpars2=as<NumericVector>(optres["par"]);
+		  NumericVector outval=as<NumericVector>(optres["value"]);
+		  
+		  double ll=-outval(0);
+		  if(ll > lbest)
+		    {
+		      lbest=-outval(0);
+		      jj=0;
+		      for(j=0;j<inpars_numpars;j++)
+			{
+			  if(in_pars(k,j)==MISSING_VALUE)
+			    {
+			      outpars(j)=outpars2(jj);
+			      jj++;
+			    }
+			  else
+			    {
+			      outpars(j)=in_pars(k,j);
+			    }
+			}
+		    }
+		}
+	      
+	      detailed_loglik=detailed_loglik_buffer;
+	      Rcout << "optim loop done" << std::endl;
+
+	      for(j=0;j<inpars_numpars;j++)
+		{
+		  if(in_pars(k,j)!=MISSING_VALUE)
+		    {
+		      pars[0].param[j]=transform_parameter(in_pars(k,j),
+							   par_trans_type[j]);
+		    }
+		  else
+		    {
+		      pars[0].param[j]=outpars(j);
+		    }
+		}
+	      
+	      Rcout << "fill out done" << std::endl;
+	
+	      delete [] partial_par;
+	    }
+	  else
+	    {
+	      Rcout << "fill out started" << std::endl;
+	      for(j=0;j<inpars_numpars;j++)
+		pars[0].param[j]=transform_parameter(in_pars(k,j),
+						     par_trans_type[j]);
+	      Rcout << "fill out done" << std::endl;
+	    }
+
+	  show_vec("params",pars[0].param,inpars_numpars);
+	  Rcout << "Fill in loglik and logprior" << std::endl;
+	  lliks[k]=loglik(pars[0].param, 0, 0);
+	  Rcout << "Filled in loglik" << std::endl;
+	  lpriors[k]=logprob(pars[0],0.0)-lliks[k];
+	  Rcout << "Filled in logprior" << std::endl;
+	}
+      
+      Rcout << " Ending loglik treatment" << std::endl;
+    }
+  else if(inpars_numsets==1 && dosmooth && num_smooth==1) 
     // parameter-estimate-based smoothing
     {
+      // PS: Should *not* have any missing values!
       // DEBUG: Rcout << "Fetching smoothing for estimates" << std::endl;
 
-      num_mcmc=inmcmc_nummcmc;
+      num_mcmc=inpars_numsets;
       pars=new params[1];
       pars[0].numparam=numpar;
       pars[0].param=new double[numpar];
       for(i=0;i<numpar;i++)
-	pars[0].param[i]=in_mcmc(0,i);
+	pars[0].param[i]=in_pars(0,i);
       loglik(pars[0].param, 1, 0);
 
       P_k_smooth=new double **[meas_smooth_len];
@@ -16146,20 +16423,20 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       cleanup_x_and_P(meas_smooth_len);
     }
-  else
+  else if(inpars_numsets>=1 && dosmooth)
     {
-      // DEBUG: Rcout << "Getting MCMC from inmcmc" << std::endl;
-
-      num_mcmc=inmcmc_nummcmc;
+      // DEBUG: Rcout << "Getting MCMC from in_pars" << std::endl;
+      
+      num_mcmc=inpars_numsets;
       pars=new params[num_mcmc];
       for(j=0;j<num_mcmc;j++)
 	{
 	  pars[j].numparam=numpar;
 	  pars[j].param=new double[numpar];
 	  for(i=0;i<numpar;i++)
-	    pars[j].param[i]=in_mcmc(j,i);
+	    pars[j].param[i]=in_pars(j,i);
 	}
-      // DEBUG: Rcout << "Done getting MCMC from inmcmc" << std::endl;
+      // DEBUG: Rcout << "Done getting MCMC from in_pars" << std::endl;
 
       x=new double**[num_states];
       for(i=0;i<num_states;i++)
@@ -16241,59 +16518,75 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     
   
   int numsamples=num_mcmc;
-  // DEBUG: Rcout << "numsamples=" << numsamples << std::endl;
+  // DEBUG:
+  Rcout << "numsamples=" << numsamples << std::endl;
 
+
+  // Something goes wrong here, for loglik mode!
   double **parsample=Make_matrix(numpar,numsamples);
   double **parsample_repar=Make_matrix(numpar,numsamples);
-  for(i=0;i<numpar;i++)
-    for(j=0;j<numsamples;j++)
-      {
-	parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
-	parsample_repar[i][j]=pars[j].param[i];
-      }
+  if(no_inpars || dosmooth || do_realizations)
+    {
+      for(i=0;i<numpar;i++)
+	for(j=0;j<numsamples;j++)
+	  {
+	    parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
+	    parsample_repar[i][j]=pars[j].param[i];
+	  }
+    }
   
-  // DEBUG: Rcout << " parameter samples fetched" << std::endl;
+  // DEBUG:
+  Rcout << " parameter samples fetched" << std::endl;
 
   char **par_name_orig=new char*[numpar];
   char **par_name_new=new char*[numpar];
   for(i=0;i<numpar;i++)
     {
-      par_name_orig[i]=new char[100];
+      par_name_orig[i]=new char[300];
       strcpy(par_name_orig[i],par_name[i]);
     }
   
-  // DEBUG: Rcout << " parameter names fetched" << std::endl;
+  // DEBUG:
+  Rcout << " parameter names fetched" << std::endl;
 
   // transform the expectancies from logarithmic size to
   // original size:
   for(i=0;i<numpar;i++)
     {
       s=par_series[i];
-      par_name_new[i]=new char[100];
+      par_name_new[i]=new char[300];
       strcpy(par_name_new[i],par_name_orig[i]);
       if(ser[s].pr->is_log)
 	{
 	  if(par_type[i]==MU)
 	    {
-	      sprintf(par_name_new[i],"exp(%s)",par_name_orig[i]);
-	      for(j=0;j<numsamples;j++)
-		parsample[i][j]=exp(parsample[i][j]);
+	      snprintf(par_name_new[i],99,"exp(%s)",par_name_orig[i]);
+	      if(no_inpars || dosmooth || do_realizations)
+		for(j=0;j<numsamples;j++)
+		  parsample[i][j]=exp(parsample[i][j]);
 	    }
 	  if(par_type[i]==OBS_SD)
 	    {
-	      sprintf(par_name_new[i],"%s_origscale",par_name_orig[i]);
-	      for(j=0;j<numsamples;j++)
-		parsample[i][j]=(ser[s].pr->is_log==2 ? 
-				 exp(ser[s].mean_val) : ser[s].mean_val)*
-		  sqrt(exp(parsample[i][j]*parsample[i][j])-1.0)*
-		  exp(parsample[i][j]*parsample[i][j]/2.0);
+	      snprintf(par_name_new[i],99,"%s_origscale",par_name_orig[i]);
+	      if(no_inpars || dosmooth || do_realizations)
+		for(j=0;j<numsamples;j++)
+		  parsample[i][j]=(ser[s].pr->is_log==2 ? 
+				   exp(ser[s].mean_val) : ser[s].mean_val)*
+		    sqrt(exp(parsample[i][j]*parsample[i][j])-1.0)*
+		    exp(parsample[i][j]*parsample[i][j]/2.0);
 	    }
 	}
     }
+
+  for(i=0;i<numpar;i++)
+    Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] << std::endl;
   
-  // DEBUG: Rcout << "Stationary stdev?" << std::endl;
+  
+  // DEBUG:
+  Rcout << "Stationary stdev?" << std::endl;
 
   if(use_stationary_sdev)
+  if(no_inpars || dosmooth || do_realizations)
     {
       for(s=0;s<num_series;s++)
 	{
@@ -16336,9 +16629,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      char s_name[1000];
 		      
 		      if(all_global)
-			sprintf(s_name, "sd_%s_%d", ser[s].name,l+1);
+			snprintf(s_name, 999,"sd_%s_%d", ser[s].name,l+1);
 		      else
-			sprintf(s_name, "sd_%s_%d_r%d", ser[s].name,l+1,j);
+			snprintf(s_name, 999,"sd_%s_%d_r%d", ser[s].name,l+1,j);
 		      strcpy(par_name_new[index_diffusion],s_name);
 		      
 		      for(i=0;i<numsamples;i++)
@@ -16365,7 +16658,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
     }
   
-  // DEBUG: Rcout << "Add extra cycle info" << std::endl;
+  // DEBUG:
+  Rcout << "Add extra cycle info" << std::endl;
 
   int numpar2=numpar;
   bool has_cycles[10];
@@ -16389,23 +16683,28 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   StringVector parnames(numpar2);
   
-  // DEBUG: Rcout << "best pars repar" << std::endl;
+  // DEBUG:
+  Rcout << "best pars repar" << std::endl;
 
   double *best_pars_repar=new double[numpar];
-  if(!do_ml)
-    for(j=0;j<numpar;j++)
-      best_pars_repar[j]=
-	find_statistics(parsample_repar[j], numsamples, MEDIAN);
+  if(no_inpars || dosmooth || do_realizations)
+    if(!do_ml)
+      for(j=0;j<numpar;j++)
+	best_pars_repar[j]=
+	  find_statistics(parsample_repar[j], numsamples, MEDIAN);
       
-  // DEBUG: Rcout << "ML" << std::endl;
+  // DEBUG:
+  Rcout << "ML, do_ml=" << do_ml << std::endl;
 
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
   double best_loglik=MISSING_VALUE;
+  if(no_inpars || dosmooth || do_realizations)
+    {
   if(do_ml)
     {
       // traverse the number of wanted hill-climbs:
-
+      
       if(!silent)
 	Rcout << "ML started" << std::endl;
       ml_started=true;
@@ -16428,25 +16727,25 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      else
 		curr_par[j]=parsample_repar[j][(i-2)*(numsamples-1)/(num_optim-3)];
 	    }
-
-
-
+	  
+	  
+	  
 	  /*
 	  // do the optimization:
 	  int maxiter=1000;
 	  //double *pars2=gsl_optimization_cover(minusloglik, 
 	  double *pars2=quasi_newton(minusloglik,
-				     numpar, // number of parameters 
-				     curr_par, // starting values  
-				     0.00000001, // precision 
-				     maxiter, // Maximum number of
-				     // iterations. The number of iterations
-				     // neccessary will be stored here after the
-				     // optimization and can be checked 
-				     true,false,
-				     silent);
+	  numpar, // number of parameters 
+	  curr_par, // starting values  
+	  0.00000001, // precision 
+	  maxiter, // Maximum number of
+	  // iterations. The number of iterations
+	  // neccessary will be stored here after the
+	  // optimization and can be checked 
+	  true,false,
+	  silent);
 	  */
-
+	  
 	  
 	  NumericVector initpars(numpar);
 	  for(j=0;j<numpar;j++)
@@ -16463,17 +16762,17 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  
 	  /* RInside R;
-	  R["loglikwrapper"] = Rcpp::InternalFunction(&loglikwrapper);
-	  R["initpars"] = initpars;
-	  
-	  NumericVector initpars(numpar);
-	  for(j=0;j<numpar;j++)
-	    initpars[j]=curr_par[j];
-	  List optres=R.parseEval("optim(initpars,loglikwrapper)");
-	  NumericVector outpars=as<NumericVector>(optres["par"]);
-	  double *pars2=new double[numpar];
-	  for(j=0;j<numpar;j++)
-	    pars2[j]=outpars[j];
+	     R["loglikwrapper"] = Rcpp::InternalFunction(&loglikwrapper);
+	     R["initpars"] = initpars;
+	     
+	     NumericVector initpars(numpar);
+	     for(j=0;j<numpar;j++)
+	     initpars[j]=curr_par[j];
+	     List optres=R.parseEval("optim(initpars,loglikwrapper)");
+	     NumericVector outpars=as<NumericVector>(optres["par"]);
+	     double *pars2=new double[numpar];
+	     for(j=0;j<numpar;j++)
+	     pars2[j]=outpars[j];
 	  */
 	  
 	  
@@ -16499,7 +16798,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	{
 	  ml_pars[j]=invtransform_parameter(best_pars_repar[j], 
 					    par_trans_type[j]);
-	  
+	      
 	  s=par_series[j];
 	  if(ser[s].pr->is_log)
 	    {
@@ -16511,7 +16810,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  exp(ml_pars[j]*ml_pars[j]/2.0);
 	    }
 	}
-
+      
       if(return_residuals==1)
 	{
 	  if(!silent)
@@ -16519,16 +16818,17 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  double lres=loglik(best_pars_repar, 0, 0, 0, NULL, 0, NULL,
 			     1, &resids_time,
-			     &resids, &prior_expected_values,
+				 &resids, &prior_expected_values,
 			     &resid_numcol, &resid_len);
-
+	  
 	  if(!resids)
 	    Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
-	      lres << std::endl;
+		  lres << std::endl;
 	  else if(!silent)
 	    Rcout << "lres=" << lres << std::endl;
 	}
       //loglik(best_pars_repar, 0, 0,1,filestart);
+      
       
       
       int k=numpar;
@@ -16561,7 +16861,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
       delete [] medpar;
     }
-
+    }
+  
+  Rcout << "ML done" << std::endl;
 
 #ifdef DETAILED_TIMERS
   List alltimers=List::create(
@@ -16640,53 +16942,77 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   // each parameter into the return list:
   if(!silent)
     Rcout << "numpar=" << numpar << std::endl;
-  for(j=0;j<numpar;j++)
+
+  double *est_pars=new double[numpar];
+  if(no_inpars || dosmooth || do_realizations)
     {
-      double mean= find_statistics(parsample[j], numsamples, MEAN);
-      double med=  find_statistics(parsample[j], numsamples, MEDIAN);
-      double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
-      double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
-      
-      if(use_half_times && !strncmp(par_name[j],"dt_",3))
+      for(j=0;j<numpar;j++)
 	{
-	  mean*=log(2.0);
-	  med*=log(2.0);
-	  lower*=log(2.0);
-	  upper*=log(2.0);
-	  if(do_ml && ml_pars)
-	    ml_pars[j]*=log(2.0);
-	}
-      
-      List parlist;
-      if(!do_ml)
-	parlist=List::create(Named("mean",mean),
-			     Named("median", med),
-			     Named("lower02_5",lower),
-			     Named("upper97_5",upper) );
-      else
-	parlist=List::create(Named("ML",ml_pars[j]),
-			     Named("mean",mean),
-			     Named("median", med),
-			     Named("lower02_5",lower),
-			     Named("upper97_5",upper) );
-      out[par_name_new[j]]=parlist;
-      
-      if(!silent)
-	{
-	  Rcout << "j=" << j << std::endl;
-	  Rcout << par_name_new[j] << std::endl;
-	  Rcout << "mean=" << mean << " median=" << med << 
+	  double mean= find_statistics(parsample[j], numsamples, MEAN);
+	  double med=  find_statistics(parsample[j], numsamples, MEDIAN);
+	  double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
+	  double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
+	  
+	  if(use_half_times && !strncmp(par_name[j],"dt_",3))
+	    {
+	      mean*=log(2.0);
+	      med*=log(2.0);
+	      lower*=log(2.0);
+	      upper*=log(2.0);
+	      if(do_ml && ml_pars)
+		ml_pars[j]*=log(2.0);
+	    }
+	  
+	  List parlist;
+	  if(!do_ml)
+	    {
+	      est_pars[j]=mean;
+	      parlist=List::create(Named("mean",mean),
+				   Named("median", med),
+				   Named("lower02_5",lower),
+				   Named("upper97_5",upper) );
+	    }
+	  else
+	    {
+	      est_pars[j]=ml_pars[j];
+	      parlist=List::create(Named("ML",ml_pars[j]),
+				   Named("mean",mean),
+				   Named("median", med),
+				   Named("lower02_5",lower),
+				   Named("upper97_5",upper) );
+	    }
+	  out[par_name_new[j]]=parlist;
+	  
+	  if(!silent)
+	    {
+	      Rcout << "j=" << j << std::endl;
+	      Rcout << par_name_new[j] << std::endl;
+	      Rcout << "mean=" << mean << " median=" << med << 
 	    " lower=" << lower << " upper=" << upper << std::endl;
+	    }
+	  
+	  std::string pname(par_name_new[j]);
+	  parnames(j)=pname;
 	}
-      
-      std::string pname(par_name_new[j]);
-      parnames(j)=pname;
     }
   if(ml_pars)
     delete [] ml_pars;
-  
-  // DEBUG: Rcout << "Start summary statistics (2)" << std::endl;
 
+  if(no_inpars || dosmooth || do_realizations)
+    {
+      NumericVector est_paramset(numpar);
+      for(i=0;i<numpar;i++)
+	est_paramset(i)=est_pars[i];
+      out["est.par"]=est_paramset;
+      delete [] est_pars;
+    }
+  
+
+  
+  // DEBUG:
+  Rcout << "Start summary statistics (2)" << std::endl;
+
+  if(no_inpars || dosmooth || do_realizations)
   if(num_series_feed>0)
     {
       double *iscomplex=new double[numsamples];
@@ -16732,7 +17058,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 				      Named("lower02_5",c_lower),
 				      Named("upper97_5",c_upper) );
 	    char cyclename[100];
-	    sprintf(cyclename,"cycle%02d",i+1);
+	    snprintf(cyclename,99,"cycle%02d",i+1);
 	    out[cyclename]=parlist;
 	    
 	    std::string c_name(cyclename);
@@ -16741,12 +17067,15 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  }
     }
   
-  // DEBUG: Rcout << "Set parnames" << std::endl;
+  // DEBUG:
+  Rcout << "Set parnames" << std::endl;
   
   out["parameter.names"]=parnames;
 
-  // DEBUG: Rcout << "Residuals" << std::endl;
+  // DEBUG:
+  Rcout << "Residuals" << std::endl;
 
+  if(no_inpars || dosmooth || do_realizations)
   if(return_residuals==1)
     {
       if(resids && resid_len>0)
@@ -16783,7 +17112,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
     }
    
-  // DEBUG: Rcout << "Start smoothing" << std::endl;
+  // DEBUG:
+  Rcout << "Start smoothing" << std::endl;
 
   if(dosmooth && !do_realizations)
     {
@@ -16805,15 +17135,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  procname[i]=new char[1000];
 	  if(numsites<=1)
-	    sprintf(procname[i], "%s_layer%03d",ser[s].name,l+1);
+	    snprintf(procname[i], 999,"%s_layer%03d",ser[s].name,l+1);
 	  else
-	    sprintf(procname[i], "%s_site%03d_layer%03d",ser[s].name,site,l+1);
+	    snprintf(procname[i], 999,
+		     "%s_site%03d_layer%03d",ser[s].name,site,l+1);
 	  
 	  std::string pname(procname[i]);
 	  
           process_names(i)=pname;
 	  
-	  if(inmcmc_nummcmc==1 && num_smooth==1) 
+	  if(inpars_numsets==1 && num_smooth==1) 
 	    // parameter-estimate-based smoothing
 	    {
 	      // DEBUG: Rcout << "Making standard smoothing output" << std::endl;
@@ -16866,7 +17197,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  out["smoothing.samples"]=smooth_samples;
 	}
       
-      if(inmcmc_nummcmc==1 && num_smooth==1) 
+      if(inpars_numsets==1 && num_smooth==1) 
 	// parameter-estimate-based smoothing
 	{
 	  // DEBUG: Rcout << "Making P_k smoothing output" << std::endl;
@@ -16884,7 +17215,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      for(i=0;i<num_states;i++)
 		for(j=0;j<num_states;j++)
 		  nextmatrix(i,j)=P_k_smooth[k][i][j];
-	      sprintf(strbuff, "P_k_%05d",k+1);
+	      snprintf(strbuff, 19, "P_k_%05d",k+1);
 	      P_k[strbuff]=nextmatrix;
 	    }
 	  
@@ -16904,7 +17235,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     tripledelete(P_k_smooth,meas_smooth_len,num_states);
   
   
-  // DEBUG: Rcout << "Smoothing done" << std::endl;
+  // DEBUG:
+  Rcout << "Smoothing done" << std::endl;
 
   if(do_realizations && numit_realizations_made>0 && x_k_realized_all!=NULL)
     {
@@ -16921,9 +17253,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  procname[i]=new char[200];
 	  if(numsites<=1)
-	    sprintf(procname[i], "%s_layer%03d",ser[s].name,l+1);
+	    snprintf(procname[i], 199,"%s_layer%03d",ser[s].name,l+1);
 	  else
-	    sprintf(procname[i], "%s_site%03d_layer%03d",ser[s].name,site,l+1);
+	    snprintf(procname[i], 199,
+		     "%s_site%03d_layer%03d",ser[s].name,site,l+1);
 	}
       
       int k;
@@ -16961,16 +17294,20 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       doubledelete(procname,num_states);
     }
   
-  // DEBUG: Rcout << "Realizations done" << std::endl;
+  // DEBUG:
+  Rcout << "Realizations done" << std::endl;
   
-  NumericVector est_origpar(numpar);
-  for(i=0;i<numpar;i++)
-    est_origpar(i)=best_pars_repar[i];
-  out["est.origpar"]=est_origpar;
-
-  delete [] best_pars_repar;
+  if(no_inpars || dosmooth || do_realizations)
+    {
+      NumericVector est_origpar(numpar);
+      for(i=0;i<numpar;i++)
+	est_origpar(i)=best_pars_repar[i];
+      out["est.origpar"]=est_origpar;
+      delete [] best_pars_repar;
+    }
   
-  // DEBUG: Rcout << " Returning MCMC" << std::endl;
+  // DEBUG:
+  Rcout << " Returning MCMC" << std::endl;
 
   if(return_mcmc)
     {
@@ -16986,19 +17323,46 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  mcmcsamples2(i,j)=parsample_repar[i][j];
       out["mcmc.origpar"]=mcmcsamples2;
     }
+
+  if(lliks)
+    {
+      NumericVector llik(num_lliks);
+      for(j=0;j<num_lliks;j++)
+	llik(j)=lliks[j];
+      out["loglik"]=llik;
+      delete [] lliks;
+    }
   
-  // DEBUG: Rcout << " Returned MCMCg" << std::endl;
+  if(lpriors && !do_ml)
+    {
+      NumericVector lprior(num_lpriors);
+      for(j=0;j<num_lpriors;j++)
+	lprior(j)=lpriors[j];
+      out["logprior"]=lprior;
+      delete [] lpriors;
+    }
+  
+  
+  // DEBUG:
+  Rcout << " Returned MCMCg" << std::endl;
 
   doubledelete(par_name_orig,numpar);
+  Rcout << " deleted par_name_orig" << std::endl;
   doubledelete(par_name_new,numpar);
+  Rcout << " deleted par_name" << std::endl;
   doubledelete(parsample,numpar);
+  Rcout << " deleted parsample" << std::endl;
   doubledelete(parsample_repar,numpar);
+  Rcout << " deleted parsample_repar" << std::endl;
   
   delete [] pars;
+  Rcout << " deleted pars" << std::endl;
   delete [] meas_buffer;
+  Rcout << " deleted meas_buffer" << std::endl;
   reset_global_variables();
   
-  // DEBUG: Rcout << " Returning" << std::endl;
+  // DEBUG:
+  Rcout << " Returning" << std::endl;
 
   PutRNGstate();
   return(out);
@@ -17223,7 +17587,7 @@ void test_analysis(int num_layers_real, int num_layers_checked)
   
   double loglik=MISSING_VALUE;
   char filename[1000];
-  sprintf(filename,"test_%dlayer.txt",num_layers_real);
+  snprintf(filename,999,"test_%dlayer.txt",num_layers_real);
   
   FILE *f=fopen(filename,"r");
   if(!f || feof(f))
@@ -17359,13 +17723,13 @@ int main(int argc, char **argv)
   double start=MISSING_VALUE,end=MISSING_VALUE;
   int dosmooth=0, num_optim=0, sel_pres=0, preshow=0;
   double diff=0.0;
-  char filestart[1000]="";
+  char filestart[300]="";
   char realization_file_start[1000];
   bool do_realizations=false, do_simulations=false, 
     do_importance=true, do_dt_start_end=false;
   int numsim=0;
   double *sim_param=NULL;
-  char simulation_file_start[1000];
+  char simulation_file_start[300];
   double t_start=MISSING_VALUE, t_end=MISSING_VALUE;
   HydDateTime dt_start=NoHydDateTime, dt_end=NoHydDateTime;
   double *startpar=NULL;
@@ -18347,11 +18711,12 @@ int main(int argc, char **argv)
 	{
 	  if(num_series>0)
 	    for(s=0;s<num_series;s++)
-	      sprintf(filenames[s], "%s_serie%02d_sim%04d.txt", 
+	      snprintf(filenames[s], 800,"%s_serie%02d_sim%04d.txt", 
 		      simulation_file_start,s,i+1);
 	  else
-	    sprintf(filenames[s], "%s_sim%04d.txt",simulation_file_start,i+1);
-
+	    snprintf(filenames[s], 800,"%s_sim%04d.txt",
+		     simulation_file_start,i+1);
+	  
 	  ll=loglik(sim_param_repar, 0, 0, 0, NULL, 0, filenames);
 	}
       cout << "loglik=" << ll << endl;
@@ -18390,9 +18755,9 @@ int main(int argc, char **argv)
 	  char cmd[1000];
 	  
 	  if(ser[s].meas[0].dt!=NoHydDateTime)
-	    sprintf(cmd,"timeseriegraph -x t -y %s",ser[s].name);
+	    snprintf(cmd,999,"timeseriegraph -x t -y %s",ser[s].name);
 	  else
-	    sprintf(cmd,"vvgraph -x t -y %s",ser[s].name);
+	    snprintf(cmd,999,"vvgraph -x t -y %s",ser[s].name);
 	  
 	  FILE *p;
 	  p=popen(cmd,"w");
@@ -18535,7 +18900,7 @@ int main(int argc, char **argv)
   char **par_name_orig=new char*[numpar];
   for(i=0;i<numpar;i++)
     {
-      par_name_orig[i]=new char[100];
+      par_name_orig[i]=new char[300];
       strcpy(par_name_orig[i],par_name[i]);
     }
   
@@ -18548,13 +18913,13 @@ int main(int argc, char **argv)
 	{
 	  if(par_type[i]==MU)
 	    {
-	      sprintf(par_name[i],"exp(%s)",par_name_orig[i]);
+	      snprintf(par_name[i],99,"exp(%s)",par_name_orig[i]);
 	      for(j=0;j<numsamples;j++)
 		parsample[i][j]=exp(parsample[i][j]);
 	    }
 	  if(par_type[i]==OBS_SD)
 	    {
-	      sprintf(par_name[i],"%s_origscale",par_name_orig[i]);
+	      snprintf(par_name[i],99,"%s_origscale",par_name_orig[i]);
 	      for(j=0;j<numsamples;j++)
 		parsample[i][j]=(ser[s].pr->is_log==2 ? 
 				 exp(ser[s].mean_val) : ser[s].mean_val)*
@@ -18565,28 +18930,28 @@ int main(int argc, char **argv)
     }
 
 
-  /*
+  
   // show mean, median and 95% credibility interval for
   // each parameter:
   for(j=0;j<numpar;j++)
   {
-  double mean=find_statistics(parsample[j], numsamples, MEAN);
-  double med=find_statistics(parsample[j], numsamples, MEDIAN);
-  double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
-  double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
-      
-  if(report_halflife && !strncmp(par_name[j],"dt_",3))
-  {
-  mean*=log(2.0);
-  med*=log(2.0);
-  lower*=log(2.0);
-  upper*=log(2.0);
+    double mean=find_statistics(parsample[j], numsamples, MEAN);
+    double med=find_statistics(parsample[j], numsamples, MEDIAN);
+    double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
+    double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
+    
+    if(report_halflife && !strncmp(par_name[j],"dt_",3))
+      {
+	mean*=log(2.0);
+	med*=log(2.0);
+	lower*=log(2.0);
+	upper*=log(2.0);
+      }
+    
+    printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
+	   par_name[j], mean, med, lower,upper);
   }
-      
-  printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
-  par_name[j], mean, med, lower,upper);
-  }
-  */
+  
  
   if(do_ml)
     {
@@ -18713,7 +19078,7 @@ int main(int argc, char **argv)
 		 find_statistics(cycle, numsamples, PERCENTILE_2_5,0.01),
 		 find_statistics(cycle, numsamples, PERCENTILE_97_5,0.01));
 	  char name[100];
-	  sprintf(name,"cycle%02d",i+1);
+	  snprintf(name,99,"cycle%02d",i+1);
 	  show_parameter(cycle, numsamples, name, silent, filestart);
 	  
 	  delete [] cycle;
@@ -18723,7 +19088,7 @@ int main(int argc, char **argv)
   // if not in silent modus, show inferred series:
   if(!silent && dosmooth && !do_realizations)
     {
-      char filename[1000], cmd[1000];
+      char filename[1000], cmd[2000];
       
       if(ser[0].numlayers>1 && ser[0].meas[0].sd!=MISSING_VALUE && sel_pres)
 	// check measurement variance vs selection pressure (difference
@@ -18741,7 +19106,7 @@ int main(int argc, char **argv)
 		  {
 		    if(meas_smooth[k].serie_num[m]==0 && 
 		       meas_smooth[k].meanval[m]!=MISSING_VALUE)
-		      {
+     {
 			// site:
 			j=meas_smooth[k].site[m];
 			
@@ -18769,16 +19134,16 @@ int main(int argc, char **argv)
 	    l=0;
 	    
 	    if(ser[s].meas[0].dt!=NoHydDateTime)
-	      sprintf(cmd,"timeseriegraph -x t -y %s",ser[s].name);
+	      snprintf(cmd,1500,"timeseriegraph -x t -y %s",ser[s].name);
 	    else
-	      sprintf(cmd,"vvgraph -x t -y %s",ser[s].name);
+	      snprintf(cmd,1500,"vvgraph -x t -y %s",ser[s].name);
 	    
 	    FILE *p;
 	    if(!*filestart)
 	      p=popen(cmd,"w");
 	    else
 	      {
-		sprintf(filename, "%s_allsites_%s_layer0.txt", 
+		snprintf(filename, 800, "%s_allsites_%s_layer0.txt", 
 			filestart,ser[s].name);
 		p=fopen(filename,"w");
 	      }
@@ -18848,16 +19213,16 @@ int main(int argc, char **argv)
 	  l=state_layer[i];
 	  
 	  if(ser[s].meas[0].dt!=NoHydDateTime)
-	    sprintf(cmd,"timeseriegraph -x t -y %s",ser[s].name);
+	    snprintf(cmd,999,"timeseriegraph -x t -y %s",ser[s].name);
 	  else
-	    sprintf(cmd,"vvgraph -x t -y %s",ser[s].name);
+	    snprintf(cmd,999,"vvgraph -x t -y %s",ser[s].name);
 	  
 	  FILE *p;
 	  if(!*filestart)
 	    p=popen(cmd,"w");
 	  else
 	    {
-	      sprintf(filename, "%s_singlesite%02d.txt", filestart, i);
+	      snprintf(filename,800, "%s_singlesite%02d.txt", filestart, i);
 	      p=fopen(filename,"w");
 	    }
 	  fprintf(p, "# Column 1: mean %s, site %d, layer %d, x%d\n", 
@@ -18969,15 +19334,15 @@ int main(int argc, char **argv)
 		int j,k;
 		
 		if(ser[s].meas[0].dt!=NoHydDateTime)
-		  sprintf(cmd,"timeseriegraph -x t -y %s",ser[s].name);
+		  snprintf(cmd,999,"timeseriegraph -x t -y %s",ser[s].name);
 		else
-		  sprintf(cmd,"vvgraph -x t -y %s",ser[s].name);
+		  snprintf(cmd,999,"vvgraph -x t -y %s",ser[s].name);
 		
 		if(!*filestart)
 		  p=popen(cmd,"w");
 		else
 		  {
-		    sprintf(filename, "%s_%s_layer%01d.txt", filestart, 
+		    snprintf(filename,900, "%s_%s_layer%01d.txt", filestart, 
 			    ser[s].name,l+1);
 		    p=fopen(filename,"w");
 		  }
@@ -19033,7 +19398,7 @@ int main(int argc, char **argv)
 		  }
 		else
 		  {
-		    sprintf(filename, "%s_site%01d.txt", filestart, j);
+		    snprintf(filename, 800,"%s_site%01d.txt", filestart, j);
 		    p=fopen(filename, "w");
 		  }
 		k=1;
@@ -19128,8 +19493,8 @@ int main(int argc, char **argv)
       char **repar_name=new char*[numpar];
       for(i=0;i<numpar;i++)
 	{
-	  repar_name[i]=new char[100];
-	  sprintf(repar_name[i], "Re-parametrized %s",
+	  repar_name[i]=new char[300];
+	  snprintf(repar_name[i],250, "Re-parametrized %s",
 		  par_name_orig[i]);
 	}
       
@@ -19206,9 +19571,9 @@ int main(int argc, char **argv)
 		      char s_name[1000];
 		      
 		      if(all_global)
-			sprintf(s_name, "sd_s%d_l%d", s+1,l+1);
+			snprintf(s_name,999, "sd_s%d_l%d", s+1,l+1);
 		      else
-			sprintf(s_name, "sd_s%d_l%d_r%d", s+1,l+1,j);
+			snprintf(s_name,999, "sd_s%d_l%d_r%d", s+1,l+1,j);
 
 		      for(i=0;i<numsamples;i++)
 			sd[i]=parsample[index_diffusion][i]*
