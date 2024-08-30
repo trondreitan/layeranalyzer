@@ -1,7 +1,7 @@
 \name{read.layer.data.series}
 \alias{read.layer.data.series}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{ Represents a measurement time series. }
+\title{ Read a series representing a measurement time series. }
 \description{
 This class function reads a file representing a measurement time series. Can include multiple sites. Individual measurement error can be added. 
 }
@@ -9,13 +9,13 @@ This class function reads a file representing a measurement time series. Can inc
 read.layer.data.series(filename,name,column.type=c("time","value"), 
                 header=FALSE,dec=".",sep="", 
                 quote="\"'", numerals = c("allow.loss", "warn.loss", "no.loss"),
-                row.names=NULL, col.names=column.type, as.is = !stringsAsFactors,
+                row.names=NULL, col.names=column.type, 
                 na.strings = "NA", colClasses = NA, nrows = -1,
                 skip = 0, check.names = TRUE, fill = !blank.lines.skip,
                 strip.white = FALSE, blank.lines.skip = TRUE,
                 comment.char = "#",
                 allowEscapes = FALSE, flush = FALSE,
-                stringsAsFactors = default.stringsAsFactors(),
+                stringsAsFactors = FALSE, as.is = !stringsAsFactors,
                 fileEncoding = "", encoding = "unknown", text, skipNul = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -41,6 +41,8 @@ read.layer.data.series(filename,name,column.type=c("time","value"),
           ‘TRUE’ if and only if the first row contains one fewer field
           than the number of columns.
  }
+ \item{dec}{ the character used in the file for decimal points.
+  }
  \item{sep}{ the field separator character.  Values on each line of the
           file are separated by this character.  If ‘sep = ""’ (the
           default for ‘read.table’) the separator is ‘white space’,
@@ -52,8 +54,6 @@ read.layer.data.series(filename,name,column.type=c("time","value"),
           embedded in quotes.  Quoting is only considered for columns
           read as character, which is all of them unless ‘colClasses’
           is specified.
-  }
-  \item{dec}{ the character used in the file for decimal points.
   }
   \item{numerals}{ string indicating how to convert numbers whose conversion to
           double precision would lose accuracy, see ‘type.convert’.
@@ -75,22 +75,6 @@ read.layer.data.series(filename,name,column.type=c("time","value"),
   }
   \item{col.names}{ a vector of optional names for the variables.  The default
           is to use ‘"V"’ followed by the column number.
-  }
-  \item{as.is}{ the default behavior of ‘read.table’ is to convert character
-          variables (which are not converted to logical, numeric or
-          complex) to factors.  The variable ‘as.is’ controls the
-          conversion of columns not otherwise specified by
-          ‘colClasses’.  Its value is either a vector of logicals
-         (values are recycled if necessary), or a vector of numeric or
-          character indices which specify which columns should not be
-          converted to factors.
-
-          Note: to suppress all conversions including those of numeric
-          columns, set ‘colClasses = "character"’.
-
-          Note that ‘as.is’ is specified per column (not per variable)
-          and so includes the column of row names (if any) and any
-          columns to be skipped.
   }
   \item{na.strings}{ a character vector of strings which are to be interpreted
           as ‘NA’ values.  Blank fields are also considered to be
@@ -155,6 +139,22 @@ read.layer.data.series(filename,name,column.type=c("time","value"),
   \item{stringsAsFactors}{ logical: should character vectors be converted to
           factors?  Note that this is overridden by ‘as.is’ and
           ‘colClasses’, both of which allow finer control.
+  }
+  \item{as.is}{ the default behavior of ‘read.table’ is to convert character
+          variables (which are not converted to logical, numeric or
+          complex) to factors.  The variable ‘as.is’ controls the
+          conversion of columns not otherwise specified by
+          ‘colClasses’.  Its value is either a vector of logicals
+         (values are recycled if necessary), or a vector of numeric or
+          character indices which specify which columns should not be
+          converted to factors.
+
+          Note: to suppress all conversions including those of numeric
+          columns, set ‘colClasses = "character"’.
+
+          Note that ‘as.is’ is specified per column (not per variable)
+          and so includes the column of row names (if any) and any
+          columns to be skipped.
   }
   \item{fileEncoding}{ character string: if non-empty declares the encoding used
           on a file (not a connection) so the character data can be
