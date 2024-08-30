@@ -43,11 +43,11 @@ using namespace Rcpp;
 // *******************
 
 #ifndef doubledelete
-#define doubledelete(array,len) {if(array) { for(int count=0;count<len;count++) if(array[count]) delete [] array[count]; delete [] array; array=NULL;}}
+#define doubledelete(array,len) {if(array) { for(unsigned int count=0;count<(unsigned int)len;count++) if(array[count]) delete [] array[count]; delete [] array; array=NULL;}}
 #endif // doubledelete
 
 #ifndef tripledelete
-#define tripledelete(array,len,len2) {if(array) { for(int count=0;count<len;count++){ if(array[count]){ for(int count2=0;count2<len2;count2++) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
+#define tripledelete(array,len,len2) {if(array) { for(unsigned int count=0;count<(unsigned int)len;count++){ if(array[count]){ for(unsigned int count2=0;count2<(unsigned int)len2;count2++) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
 #endif // tripledelete
 
 #define MAXIM(a, b) ((a) > (b) ? (a) : (b))
@@ -134,21 +134,21 @@ transform_type *par_trans_type=NULL;
 REALIZATION_STRATEGY real_strat=NO_CENSORING;
 
 series *ser=NULL;
-int num_series=0;
+unsigned int num_series=0;
 
-int num_smooth=10; // Smoothings per iteration
+unsigned int num_smooth=10; // Smoothings per iteration
 
 INDENTIFICATION_PRIOR_HANDLING id_strategy=ID_NONE;
 
-int numsites; // Number of sites
-int num_tot_layers; // total number of layers over all series
+unsigned int numsites; // Number of sites
+unsigned int num_tot_layers; // total number of layers over all series
 bool some_pairwise_correlations=false;
 
 double p_pos_site_sigma2=0.0;
 double p_pos_series_sigma2=0.0;
 
 // Extra-layer instantaneous correlations specifications:
-int num_series_corr=0;
+unsigned int num_series_corr=0;
 int *corr_from_series=NULL, *corr_to_series=NULL, 
   *corr_from_layer=NULL, *corr_to_layer=NULL;
 int *corr_from_index=NULL, *corr_to_index=NULL; // series+layer indexes
@@ -160,32 +160,32 @@ int *indicator_array=NULL;
 int useext=0; // use external times series in the main series?
 
 measurement_cluster *meas_tot=NULL, *meas_smooth=NULL;
-int meas_tot_len=0, meas_smooth_len=0;
+unsigned int meas_tot_len=0, meas_smooth_len=0;
 
 double *obs_corr_t=NULL, **obs_corr=NULL;
 int *obs_corr_site=NULL, obs_corr_len=0;
 
-int num_states=1;
-int state_series[LARGE_ENOUGH_ARRAY]; // which serie does a state variable belong to?
-int state_layer[LARGE_ENOUGH_ARRAY]; // which layer does a state variable belong to?
-int series_state_start[100]; // which state index does this series start with?
+unsigned int num_states=1;
+unsigned int state_series[LARGE_ENOUGH_ARRAY]; // which serie does a state variable belong to?
+unsigned int state_layer[LARGE_ENOUGH_ARRAY]; // which layer does a state variable belong to?
+unsigned int series_state_start[100]; // which state index does this series start with?
 
-int numpar=0; // number of parameters
+unsigned int numpar=0; // number of parameters
 
 
-int len_x_k_s_kept=0, size_x_k_s_kept=0;
+unsigned int len_x_k_s_kept=0, size_x_k_s_kept=0;
 double **x_k_s_kept=NULL, ***P_k_s_kept=NULL;
 double *t_k_smooth=NULL;
 HydDateTime *dt_k_smooth=NULL;
 
 double **x_k_realized=NULL;
 double ***x_k_realized_all=NULL;
-int numit_realization=100, numit_realizations_made=0;
+unsigned int numit_realization=100, numit_realizations_made=0;
 
 bool nodata=false;
 
 // Extra-layer causal specifications:
-int num_series_feed=0;
+unsigned int num_series_feed=0;
 int *feed_from_series=NULL, *feed_to_series=NULL, 
   *feed_from_layer=NULL, *feed_to_layer=NULL;
 int *feed_symmetric=NULL;
@@ -194,7 +194,7 @@ bool is_complex=false;
 double cycle_time[10];
 
 // Measurement data and external data series:
-int ext_len=0;
+unsigned int ext_len=0;
 double_2d *extdata=NULL;
 
 
@@ -1957,13 +1957,14 @@ public:
   void set_content(double_2d new_content);
 
   list_2d *suc();
-  double_2d *get_array(int *len);
+  double_2d *get_array(unsigned int *len);
 };
 
 // Read a file containing two doubles per line and return
 // as an array. Uses list_2d internally. Sorts the array
 // according to the first double.
-double_2d *get_2d_data_file(char *filename, int *len, bool dosort=true);
+double_2d *get_2d_data_file(char *filename,
+			    unsigned int *len, bool dosort=true);
 
 class csv : public double_linked_list
 {
@@ -3292,11 +3293,11 @@ list_2d *list_2d::suc()
   return (list_2d *) getnext(); 
 }
 
-double_2d *list_2d::get_array(int *len)
+double_2d *list_2d::get_array(unsigned int *len)
 {
   *len=number_of_elements();
 
-  int i=0;
+  unsigned int i=0;
   double_2d *ret=new double_2d[*len];
   for(list_2d *ptr=this;ptr;ptr=ptr->suc(),i++)
     ret[i]=ptr->get_content();
@@ -3308,7 +3309,7 @@ double_2d *list_2d::get_array(int *len)
 
 
 
-double_2d *get_2d_data_file(char *filename, int *len, bool dosort)
+double_2d *get_2d_data_file(char *filename, unsigned int *len, bool dosort)
 {
   list_2d *head=NULL, *tail=NULL;
   ifstream in;
@@ -3343,7 +3344,7 @@ double_2d *get_2d_data_file(char *filename, int *len, bool dosort)
 
       in.getline(line,9999);
     }
-  
+
   double_2d *ret=head->get_array(len);
   if(dosort)
     qsort(ret, (size_t) *len, sizeof(double_2d), compare_double_2d_x);
@@ -5698,69 +5699,72 @@ double *quasi_newton(double (*func)(double *),
 // Taken from hydrasub-library, file mcmc.C/H
 // ****************************************************
 
-double log_prob(double **data, int numrows, int numcolumns,
-		int numparams, double *params,
-		int num_hyperparameters, double *hyper_parameters,
+double log_prob(double **data, unsigned int numrows, unsigned int numcolumns,
+		unsigned int numparams, double *params,
+		unsigned int num_hyperparameters, double *hyper_parameters,
 		
-		double (*log_prior)(int /*numparams*/, 
+		double (*log_prior)(unsigned int /*numparams*/, 
 				    double* /* params */,
-				     int /* num_hyperparameters */,
+				    unsigned  int /* num_hyperparameters */,
 				    double* /* hyper_parameters */),
 		 
 		double (*log_lik)(double** /*data*/, 
-				  int /* numrows */, 
-				  int /* numcolumns */,
-				  int /*numparams*/, 
+				  unsigned int /* numrows */, 
+				  unsigned int /* numcolumns */,
+				  unsigned int /*numparams*/, 
 				  double* /* params */), 
 
 		double T=1.0);
 
-void sample_once(double **data, int numrows, int numcolumns,
-		 int numparams, int numtemp, double **params, 
+void sample_once(double **data, unsigned int numrows, unsigned int numcolumns,
+		 unsigned int numparams, unsigned int numtemp, double **params, 
 		 int *acc, double *rw, double *logprob,
 		 double *T, int *swaps, double tempering_prob,
-		 int num_hyperparameters, double *hyper_parameters,
+		 unsigned int num_hyperparameters, double *hyper_parameters,
 		 
-		 double (*log_prior)(int /*numparams*/, 
+		 double (*log_prior)(unsigned int /*numparams*/, 
 				     double* /* params */,
-				     int /* num_hyperparameters */,
+				     unsigned int /* num_hyperparameters */,
 				     double* /* hyper_parameters */),
 		 
 		 double (*log_lik)(double** /*data*/, 
-				   int /* numrows */, 
-				   int /* numcolumns */,
-				   int /*numparams*/, 
+				   unsigned int /* numrows */, 
+				   unsigned int /* numcolumns */,
+				   unsigned int /*numparams*/, 
 				   double* /* params */),
 		 bool update_prev_log_prob=false ,
 		 bool silent=true);
 		
 
 
-double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
+double **general_mcmc(unsigned int numsamples, unsigned int burnin,
+		      unsigned int indep, unsigned int numtemp,
 
-		      double **data, int numrows, int numcolumns,
+		      double **data,
+		      unsigned int numrows, unsigned int numcolumns,
 		      
-		      int numparams, char **param_names, 
+		      unsigned int numparams, char **param_names, 
 		      
 		      double *T, double tempering_prob, 
 		      
-		      int num_hyperparameters, double *hyper_parameters,
+		      unsigned int num_hyperparameters,
+		      double *hyper_parameters,
 		      
-		      void (*init)(int /* numparams */,
+		      void (*init)(unsigned int /* numparams */,
 				   double* /* input parameter array*/, 
-				   int /* num_hyperparameters */,
+				   unsigned int /* num_hyperparameters */,
 				   double* /* hyperparameters */), // init mechanism
 		      // may possibly use the prior via hyper-parameters
 		      
-		      double (*log_prior)(int /*numparams*/, 
+		      double (*log_prior)(unsigned int /*numparams*/, 
 					  double* /* params */,
-					  int /* num_hyperparameters */,
+					  unsigned int /* num_hyperparameters */,
 				 double* /* hyper_parameters */),
 		      
 		      double (*log_lik)(double** /*data*/, 
-					int /* numrows */, 
-					int /* numcolumns */,
-					int /*numparams*/, 
+					unsigned int /* numrows */, 
+					unsigned int /* numcolumns */,
+					unsigned int /*numparams*/, 
 					double* /* params */),
 		      
 		      bool silent=true,
@@ -5771,25 +5775,29 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 // Importance sampling method for calculating model likelihood
 // using a multinormal approximation of the posterior samples
 // as the proposal distribution.
-double log_model_likelihood_multinormal(int num_importance_samples,
+double log_model_likelihood_multinormal(unsigned int num_importance_samples,
 			    
 					double **mcmc_params, 
-					int numparams, int numsamples,
+					unsigned int numparams,
+					unsigned int numsamples,
 					
-					double **data, int numrows, int numcolumns,
+					double **data,
+					unsigned int numrows,
+					unsigned int numcolumns,
 					
-					int num_hyperparameters, double *hyper_parameters,
+					unsigned int num_hyperparameters,
+					double *hyper_parameters,
 					
-					double (*log_prior)(int /*numparams*/, 
+					double (*log_prior)(unsigned int /*numparams*/, 
 							    double* /* params */,
-							    int /* num_hyperparameters */,
+							    unsigned int /* num_hyperparameters */,
 							    double* /* hyper_parameters */
 							    ),
 					
 					double (*log_lik)(double** /*data*/, 
-							  int /* numrows */, 
-							  int /* numcolumns */,
-							  int /*numparams*/, 
+							  unsigned int /* numrows */, 
+							  unsigned int /* numcolumns */,
+							  unsigned int /*numparams*/, 
 							  double* /* params */),
 					
 			                bool silent=true, 
@@ -5797,7 +5805,7 @@ double log_model_likelihood_multinormal(int num_importance_samples,
 
 
 // show_parameter_value : prints current parameter array to screen:
-void show_parameter_value(double *param, int numparam, char **parnames,
+void show_parameter_value(double *param, unsigned int numparam, char **parnames,
 			  int max_params=(int) MISSING_VALUE);
 
 
@@ -5811,7 +5819,7 @@ void show_parameter_value(double *param, int numparam, char **parnames,
 // N: number of samples
 // parname: name of parameter
 // silent: if set, turns on silent modus
-void show_mcmc_parameter(double *par, int N, char *parname, 
+void show_mcmc_parameter(double *par, unsigned int N, char *parname, 
 			 bool silent=false, 
 			 char *filestart=NULL);
 
@@ -5829,19 +5837,19 @@ void show_mcmc_scatter(double *par1, double *par2, int N,
 		       char *filestart=NULL);
 #endif // MAIN
 
-double log_prob(double **data, int numrows, int numcolumns,
-		int numparams, double *params,
-		int num_hyperparameters, double *hyper_parameters,
+double log_prob(double **data, unsigned int numrows, unsigned int numcolumns,
+		unsigned int numparams, double *params,
+		unsigned int num_hyperparameters, double *hyper_parameters,
 		
-		double (*log_prior)(int /*numparams*/, 
+		double (*log_prior)(unsigned int /*numparams*/, 
 				    double* /* params */,
-				    int /* num_hyperparameters */,
+				    unsigned int /* num_hyperparameters */,
 				    double* /* hyper_parameters */),
 		 
 		double (*log_lik)(double** /*data*/, 
-				  int /* numrows */, 
-				  int /* numcolumns */,
-				  int /*numparams*/, 
+				  unsigned int /* numrows */, 
+				  unsigned int /* numcolumns */,
+				  unsigned int /*numparams*/, 
 				  double* /* params */), 
 
 		double T )
@@ -5861,26 +5869,26 @@ double log_prob(double **data, int numrows, int numcolumns,
   return pp/T;
 }
 
-void sample_once(double **data, int numrows, int numcolumns,
-		 int numparams, int numtemp, double **params, 
+void sample_once(double **data, unsigned int numrows, unsigned int numcolumns,
+		 unsigned int numparams, unsigned int numtemp, double **params, 
 		 int *acc, double *rw, double *logprob,
 		 double *T, int *swaps, double tempering_prob,
-		 int num_hyperparameters, double *hyper_parameters,
+		 unsigned int num_hyperparameters, double *hyper_parameters,
 		 
-		 double (*log_prior)(int /*numparams*/, 
+		 double (*log_prior)(unsigned int /*numparams*/, 
 				     double* /* params */,
-				     int /* num_hyperparameters */,
+				     unsigned int /* num_hyperparameters */,
 				     double* /* hyper_parameters */),
 		 
 		 double (*log_lik)(double** /*data*/, 
-				   int /* numrows */, 
-				   int /* numcolumns */,
-				   int /*numparams*/, 
+				   unsigned int /* numrows */, 
+				   unsigned int /* numcolumns */,
+				   unsigned int /*numparams*/, 
 				   double* /* params */),
 		 bool update_prev_log_prob,
 		 bool silent)
 {
-  int i;
+  unsigned int i;
   
   if(numtemp>1 && drand()<tempering_prob) // tempering swap?
     {
@@ -5937,7 +5945,7 @@ void sample_once(double **data, int numrows, int numcolumns,
 	}
     }
   else // normal RW Metropolis sampling:
-    for(int t=0;t<numtemp;t++) // traverse the tempering chains
+    for(unsigned int t=0;t<numtemp;t++) // traverse the tempering chains
       {
 	double *newparams=new double[numparams];
 	for(i=0;i<numparams;i++)
@@ -5992,31 +6000,32 @@ void sample_once(double **data, int numrows, int numcolumns,
 }
 
 
-double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
+double **general_mcmc(unsigned int numsamples, unsigned int burnin,
+		      unsigned int indep, unsigned int numtemp,
 
-	      double **data, int numrows, int numcolumns,
+	      double **data, unsigned int numrows, unsigned int numcolumns,
 
-	      int numparams, char **param_names, 
+	      unsigned int numparams, char **param_names, 
 
 	      double *T, double tempering_prob, 
 
-	      int num_hyperparameters, double *hyper_parameters,
+	      unsigned int num_hyperparameters, double *hyper_parameters,
 
-	      void (*init)(int /* numparams */,
+	      void (*init)(unsigned int /* numparams */,
 			   double* /* input parameter array*/, 
-			   int /* num_hyperparameters */,
+			   unsigned int /* num_hyperparameters */,
 			   double* /* hyperparameters */), // init mechanism
 	      // may possibly use the prior via hyper-parameters
 
-	      double (*log_prior)(int /*numparams*/, 
+	      double (*log_prior)(unsigned int /*numparams*/, 
 				 double* /* params */,
-				 int /* num_hyperparameters */,
+				 unsigned int /* num_hyperparameters */,
 				 double* /* hyper_parameters */),
 	      
 	      double (*log_lik)(double** /*data*/, 
-				int /* numrows */, 
-				int /* numcolumns */,
-				int /*numparams*/, 
+				unsigned int /* numrows */, 
+				unsigned int /* numcolumns */,
+				unsigned int /*numparams*/, 
 				double* /* params */),
 
 	      bool silent,
@@ -6039,7 +6048,7 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
   double **ret=Make_matrix(numsamples,numparams);
   
   // indexes:
-  int i,j,k,t;
+  unsigned int i,j,k,t;
   
   // Current set of samples (one for each tempering chain) and
   // acceptance indicators and random walk standard deviations:
@@ -6327,24 +6336,24 @@ double **general_mcmc(int numsamples, int burnin, int indep, int numtemp,
 // Importance sampling method for calculating model likelihood
 // using a multinormal approximation of the posterior samples
 // as the proposal distribution.
-double log_model_likelihood_multinormal(int num_importance_samples,
+double log_model_likelihood_multinormal(unsigned int num_importance_samples,
 			    
 			    double **mcmc_params, 
-			    int numparams, int numsamples,
+			    unsigned int numparams, unsigned int numsamples,
 			    
-			    double **data, int numrows, int numcolumns,
+			    double **data, unsigned int numrows, unsigned int numcolumns,
 			    
-			    int num_hyperparameters, double *hyper_parameters,
+			    unsigned int num_hyperparameters, double *hyper_parameters,
 			    
-			    double (*log_prior)(int /*numparams*/, 
+			    double (*log_prior)(unsigned int /*numparams*/, 
 						double* /* params */,
-						int /* num_hyperparameters */,
+						unsigned int /* num_hyperparameters */,
 						double* /* hyper_parameters */),
 			    
 			    double (*log_lik)(double** /*data*/, 
-					      int /* numrows */, 
-					      int /* numcolumns */,
-					      int /*numparams*/, 
+					      unsigned int /* numrows */, 
+					      unsigned int /* numcolumns */,
+					      unsigned int /*numparams*/, 
 					      double* /* params */),
 			    
 			    bool silent,
@@ -6471,22 +6480,22 @@ double log_model_likelihood_multinormal(int num_importance_samples,
 }
 
 // show_parameter_value : prints current parameter array to screen:
-void show_parameter_value(double *param, int numparam, char **parnames,
+void show_parameter_value(double *param, unsigned int numparam, char **parnames,
 			  int max_params)
 {
-  int showmax=numparam;
+  unsigned int showmax=numparam;
   if(max_params!=(int)MISSING_VALUE && max_params>0 &&
-     numparam>max_params)
+     numparam>(unsigned int) max_params)
     showmax=max_params;
 #ifdef MAIN
-  for(int i=0;i<showmax;i++)
+  for(unsigned int i=0;i<showmax;i++)
     if(parnames)
       cout << parnames[i] << "=" << param[i] << " ";
     else
       cout << "par" << i+1 << "=" << param[i] << " ";
   cout << endl;
 #else
-  for(int i=0;i<showmax;i++)
+  for(unsigned int i=0;i<showmax;i++)
     if(parnames)
       Rcout << parnames[i] << "=" << param[i] << " ";
     else
@@ -6506,7 +6515,7 @@ void show_parameter_value(double *param, int numparam, char **parnames,
 // N: number of samples
 // parname: name of parameter
 // silent: if set, turns on silent modus
-void show_mcmc_parameter(double *par, int N, char *parname, 
+void show_mcmc_parameter(double *par, unsigned int N, char *parname, 
 			 bool silent, 
 			 char *filestart)
 {
@@ -6656,9 +6665,9 @@ void show_mcmc_scatter(double *par1, double *par2, int N,
 
 struct series_measurements
 {
-  int serie_num, /* belongs to which series? */
-    site /*site*/, 
-    n /* number of val measurement in this measurement line*/;
+  unsigned int serie_num; /* belongs to which series? */
+  int  site /*site*/; 
+  int  n; /* number of val measurement in this measurement line*/;
   HydDateTime dt; // Time in date/time format (only for recent events)
   double tm /* time=-age */, 
     meanval /* mean (logarithmic) value*/, 
@@ -6685,13 +6694,13 @@ class measurement_cluster
 public:
   HydDateTime dt; // Time in date/time format (only for recent events)
   double tm /* time=-age */;
-  int num_measurements;
-  
-  int *serie_num, /* belongs to which series? */
-    *site /*site*/, 
-    *n /* number of val measurement in this measurement line*/;
+  unsigned int num_measurements;
+
+  int *serie_num; /* belongs to which series? */
+  int *site /*site*/; 
+  int  *n /* number of val measurement in this measurement line*/;
   double *meanval /* mean (logarithmic) value*/, 
-         *sd /* standard deviation of (logarithmic) value */;
+    *sd /* standard deviation of (logarithmic) value */;
   int *index; // index in the state vector
   
   double **corr_matrix;
@@ -6700,8 +6709,9 @@ public:
   measurement_cluster();
   measurement_cluster(double time_, HydDateTime dtime=NoHydDateTime); 
   // Filled measurement cluster:
-  measurement_cluster(double time_, int number_of_measurements, 
-		      int *series, int *sites, int *N, 
+  measurement_cluster(double time_, unsigned int number_of_measurements, 
+		      int *series, int *sites,
+		      int *N, 
 		      double *mean_val, double *standard_dev,
 		      int *index_, HydDateTime dtime=NoHydDateTime);
   measurement_cluster(measurement_cluster *orig);
@@ -6738,7 +6748,7 @@ struct prior
   
   double beta_1, beta_2, beta_m, beta_s;
   // prior for regression terms for supplementary series
- // prior for regression term from global full external series
+  // prior for regression term from global full external series
   //       when used for the main series.
   
   
@@ -6799,7 +6809,7 @@ class series
 {
 public:
   series_measurements *meas, *comp_meas;
-  int meas_len, comp_len;
+  unsigned int meas_len, comp_len;
   prior *pr;
   char name[100];
   double mean_time, mean_val; 
@@ -6817,11 +6827,11 @@ public:
   double obs_sd;
   
   // Trigonometric functions:
-  int num_per;
+  unsigned int num_per;
   double Tper[100]; 
   double beta_sin[100], beta_cos[100];
   
-  int numlayers;
+  unsigned int numlayers;
   
   int init_treatment, allow_positive_pulls, regional_init, layered_init;
   double init_time, init_value;
@@ -6844,11 +6854,12 @@ public:
 #endif // MAIN
   
   void set_series(char *seriename, int serienum, 
-		  double *X_time, double *X_value, int n, int num_layers, 
+		  double *X_time, double *X_value,
+		  unsigned int n, unsigned int num_layers, 
 		  prior *useprior=NULL, bool is_datetime=false,
 		  double *sd=NULL, int *num_meas_per_value=NULL, int *sites=NULL);
   
-  void set_series(double **X_time, int n, int num_layers);
+  void set_series(double **X_time, unsigned int n, unsigned int num_layers);
   
   void cleanup(void);
   void init(void);
@@ -6858,7 +6869,7 @@ public:
 };
 
 
- // ********************************************************
+// ********************************************************
 //
 // PARAMS 
 //
@@ -6880,7 +6891,7 @@ public:
   void copy(params *orig); // copy the contents of another 
   //'params' structure
 
- // constructors:
+  // constructors:
   params(); // creates an empty parameter value vector
   params(int numparams); // creates the parameter value vector
   params(double *values, int numparams); // creates the
@@ -6901,7 +6912,7 @@ public:
 // *******************
 // *******************
 
- // logarithmic factorial:
+// logarithmic factorial:
 double lfactorial(int x);
 
 // Draw pairwise correlations as a vector from the prior distribution
@@ -6912,7 +6923,7 @@ double **make_sigma2(double *cor, int num_sites);
 
 // Estimate (by Monte Carlo method) the probability of a correlation drawn 
 // from the prior resulting in a positively definite covariance matrix.
-double p_positive_correlations(int num_sites,int N);
+double p_positive_correlations(unsigned int num_sites,unsigned int N);
 
 
 #ifdef MAIN
@@ -6924,9 +6935,10 @@ void usage(void);
 // get_measurements: read the measurement file and store it in
 // an array of type 'measurement'. Allows for removing some 
 // measurements, by site or by age.
-series_measurements *get_measurements(char *infile, int *len, bool *use_site,
-			       double start_time=MISSING_VALUE, 
-			       double end_time=MISSING_VALUE);
+series_measurements *get_measurements(char *infile,
+				      unsigned int *len, bool *use_site,
+				      double start_time=MISSING_VALUE, 
+				      double end_time=MISSING_VALUE);
 
 // get_correlations: read the series correlation file and store it in
 // a timeseries of arrays, corresponding to corr_1_2, corr_1_3, ... ,
@@ -7005,7 +7017,7 @@ double logprob(params &par, double T, int dosmooth=0,
 // swaps: Incremented each time a swapping of tempering
 //        chains takes place.
 void newsample(params *sample, double *log_prob, params *acc, params *rw, 
-	       double *T, int numtemp, int *swaps, int dosmooth=0,
+	       double *T, unsigned int numtemp, int *swaps, int dosmooth=0,
 	       int do_realize=0);
 
 
@@ -7015,8 +7027,9 @@ void newsample(params *sample, double *log_prob, params *acc, params *rw,
 // indep: number of MCMC iterations between each
 //        sample fetched.
 // numtemp: Number of tempering chains.
-params *layer_mcmc(int numsamples, int burnin, int indep,
-		   int numtemp,bool do_importance=true,
+params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
+		   unsigned int indep, unsigned int numtemp=1,
+		   bool do_importance=true,
 		   int dosmooth=0, int do_realization=0,  
 		   char *realization_file_start=NULL, double ****x_=NULL, 
 		   double *startpar=NULL, double T_ground=1.5,
@@ -7058,7 +7071,7 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 #ifdef __linux__  
-  #include <flexiblas/flexiblas_api.h>
+#include <flexiblas/flexiblas_api.h>
 #endif // __linux__
 
 // *************************************************
@@ -7271,25 +7284,25 @@ double **make_site_sigma2(double *cor, int num_sites)
 }
 
 
-double logprior_site_corr(int numparams, 
-		     double *params, // logit-transformed correlations
-		     int /* num_hyperparameters */,
-		     double * /*hyper_parameters*/ )
+double logprior_site_corr(unsigned int numparams, 
+			  double *params, // logit-transformed correlations
+			  unsigned int /* num_hyperparameters */,
+			  double * /*hyper_parameters*/ )
 {
   double lp=0.0;
-  for(int i=0;i<numparams;i++)
+  for(unsigned int i=0;i<numparams;i++)
     lp+= (-0.5*log(2.0*M_PI)-log(2.0)-0.5*params[i]*params[i]/4.0);
   return lp;
 }
 
 double loglik_site_corr(double ** /* data */, 
-		   int numrows, // stand in for num_sites 
-		   int /* numcolumns */,
-		   int numparams, 
-		   double *params)
+			unsigned int numrows, // stand in for num_sites 
+			unsigned int /* numcolumns */,
+			unsigned int numparams, 
+			double *params)
 {
-  int i,j;
-  int num_sites=numrows;
+  unsigned int i,j;
+  unsigned int num_sites=numrows;
   double *cor=new double[numparams];
   
   for(i=0;i<numparams;i++)
@@ -7314,12 +7327,12 @@ double loglik_site_corr(double ** /* data */,
     return(-1e+200);
 }		    
 
-void init_site_corr(int numparams,
-	       double *params, 
-	       int /* num_hyperparameters */,
-	       double* /* hyperparameters */)
+void init_site_corr(unsigned int numparams,
+		    double *params, 
+		    unsigned int /* num_hyperparameters */,
+		    double* /* hyperparameters */)
 {
-  for(int i=0;i<numparams;i++)
+  for(unsigned int i=0;i<numparams;i++)
     params[i]=0.0;
 }
 
@@ -7328,13 +7341,14 @@ void init_site_corr(int numparams,
 // correlation drawn from the prior resulting in a positively 
 // definite covariance matrix for the sites in any given combination
 // of series and layer.
-double p_positive_sitecorr(int num_sites,int N)
+double p_positive_sitecorr(unsigned int num_sites,unsigned int N)
 {
-  int dim=num_sites*(num_sites-1)/2;
+  unsigned int dim=num_sites*(num_sites-1)/2;
   double T=1.0;
   double **params=general_mcmc(N,N,9,1,NULL,num_sites,1,dim,NULL,
-		       &T, 0.1, 0, NULL, init_site_corr, logprior_site_corr, 
-		       loglik_site_corr, true);
+			       &T, 0.1, 0, NULL,
+			       init_site_corr, logprior_site_corr, 
+			       loglik_site_corr, true);
 
   double lbml=
     log_model_likelihood_multinormal(10*N, params, dim, N,
@@ -7359,7 +7373,7 @@ double p_positive_sitecorr(int num_sites,int N)
 double **make_series_sigma2(double *cor)
 {
   double **sigma2=Make_matrix(num_tot_layers,num_tot_layers);
-  int i,p=num_series_corr;
+  unsigned int i,p=num_series_corr;
 
   for(i=0;i<num_tot_layers;i++)
     sigma2[i][i]=1.0;
@@ -7372,24 +7386,24 @@ double **make_series_sigma2(double *cor)
 }
 
 
-double logprior_series_corr(int numparams, 
+double logprior_series_corr(unsigned int numparams, 
 			    double *params, // logit-transformed correlations
-			    int /* num_hyperparameters */,
+			    unsigned int /* num_hyperparameters */,
 			    double * /*hyper_parameters*/ )
 {
   double lp=0.0;
-  for(int i=0;i<numparams;i++)
+  for(unsigned int i=0;i<numparams;i++)
     lp+= (-0.5*log(2.0*M_PI)-log(2.0)-0.5*params[i]*params[i]/4.0);
   return lp;
 }
 
 double loglik_series_corr(double ** /* data */, 
-			  int /* numrows */, 
-			  int /* numcolumns */,
-			  int /* numparams */, 
+			  unsigned int /* numrows */, 
+			  unsigned int /* numcolumns */,
+			  unsigned int /* numparams */, 
 			  double *params)
 {
-  int i,j;
+  unsigned int i,j;
   double *cor=new double[num_series_corr];
   
   for(i=0;i<num_series_corr;i++)
@@ -7413,12 +7427,12 @@ double loglik_series_corr(double ** /* data */,
     return(-1e+200);
 }		    
 
-void init_series_corr(int numparams,
+void init_series_corr(unsigned int numparams,
 		      double *params, 
-		      int /* num_hyperparameters */,
+		      unsigned int /* num_hyperparameters */,
 		      double* /* hyperparameters */)
 {
-  for(int i=0;i<num_series_corr;i++)
+  for(unsigned int i=0;i<num_series_corr;i++)
     params[i]=0.0;
 }
 
@@ -7427,15 +7441,15 @@ void init_series_corr(int numparams,
 // correlation drawn from the prior resulting in a positively 
 // definite covariance matrix for the sites in any given combination
 // of series and layer.
-double p_positive_seriescorr(int N)
+double p_positive_seriescorr(unsigned int N)
 {
   double T=1.0;
   double **params=general_mcmc(N,N,9,1,
-		       NULL,0,0,
-		       num_series_corr,NULL,
-		       &T, 0.1, 0, NULL, init_series_corr, 
-		       logprior_series_corr, 
-		       loglik_series_corr, true);
+			       NULL,0,0,
+			       num_series_corr,NULL,
+			       &T, 0.1, 0, NULL, init_series_corr,
+			       logprior_series_corr, 
+			       loglik_series_corr, true);
 
   double lbml=
     log_model_likelihood_multinormal(10*N, 
@@ -7797,7 +7811,8 @@ measurement_cluster::measurement_cluster()
   dt=NoHydDateTime;
   num_measurements=0;
 
-  serie_num=site=n=index=NULL;
+  serie_num=site=NULL;
+  n=index=NULL;
   meanval=sd=NULL;
   corr_matrix=NULL;
 }
@@ -7808,16 +7823,19 @@ measurement_cluster::measurement_cluster(double time_, HydDateTime dtime)
   dt=dtime;
   num_measurements=0;
 
-  serie_num=site=n=index=NULL;
+  serie_num=site=NULL;
+  n=index=NULL;
   meanval=sd=NULL;
   corr_matrix=NULL;
 }
 
 // Filled measurement cluster:
-measurement_cluster::measurement_cluster(double time_, int number_of_measurements, 
-					int *series, int *sites, int *N, 
-					double *mean_val, double *standard_dev,
-					int *index_, HydDateTime dtime)
+measurement_cluster::measurement_cluster(double time_,
+					 unsigned int number_of_measurements, 
+					 int *series,
+					 int *sites, int *N, 
+					 double *mean_val, double *standard_dev,
+					 int *index_, HydDateTime dtime)
 {
   tm=time_;
   dt=dtime;
@@ -7832,7 +7850,7 @@ measurement_cluster::measurement_cluster(double time_, int number_of_measurement
       meanval=new double[num_measurements];
       sd=new double[num_measurements];
 
-      for(int i=0;i<num_measurements;i++)
+      for(unsigned int i=0;i<num_measurements;i++)
 	{
 	  if(series)
 	    serie_num[i]=series[i];
@@ -7850,7 +7868,8 @@ measurement_cluster::measurement_cluster(double time_, int number_of_measurement
     }
   else
     {
-      serie_num=site=n=index=NULL;
+      serie_num=site=NULL;
+      n=index=NULL;
       meanval=sd=NULL;
     }
   corr_matrix=NULL;
@@ -7862,7 +7881,8 @@ measurement_cluster::measurement_cluster(measurement_cluster *orig)
   dt=NoHydDateTime;
   num_measurements=0;
 
-  serie_num=site=n=index=NULL;
+  serie_num=site=NULL;
+  n=index=NULL;
   meanval=sd=NULL;
   corr_matrix=NULL;
 
@@ -7909,7 +7929,7 @@ void measurement_cluster::copy(measurement_cluster *orig)
   tm=orig->tm;
   dt=orig->dt;
   num_measurements=orig->num_measurements;
-  int i,j;
+  unsigned int i,j;
 
   if(num_measurements>0)
     {
@@ -7948,7 +7968,8 @@ void measurement_cluster::copy(measurement_cluster *orig)
     }
   else
     {
-      serie_num=site=n=index=NULL;
+      serie_num=site=NULL;
+      n=index=NULL;
       meanval=sd=NULL;
       corr_matrix=NULL;
     }
@@ -7956,7 +7977,7 @@ void measurement_cluster::copy(measurement_cluster *orig)
 
 void measurement_cluster::add_measurement(series_measurements &m)
 {
-  int i;
+  unsigned int i;
 
   if(num_measurements>0)
     {
@@ -7973,7 +7994,7 @@ void measurement_cluster::add_measurement(series_measurements &m)
 	}
 
       for(i=0;i<num_measurements;i++)
-	if(m.site==site[i] && m.serie_num==serie_num[i])
+	if(m.site==site[i] && (int)m.serie_num==serie_num[i])
 	  {
 #ifdef MAIN
 	    printf("Added a new measurement which was already included:\n");
@@ -7987,7 +8008,7 @@ void measurement_cluster::add_measurement(series_measurements &m)
 	  }
     }
 
-  int num=num_measurements+1;
+  unsigned int num=num_measurements+1;
   int *index_=new int[num];
   int *series=new int[num];
   int *sites=new int[num];
@@ -8054,7 +8075,7 @@ void measurement_cluster::print(void)
 {
 #ifdef MAIN
   printf("tm=%9.5f #measurements=%d\n", tm, num_measurements);
-  for(int i=0;i<num_measurements;i++)
+  for(unsigned int i=0;i<num_measurements;i++)
     {
       if(sd && sd[i]!=MISSING_VALUE && n && n[i]!=(int) MISSING_VALUE)
 	printf("ser=%d site=%d val=%9.5f sd=%9.5f n=%d\n",
@@ -8069,9 +8090,9 @@ void measurement_cluster::print(void)
   if(corr_matrix)
     {
       printf("Correlation matrix:\n");
-      for(int i=0;i<num_measurements;i++)
+      for(unsigned int i=0;i<num_measurements;i++)
 	{
-	  for(int j=0;j<num_measurements;j++)
+	  for(unsigned int j=0;j<num_measurements;j++)
 	    printf("%7.5lf ", corr_matrix[i][j]);
 	  printf("\n");
 	}
@@ -8090,7 +8111,8 @@ void measurement_cluster::print(void)
 // ********************************************************
 
 bool nosites=false;
-series_measurements *get_measurements(char *infile, int *len, 
+series_measurements *get_measurements(char *infile,
+				      unsigned int *len, 
 				      bool *use_site,
 				      double start_time, double end_time)
 {
@@ -8101,7 +8123,7 @@ series_measurements *get_measurements(char *infile, int *len,
   // (time will be counted in minutes rather than m,illions of years)
   static int first=1;
   
-  int i,lines=0; // index variables
+  unsigned int i,lines=0; // index variables
   
   ifstream in;
   char str[10000];
@@ -8488,7 +8510,7 @@ series_measurements *get_measurements(char *infile, int *len,
       // count the number of sites:
       numsites=1;
       for(i=0;i<(*len);i++)
-	if(numsites<(ret[i].site+1))
+	if((int)numsites<(ret[i].site+1))
 	  numsites=ret[i].site+1;
       first=0;
 
@@ -8912,11 +8934,12 @@ series::~series()
 }
 
 void series::set_series(char *serie_name, int serienum,
-			double *X_time, double *X_value, int n, int num_layers,
+			double *X_time, double *X_value,
+			unsigned int n, unsigned int num_layers,
 			prior *useprior, bool is_datetime,
 			double *sd, int *num_meas_per_value, int *sites)
 {
-  int i;
+  unsigned int i;
   
   init();
 
@@ -8985,9 +9008,9 @@ void series::set_series(char *serie_name, int serienum,
     pr->show();
 }
 
-void series::set_series(double **X, int n, int num_layers)
+void series::set_series(double **X, unsigned int n, unsigned int num_layers)
 {
-  int i;
+  unsigned int i;
   
   init();
 
@@ -9037,7 +9060,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 			 int serie_number,
 			 bool *use_site,double start_time,double end_time)
 {
-  int i;
+  unsigned int i;
   
   init();
   
@@ -9066,7 +9089,7 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
 		usage();
 	      }
 	    
-	    int layer=atoi(argv[2])-1;
+	    unsigned int layer=(unsigned int) (atoi(argv[2])-1);
 	    if(layer>=(numlayers-1))
 	      {
 		cerr << "Can't put time integration on the "
@@ -9960,9 +9983,9 @@ void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
 
 
 
-void keep_x_and_P(double *t_k,double **x_k_s, double ***P_k_s, int len)
+void keep_x_and_P(double *t_k,double **x_k_s, double ***P_k_s, unsigned int len)
 {
-  int i,j,k;
+  unsigned int i,j,k;
 
   if(x_k_s_kept)
     doubledelete(x_k_s_kept,len);
@@ -10026,8 +10049,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   timers[2][0]=clock();
 #endif // DETAILED_TIMERS
   
-  
-  int s,i,j,k,l,/*l2,*/ t=0,t_0=0;
+  unsigned int s,i,j,k,l,t=0, t_0=0;
   numpar=0;
   bool pairwise_wrong=false;
 
@@ -11328,13 +11350,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	m[i]=ser[s].mu[i%numsites];
       
       for(j=0;j<num_series_feed;j++)
-	if(feed_to_series[j]==s && feed_to_layer[j]==l)
+	if(feed_to_series[j]==(int)s && feed_to_layer[j]==(int)l)
 	  m[i] -= beta_feed[j]*ser[feed_from_series[j]].mu[i%numsites];
       
       m[i]*=ser[s].pull[l][i%numsites];
     }
   
-  int len = dosmooth ? meas_smooth_len : meas_tot_len;
+  unsigned int len = dosmooth ? meas_smooth_len : meas_tot_len;
   
   measurement_cluster *me = (dosmooth ? meas_smooth : meas_tot);
   
@@ -11413,7 +11435,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif // MAIN
   
   // count number of observed series:
-  int numobs=num_series*numsites;
+  unsigned int numobs=num_series*numsites;
   double **resids=new double*[numobs];
   double **prior_expectancy=new double*[numobs];
   double *resids_time=new double[meas_tot_len];
@@ -11605,7 +11627,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		
 		for(j=0;j<numsites;j++)
 		  for(k=0;k<numsites;k++)
-		    for(int k2=0;k2<numsites;k2++)
+		    for(unsigned int k2=0;k2<numsites;k2++)
 		      sqrtbuffer[j][k]+=
 			sigma_Vinv[j][k2]*complex_sqrt(sigma_lambda[k2])*sigma_V[k2][k];
 		
@@ -11659,7 +11681,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  double **sqrtprod=Make_matrix(numsites,numsites);
 	  for(j=0;j<numsites;j++)
 	    for(k=0;k<numsites;k++)
-	      for(int k2=0;k2<numsites;k2++)
+	      for(unsigned int k2=0;k2<numsites;k2++)
 		sqrtprod[j][k]+=
 		  corr_sqrt_layer[index1][j][k2]*corr_sqrt_layer[index2][k2][k];
 	  
@@ -11925,7 +11947,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  if((is_complex && lambda[i]!=0.0) ||
 	     (!is_complex && lambda_r[i]!=0))
 	    {
-	      int b;
+	      unsigned int b;
 	      for(b=i%numsites2;b<num_states;b+=numsites2)
 		{
 		  if(is_complex)
@@ -11937,7 +11959,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      if(ser[s].linear_time_dep)
 		{
 		  double t00=me[0].tm;
-		  int nl=ser[s].numlayers;
+		  unsigned int nl=ser[s].numlayers;
 		  b=series_state_start[s]+numsites*(nl-1)+i%numsites;
 	      
 	          if(is_complex)
@@ -12332,8 +12354,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      
 	      s=state_series[i];
 	      l=state_layer[i];
-	      int nl=ser[s].numlayers;
-	      int b=i+(nl-l-1)*numsites;
+	      unsigned int nl=ser[s].numlayers;
+	      unsigned int b=i+(nl-l-1)*numsites;
 	      
 	      if(state_layer[b]!=(nl-1))
 		{
@@ -12801,7 +12823,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       
       if(me[k].num_measurements==1)
 	{
-	  int j1,j2;
+	  unsigned int j1,j2;
 	  double y_k=me[k].meanval[0]-x_k_prev[me[k].index[0]];
 	  double S_k=0.0, R_k=0.0;
 	  
@@ -12939,7 +12961,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
       else if(me[k].num_measurements>1)
 	{
-	  int n=me[k].num_measurements, i2,j1,j2;
+	  unsigned int n=me[k].num_measurements, i2,j1,j2;
 	  double *y_k=new double[n];
 	  double *zeroes_k=new double[n];
 	  double **S_k=Make_matrix(n,n);
@@ -13331,7 +13353,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
       if(!x_k_realized)
 	x_k_realized=Make_matrix(meas_smooth_len, num_states);
       
-      int stopped=1, numit=0;
+      int stopped=1;
+      unsigned numit=0;
       double sum_prob=0.0;
       while(stopped && numit<numit_realization)
 	{
@@ -13544,7 +13567,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 	  if(real_strat!=NO_CENSORING && !stopped)
 	    {
-	      int *k2=new int[numsites];
+	      unsigned int *k2=new unsigned int[numsites];
 	      // stores the index of the last site specific measurement
 	      for(i=0;i<numsites;i++)
 		k2[i]=len-1;
@@ -13557,7 +13580,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    {
 		      while(k2[i]>=0 && 
 			    (k2[i]>=k || 
-			     (me[k2[i]].site!=NULL && me[k2[i]].site[0]!=i) || 
+			     (me[k2[i]].site!=NULL &&
+			      me[k2[i]].site[0]!=(int)i) || 
 			     (me[k2[i]].meanval!=NULL && 
 			      me[k2[i]].meanval[0]==MISSING_VALUE)))
 			k2[i]--;
@@ -13757,7 +13781,7 @@ double minusloglik(double *pars)
 
 double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 {
-  int s,i,l;
+  unsigned int s,i,l;
   
   // fetch the log-likelihood:
   double ll=loglik(par.param, dosmooth, do_realize), prp=0.0;;
@@ -13943,7 +13967,7 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				{
 				  double ldt_old=-log(ser[s].pull[l+1][i]);
 				  
-				  for(int i2=0;i2<numsites;i2++)
+				  for(unsigned int i2=0;i2<numsites;i2++)
 				    if(i2!=i && indicator_array[i]==
 				       indicator_array[i2])
 				      ldt_old=MINIM(ldt_old,-log(ser[s].pull[l+1][i]));
@@ -14096,7 +14120,7 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 				{
 				  double ldt_old=-log(ser[s].pull[l-1][i]);
 				  
-				  for(int i2=0;i2<numsites;i2++)
+				  for(unsigned int i2=0;i2<numsites;i2++)
 				    if(i2!=i && 
 				       indicator_array[i]==indicator_array[i2])
 				      ldt_old=MAXIM(ldt_old,
@@ -14341,7 +14365,8 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 //        chains takes place.
 // ******************************************************
 void newsample(params *sample, double *log_prob, params *acc, params *rw,
-	       double *T, int numtemp, int *swaps, int dosmooth, int do_realize)
+	       double *T, unsigned int numtemp, int *swaps,
+	       int dosmooth, int do_realize)
 {
   if(numtemp>1 && drand()<0.1) // tempering swap?
     {
@@ -14364,7 +14389,7 @@ void newsample(params *sample, double *log_prob, params *acc, params *rw,
 	}
     }
   else // normal RW Metropolis sampling:
-    for(int t=0;t<numtemp;t++) // traverse the tempering chains
+    for(unsigned int t=0;t<numtemp;t++) // traverse the tempering chains
       {
 	// Make a new parameter structure from the old:
 	params newparams(sample+t);
@@ -14372,7 +14397,7 @@ void newsample(params *sample, double *log_prob, params *acc, params *rw,
 	double sT=sqrt(T[t]); // tempering contribution to the 
 	// random walk standard deviation
 	
-	for(int i=0;i<numpar;i++) // traverse the parameters
+	for(unsigned int i=0;i<numpar;i++) // traverse the parameters
 	  {
 	    // if binary, try to switch the indicator, else
 	    // sample from the normal distribution with the
@@ -14468,8 +14493,9 @@ double init_par(int i) // i=parameter number
 //        sample fetched.
 // numtemp: Number of tempering chains.
 // ****************************************************
-params *layer_mcmc(int numsamples, int burnin, int indep,
-		   int numtemp,bool do_importance,
+params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
+		   unsigned int indep,unsigned int numtemp,
+		   bool do_importance,
 		   int dosmooth, int do_realization,  
 		   char *realization_file_start, double ****x_, 
 		   double *startpar, double T_ground,
@@ -14495,7 +14521,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
   double *log_prob=new double[numtemp];
   
   // indexes:
-  int i,j,k,t;
+  unsigned int i,j,k;
+  unsigned int t;
   
   // Temperatures for each tempering chain:
   double *T=new double[numtemp];
@@ -14732,7 +14759,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    {
 	      double *xx=new double[num_states], 
 		**ss=Make_matrix(num_states,num_states);
-	      int ii,jj;
+	      unsigned int ii,jj;
 	      
 	      for(ii=0;ii<num_states;ii++)
 		xx[ii]=x_k_s_kept[k][ii];
@@ -14844,7 +14871,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    }
 	  else if(realization_file_start==NULL)
 	    {
-	      int i_real=numit_realizations_made;
+	      unsigned int i_real=numit_realizations_made;
 	      if(i_real<numit_realization)
 		{
 		  if(!x_k_realized_all)
@@ -14907,8 +14934,8 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 	    printf("%d<->%d: %d\n", i, i+1, swaps[i]);
 #else
 	  Rcout << "Swaps:" << std::endl;
-	  for(i=0;i<(numtemp-1);i++)
-	    Rcout << i << "<->" << i+1 << ": " << swaps[i] << std::endl;
+	  for(t=0;t<(numtemp-1);t++)
+	    Rcout << t << "<->" << t+1 << ": " << swaps[t] << std::endl;
 #endif // MAIN
 	}
     }
@@ -14930,7 +14957,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
       // csamples: will contain the MCMC samples as a 2D array:
       double **csamples=new double*[numsamples];
       // number of non-indicator parameters:
-      int numpar2=numpar-numsites*use_indicator;
+      unsigned int numpar2=(unsigned int)(numpar-numsites*use_indicator);
       double maxprob=-1e+200;
 
       // Calculate the Bayesian probability estimates for the
@@ -15015,7 +15042,7 @@ params *layer_mcmc(int numsamples, int burnin, int indep,
 #endif // MAIN
       
 
-      int num_imp=numtemp*(numsamples*indep+burnin)*numpar;
+      unsigned int num_imp=numtemp*(numsamples*indep+burnin)*numpar;
       
       // Importance sampling in order to calculate
       // the model probabilities:
@@ -15368,7 +15395,7 @@ const double partial_loglikwrapper(const NumericVector &vals)
   
   double *val2=new double[numpar];
 
-  int i=0,j;
+  unsigned int i=0,j;
   for(j=0;j<numpar;j++)
     {
       if(partial_par[j]!=MISSING_VALUE)
@@ -15415,7 +15442,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   int num_mcmc=as<int>(num_MCMC);
   int burnin=as<int>(Burnin);
   int spacing=as<int>(Spacing);
-  int numtemp=as<int>(NumTemp);
+  unsigned int numtemp=as<unsigned int>(NumTemp);
   int do_importance=as<int>(do_model_likelihood);
   int do_ml=as<int>(do_maximum_likelihood);
   if(do_ml)
@@ -15530,7 +15557,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(!silent)
     Rcout << inall.size() << std::endl;
   
-  int s,i,j,l;
+  unsigned int s,i,l;
+  int j;
   for(s=0;s<num_series;s++)
     {
       List inlist=as<List>(inall[s]);
@@ -15545,10 +15573,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       //NumericMatrix X=as<NumericMatrix>(inlist["datamatrix"]); 
       
       NumericVector X_time=as<NumericVector>(indata["time"]);
-      int len_time=X_time.size();
+      unsigned int len_time=X_time.size();
       
       NumericVector X_value=as<NumericVector>(indata["value"]);
-      int len_value=X_value.size();
+      unsigned int len_value=X_value.size();
       
       if(len_time!=len_value)
 	{
@@ -15558,7 +15586,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  PutRNGstate();
 	  return NULL;
 	}
-      int len=len_time;
+      unsigned int len=len_time;
       
       std::string name=as<std::string>(indata["name"]);
       char *seriename=(char *) name.c_str();
@@ -15567,29 +15595,29 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       int nopull=as<int>(inlist["no.pull"]); 
       int lintime=as<int>(inlist["lin.time"]); 
       IntegerVector timeint_layers=as<IntegerVector>(inlist["time.integral"]);
-      int num_timeint=timeint_layers.size();
+      unsigned int num_timeint=timeint_layers.size();
       int regmu=as<int>(inlist["regional.mu"]); 
       int reglint=as<int>(inlist["regional.lin.time"]); 
       IntegerVector regpull_layers=as<IntegerVector>(inlist["regional.pull"]);
-      int num_regpull=regpull_layers.size();
+      unsigned int num_regpull=regpull_layers.size();
       IntegerVector regsigma_layers=as<IntegerVector>(inlist["regional.sigma"]);
-      int num_regsigma=regsigma_layers.size();
+      unsigned int num_regsigma=regsigma_layers.size();
       IntegerVector corrsigma_layers=as<IntegerVector>(inlist["correlated.sigma"]);
-      int num_corrsigma=corrsigma_layers.size();
+      unsigned int num_corrsigma=corrsigma_layers.size();
       IntegerVector pcorrsigma_layers=as<IntegerVector>(inlist["pairwise.correlated.sigma"]);
-      int num_pcorrsigma=pcorrsigma_layers.size();
+      unsigned int num_pcorrsigma=pcorrsigma_layers.size();
       IntegerVector nosigma_layers=as<IntegerVector>(inlist["no.sigma"]);
-      int num_nosigma=nosigma_layers.size();
+      unsigned int num_nosigma=nosigma_layers.size();
       IntegerVector onedimsigma_layers=as<IntegerVector>(inlist["one.dim.sigma"]);
-      int num_onedimsigma=onedimsigma_layers.size();
+      unsigned int num_onedimsigma=onedimsigma_layers.size();
       IntegerVector groupingsigma_layers=as<IntegerVector>(inlist["grouping.sigma"]);
-      int num_groupingsigma=groupingsigma_layers.size();
+      unsigned int num_groupingsigma=groupingsigma_layers.size();
       IntegerVector removesigma_layers=as<IntegerVector>(inlist["remove.sigma"]);
-      int num_removesigma=removesigma_layers.size();
+      unsigned int num_removesigma=removesigma_layers.size();
       IntegerVector diffsigma_layers=as<IntegerVector>(inlist["differentiate.sigma"]);
-      int num_diffsigma=diffsigma_layers.size();
+      unsigned int num_diffsigma=diffsigma_layers.size();
       IntegerVector diffpull_layers=as<IntegerVector>(inlist["differentiate.pull"]);
-      int num_diffpull=diffpull_layers.size();
+      unsigned int num_diffpull=diffpull_layers.size();
       int diffmu=as<int>(inlist["differentiate.mu"]); 
       int difflint=as<int>(inlist["differentiate.lin.time"]); 
       int init0=as<int>(inlist["init.0"]); 
@@ -15598,16 +15626,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       int init_same_sites=as<int>(inlist["init.same.sites"]); 
       int init_same_layers=as<int>(inlist["init.same.layers"]); 
       NumericVector init_specified=as<NumericVector>(inlist["init.specified"]);
-      int num_init_specified=init_specified.size();
+      unsigned int num_init_specified=init_specified.size();
       int allow_pos_pull=as<int>(inlist["allow.pos.pull"]);
       NumericVector periods=as<NumericVector>(inlist["period"]);
-      int num_periods=periods.size();
+      unsigned int num_periods=periods.size();
       int is_datetime=as<int>(indata["is.datetime"]);
       
-      int n=len;
+      unsigned int n=len;
       
       NumericVector sd=as<NumericVector>(indata["std.dev"]);
-      int len_sd=sd.size();
+      unsigned int len_sd=sd.size();
       double *sd_meas=NULL;
       if(len_sd==len)
 	{
@@ -15617,7 +15645,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       
       IntegerVector num_meas_per_value=as<IntegerVector>(indata["num.meas.per.value"]);
-      int len_n=num_meas_per_value.size();
+      unsigned int len_n=num_meas_per_value.size();
       int *n_meas=NULL;
       if(len_n==len)
 	{
@@ -15628,7 +15656,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       numsites=1;
       IntegerVector site=as<IntegerVector>(indata["site"]);
-      int len_sites=site.size();
+      unsigned int len_sites=site.size();
       int *site_meas=NULL;
       if(len_sites==len)
 	{
@@ -15636,8 +15664,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(i=0;i<len;i++)
 	    {
 	      site_meas[i]=site[i];
-	      if((site_meas[i]+1)>numsites)
-		numsites=(site_meas[i]+1);
+	      if((site_meas[i]+1)>(int)numsites)
+		numsites=(unsigned int) (site_meas[i]+1);
 	    }
 	}  
       
@@ -15816,7 +15844,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   for(s=0;s<num_series;s++)
     {
       for(l=0;l<ser[s].numlayers;l++)
-	for(j=0;j<numsites;j++)
+	for(j=0;j<(int)numsites;j++)
 	  {
 	    state_series[num_states+l*numsites+j]=s;
 	    state_layer[num_states+l*numsites+j]=l;
@@ -15905,7 +15933,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    meas_smooth_len++;
 	  
 	  meas_smooth=new measurement_cluster[meas_smooth_len+meas_tot_len+10];
-	  int j=0,k=0;
+	  unsigned int j=0,k=0;
 	  
 	  i=0;
 	  t=MINIM(t1,meas_tot[0].tm);
@@ -15987,7 +16015,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   for(i=0;i<num_series_feed;i++)
     {
       feed_from_series[i]=causal_pairs[4*i]-1;
-      if(feed_from_series[i]>=num_series)
+      if(feed_from_series[i]>=(int)num_series)
 	{
 	  Rcout << "Series index too high for 'from' series:" << 
 	    feed_from_series[i]+1 << std::endl;
@@ -16003,7 +16031,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       feed_from_layer[i]=causal_pairs[4*i+1]-1;
       if(feed_from_layer[i]>=
-	 ser[feed_from_series[i]].numlayers)
+	 (int)ser[feed_from_series[i]].numlayers)
 	{
 	  Rcout << "Layer index too high for 'from' series:" << 
 	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << std::endl;
@@ -16018,7 +16046,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  return NULL;
 	}
       feed_to_series[i]=causal_pairs[4*i+2]-1;
-      if(feed_to_series[i]>=num_series)
+      if(feed_to_series[i]>=(int)num_series)
 	{
 	  Rcout << "Series index too high for 'to' series:" << 
 	    feed_to_series[i]+1 << std::endl;
@@ -16034,7 +16062,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       feed_to_layer[i]=causal_pairs[4*i+3]-1;
       if(feed_to_layer[i]>=
-	 ser[feed_to_series[i]].numlayers)
+	 (int)ser[feed_to_series[i]].numlayers)
 	{
 	  Rcout << "Layer index too high for 'to' series:" << 
 	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << std::endl;
@@ -16056,7 +16084,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   for(i=num_series_feed;i<num_series_feed+numsym;i++)
     {
       feed_from_series[i]=causal_sym_pairs[4*(i-num_series_feed)]-1;
-      if(feed_from_series[i]>=num_series)
+      if(feed_from_series[i]>=(int)num_series)
 	{
 	  Rcout << "Series index too high for 'from' series:" << 
 	    feed_from_series[i]+1 << std::endl;
@@ -16072,7 +16100,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       feed_from_layer[i]=causal_sym_pairs[4*(i-num_series_feed)+1]-1;
       if(feed_from_layer[i]>=
-	 ser[feed_from_series[i]].numlayers)
+	 (int)ser[feed_from_series[i]].numlayers)
 	{
 	  Rcout << "Layer index too high for 'from' series:" << 
 	    feed_from_series[i]+1 << ":" << feed_from_layer[i]+1 << std::endl;
@@ -16087,7 +16115,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  return NULL;
 	}
       feed_to_series[i]=causal_sym_pairs[4*(i-num_series_feed)+2]-1;
-      if(feed_to_series[i]>=num_series)
+      if(feed_to_series[i]>=(int)num_series)
 	{
 	  Rcout << "Series index too high for 'to' series:" << 
 	    feed_to_series[i]+1 << std::endl;
@@ -16103,7 +16131,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       feed_to_layer[i]=causal_sym_pairs[4*(i-num_series_feed)+3]-1;
       if(feed_to_layer[i]>=
-	 ser[feed_to_series[i]].numlayers)
+	 (int)ser[feed_to_series[i]].numlayers)
 	{
 	  Rcout << "Layer index too high for 'to' series:" << 
 	    feed_to_series[i]+1 << ":" << feed_to_layer[i]+1 << std::endl;
@@ -16142,7 +16170,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   for(i=0;i<num_series_corr;i++)
     {
       corr_from_series[i]=corr_pairs[4*i]-1;
-      if(corr_from_series[i]>=num_series)
+      if(corr_from_series[i]>=(int)num_series)
 	{
 	  Rcout << "Series index too high for 'from' series:" << 
 	    corr_from_series[i]+1 << std::endl;
@@ -16158,7 +16186,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       corr_from_layer[i]=corr_pairs[4*i+1]-1;
       if(corr_from_layer[i]>=
-	 ser[corr_from_series[i]].numlayers)
+	 (int)ser[corr_from_series[i]].numlayers)
 	{
 	  Rcout << "Layer index too high for 'from' series:" << 
 	    corr_from_series[i]+1 << ":" << corr_from_layer[i]+1 << std::endl;
@@ -16173,7 +16201,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  return NULL;
 	}
       corr_to_series[i]=corr_pairs[4*i+2]-1;
-      if(corr_to_series[i]>=num_series)
+      if(corr_to_series[i]>=(int)num_series)
 	{
 	  Rcout << "Series index too high for 'to' series:" << 
 	    corr_to_series[i]+1 << std::endl;
@@ -16189,7 +16217,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       corr_to_layer[i]=corr_pairs[4*i+3]-1;
       if(corr_to_layer[i]>=
-	 ser[corr_to_series[i]].numlayers)
+	 (int)ser[corr_to_series[i]].numlayers)
 	{
 	  Rcout << "Layer index too high for 'to' series:" << 
 	    corr_to_series[i]+1 << ":" << corr_to_layer[i]+1 << std::endl;
@@ -16266,7 +16294,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  num_lliks=num_lpriors=num_mcmc;
 	  lliks=new double[num_mcmc];
 	  lpriors=new double[num_mcmc];
-	  for(j=0;j<num_mcmc;j++)
+	  for(j=0;(int)j<num_mcmc;j++)
 	    {
 	      lliks[j]=pars[j].log_lik;
 	      lpriors[j]=pars[j].log_prob-pars[j].log_lik;
@@ -16291,7 +16319,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(int k=0;k<inpars_numsets;k++)
 	{
 	  int num_missing=0;
-	  for(j=0;j<inpars_numpars;j++)
+	  for(j=0;(int)j<inpars_numpars;j++)
 	    if(in_pars(k,j)==MISSING_VALUE)
 	      num_missing++;
 	    
@@ -16310,18 +16338,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      NumericVector outpars(inpars_numpars);
 	      
 	      detailed_loglik=false;
-	      for(i=0;i<num_optim;i++)
+	      for(i=0;(int)i<num_optim;i++)
 		{
 		  NumericVector initpars(num_missing);
 		  int jj=0;
-		  for(j=0;j<inpars_numpars;j++)
+		  for(j=0;(int)j<inpars_numpars;j++)
 		    if(in_pars(k,j)==MISSING_VALUE)
 		      {
 			initpars[jj]=init_par(j);
 			jj++;
 		      }
 		  partial_par=new double[inpars_numpars];
-		  for(j=0;j<inpars_numpars;j++)
+		  for(j=0;(int)j<inpars_numpars;j++)
 		    partial_par[j]=transform_parameter(in_pars(k,j),
 						       par_trans_type[j]);
 		  Environment stats("package:stats");
@@ -16337,7 +16365,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		    {
 		      lbest=-outval(0);
 		      jj=0;
-		      for(j=0;j<inpars_numpars;j++)
+		      for(j=0;(int)j<inpars_numpars;j++)
 			{
 			  if(in_pars(k,j)==MISSING_VALUE)
 			    {
@@ -16355,7 +16383,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      detailed_loglik=detailed_loglik_buffer;
 	      Rcout << "optim loop done" << std::endl;
 
-	      for(j=0;j<inpars_numpars;j++)
+	      for(j=0;(int)j<inpars_numpars;j++)
 		{
 		  if(in_pars(k,j)!=MISSING_VALUE)
 		    {
@@ -16375,7 +16403,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  else
 	    {
 	      Rcout << "fill out started" << std::endl;
-	      for(j=0;j<inpars_numpars;j++)
+	      for(j=0;(int)j<inpars_numpars;j++)
 		pars[0].param[j]=transform_parameter(in_pars(k,j),
 						     par_trans_type[j]);
 	      Rcout << "fill out done" << std::endl;
@@ -16408,7 +16436,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       P_k_smooth=new double **[meas_smooth_len];
       x_k_smooth=new double *[meas_smooth_len];
 
-      for(int k=0;k<meas_smooth_len;k++)
+      for(unsigned int k=0;k<meas_smooth_len;k++)
 	{
 	  x_k_smooth[k]=new double[num_states];
 	  P_k_smooth[k]=Make_matrix(num_states,num_states);
@@ -16416,7 +16444,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(i=0;i<num_states;i++)
 	    {
 	      x_k_smooth[k][i]=x_k_s_kept[k][i];
-	      for(j=0;j<num_states;j++)
+	      for(j=0;j<(int)num_states;j++)
 		P_k_smooth[k][i][j]=P_k_s_kept[k][i][j];
 	    }
 	}
@@ -16429,7 +16457,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       num_mcmc=inpars_numsets;
       pars=new params[num_mcmc];
-      for(j=0;j<num_mcmc;j++)
+      for(j=0;(int)j<num_mcmc;j++)
 	{
 	  pars[j].numparam=numpar;
 	  pars[j].param=new double[numpar];
@@ -16442,23 +16470,23 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(i=0;i<num_states;i++)
 	{
 	  x[i]=new double*[meas_smooth_len];
-	  for(int k=0;k<meas_smooth_len;k++)
+	  for(unsigned int k=0;k<meas_smooth_len;k++)
 	    {
 	      x[i][k]=new double[num_smooth*num_mcmc];
-	      for(j=0;j<num_smooth*num_mcmc;j++)
+	      for(j=0;j<(int)(num_smooth*num_mcmc);j++)
 		x[i][k][j]=0.0;
 	    }
 	}
 
-      for(i=0;i<num_mcmc;i++)
+      for(i=0;(int)i<num_mcmc;i++)
 	{
 	  loglik(pars[i].param, 1, 0);
 
-	  for(int k=0;k<meas_smooth_len;k++)
+	  for(unsigned int k=0;k<meas_smooth_len;k++)
 	    {
 	      double *xx=new double[num_states], 
 		**ss=Make_matrix(num_states,num_states);
-	      int ii,jj;
+	      unsigned int ii,jj;
 	      
 	      for(ii=0;ii<num_states;ii++)
 		xx[ii]=x_k_s_kept[k][ii];
@@ -16498,7 +16526,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		    }
 		}
 
-	      for(j=0;j<num_smooth;j++)
+	      for(j=0;j<(int)num_smooth;j++)
 		{
 		  for(ii=0;ii<num_states;ii++)
 		    x[ii][k][i*num_smooth+j]=new_x[j][ii];
@@ -16517,7 +16545,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
     
   
-  int numsamples=num_mcmc;
+  unsigned int numsamples=(unsigned int) num_mcmc;
   // DEBUG:
   Rcout << "numsamples=" << numsamples << std::endl;
 
@@ -16528,7 +16556,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(no_inpars || dosmooth || do_realizations)
     {
       for(i=0;i<numpar;i++)
-	for(j=0;j<numsamples;j++)
+	for(j=0;j<(int)numsamples;j++)
 	  {
 	    parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
 	    parsample_repar[i][j]=pars[j].param[i];
@@ -16562,14 +16590,14 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    {
 	      snprintf(par_name_new[i],99,"exp(%s)",par_name_orig[i]);
 	      if(no_inpars || dosmooth || do_realizations)
-		for(j=0;j<numsamples;j++)
+		for(j=0;j<(int)numsamples;j++)
 		  parsample[i][j]=exp(parsample[i][j]);
 	    }
 	  if(par_type[i]==OBS_SD)
 	    {
 	      snprintf(par_name_new[i],99,"%s_origscale",par_name_orig[i]);
 	      if(no_inpars || dosmooth || do_realizations)
-		for(j=0;j<numsamples;j++)
+		for(j=0;j<(int)numsamples;j++)
 		  parsample[i][j]=(ser[s].pr->is_log==2 ? 
 				   exp(ser[s].mean_val) : ser[s].mean_val)*
 		    sqrt(exp(parsample[i][j]*parsample[i][j])-1.0)*
@@ -16590,10 +16618,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     {
       for(s=0;s<num_series;s++)
 	{
-	  for(int l=0;l<ser[s].numlayers;l++)
+	  for(unsigned int l=0;l<ser[s].numlayers;l++)
 	    {
 	      bool all_global=false;
-	      for(j=0;j<numsites && !all_global;j++)
+	      for(j=0;j<(int)numsites && !all_global;j++)
 		{
 		  int  index_diffusion=-1, index_pull=-1;
 		  bool found_diffusion=false, found_pull=false;
@@ -16601,8 +16629,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  
 		  for(i=0;i<numpar && (!found_diffusion || !found_pull);i++)
 		    {
-		      if(par_series[i]==s && par_layer[i]==(l+1) &&
-			 (par_region[i]==j || par_region[i]<0))
+		      if(par_series[i]==(int)s && par_layer[i]==(int)(l+1) &&
+			 (par_region[i]==(int)j || par_region[i]<0))
 			{
 			  if(par_type[i]==SIGMA)
 			    {
@@ -16669,7 +16697,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(i=0;i<10;i++)
 	{
 	  has_cycles[i]=false;
-	  for(j=0;j<numsamples && !has_cycles[i];j++)
+	  for(j=0;j<(int)numsamples && !has_cycles[i];j++)
 	    if(pars[j].cycles[i]!=MISSING_VALUE && (ABSVAL((pars[j].cycles[i]))>1e-30))
 	      {
                 if(!silent)
@@ -16689,7 +16717,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   double *best_pars_repar=new double[numpar];
   if(no_inpars || dosmooth || do_realizations)
     if(!do_ml)
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	best_pars_repar[j]=
 	  find_statistics(parsample_repar[j], numsamples, MEDIAN);
       
@@ -16709,14 +16737,14 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	Rcout << "ML started" << std::endl;
       ml_started=true;
       
-      for(i=0;i<num_optim;i++)
+      for(i=0;(int)i<num_optim;i++)
 	{
 	  if(!silent)
 	    Rcout << "Optimization nr. " << i << std::endl;
 	  
 	  double *curr_par=new double[numpar];
 	  
-	  for(j=0;j<numpar;j++)
+	  for(j=0;j<(int)numpar;j++)
 	    {
 	      if(i==0)
 		curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEDIAN);
@@ -16748,7 +16776,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  
 	  NumericVector initpars(numpar);
-	  for(j=0;j<numpar;j++)
+	  for(j=0;j<(int)numpar;j++)
 	    initpars[j]=curr_par[j];
 	  Environment stats("package:stats");
 	  Function optim=stats["optim"];
@@ -16757,7 +16785,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			    Rcpp::_["method"]="BFGS");
 	  NumericVector outpars=as<NumericVector>(optres["par"]);
 	  double *pars2=new double[numpar];
-	  for(j=0;j<numpar;j++)
+	  for(j=0;j<(int)numpar;j++)
 	    pars2[j]=outpars[j];
 	  
 	  
@@ -16783,7 +16811,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  if(i==0 || curr_loglik>best_loglik)
 	    {
 	      // If so, store the parameter array and the log-likelihood:
-	      for(j=0;j<numpar;j++)
+	      for(j=0;j<(int)numpar;j++)
 		best_pars_repar[j]=pars2[j];
 	      best_loglik=curr_loglik;
 	    }
@@ -16794,7 +16822,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       // transform the expectancies from logarithmic size to
       // original size:
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	{
 	  ml_pars[j]=invtransform_parameter(best_pars_repar[j], 
 					    par_trans_type[j]);
@@ -16843,7 +16871,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(!do_ml && return_residuals==1)
     {
       double *medpar=new double[numpar];
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
       
       if(!silent)
@@ -16946,7 +16974,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   double *est_pars=new double[numpar];
   if(no_inpars || dosmooth || do_realizations)
     {
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	{
 	  double mean= find_statistics(parsample[j], numsamples, MEAN);
 	  double med=  find_statistics(parsample[j], numsamples, MEDIAN);
@@ -17018,7 +17046,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       double *iscomplex=new double[numsamples];
       int k=numpar;
       
-      for(j=0;j<numsamples;j++)
+      for(j=0;j<(int)numsamples;j++)
 	iscomplex[j]=pars[j].iscomplex ? 1.0 : 0.0;
       
       double ic_mean=find_statistics(iscomplex, numsamples, MEAN);
@@ -17043,7 +17071,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	if(has_cycles[i])
 	  {
 	    double *cycle=new double[numsamples];
-	    for(j=0;j<numsamples;j++)
+	    for(j=0;j<(int)numsamples;j++)
 	      cycle[j]=pars[j].cycles[i];
 	    
 	    double c_mean=find_statistics(cycle, numsamples, MEAN,0.01);
@@ -17081,8 +17109,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       if(resids && resid_len>0)
 	{
 	  NumericMatrix standardized_residuals(resid_len, resid_numcol);
-	  for(i=0;i<resid_numcol;i++)
-	    for(j=0;j<resid_len;j++)
+	  for(i=0;(int)i<resid_numcol;i++)
+	    for(j=0;(int)j<resid_len;j++)
 	      standardized_residuals(j,i)=resids[i][j];
 	  out["standardized.residuals"]=standardized_residuals;
 	  doubledelete(resids, resid_numcol);
@@ -17095,7 +17123,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       if(resids_time && resid_len>0)
 	{
 	  NumericVector residuals_time(resid_len);
-	  for(j=0;j<resid_len;j++)
+	  for(j=0;(int)j<resid_len;j++)
 	    residuals_time(j)=resids_time[j];
 	  out["residuals.time"]=residuals_time;
 	  delete [] resids_time;
@@ -17104,8 +17132,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       if(prior_expected_values && resid_len>0)
 	{
 	  NumericMatrix prior_expectancy(resid_len, resid_numcol);
-	  for(i=0;i<resid_numcol;i++)
-	    for(j=0;j<resid_len;j++)
+	  for(i=0;(int)i<resid_numcol;i++)
+	    for(j=0;(int)j<resid_len;j++)
 	      prior_expectancy(j,i)=prior_expected_values[i][j];
 	  out["prior.expected.values"]=prior_expectancy;
 	  doubledelete(prior_expected_values, resid_numcol);
@@ -17123,9 +17151,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       NumericMatrix process_lower95(num_states,meas_smooth_len);
       NumericMatrix process_upper95(num_states,meas_smooth_len);
       char **procname=new char*[num_states];
-      int k;
+      unsigned int k;
       
-      for(j=0;j<meas_smooth_len;j++)
+      for(j=0;j<(int)meas_smooth_len;j++)
 	process_time_points(j)=meas_smooth[j].tm;
       
       for(i=0;i<num_states;i++)
@@ -17180,7 +17208,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       if(do_return_smoothing_samples)
 	{
 	  NumericMatrix firstmatrix(meas_smooth_len,num_smooth*numsamples);
-	  for(j=0;j<meas_smooth_len;j++)
+	  for(j=0;j<(int)meas_smooth_len;j++)
 	    for(k=0;k<num_smooth*numsamples;k++)
 	      firstmatrix(j,k)=x[0][j][k];
 	  List smooth_samples=List::create(Named(procname[0],firstmatrix));
@@ -17188,7 +17216,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(i=1;i<num_states;i++)
 	    {
 	      NumericMatrix nextmatrix(meas_smooth_len,num_smooth*numsamples);
-	      for(j=0;j<meas_smooth_len;j++)
+	      for(j=0;j<(int)meas_smooth_len;j++)
 		for(k=0;k<num_smooth*numsamples;k++)
 		  nextmatrix(j,k)=x[i][j][k];
 	      smooth_samples[procname[i]]=nextmatrix;
@@ -17204,7 +17232,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  // Rcout << "P_k_smooth" << (P_k_smooth ? 1 : 0) << std::endl;
 	  NumericMatrix firstmatrix(num_states, num_states);
 	  for(i=0;i<num_states;i++)
-	    for(j=0;j<num_states;j++)
+	    for(j=0;j<(int)num_states;j++)
 	      firstmatrix(i,j)=P_k_smooth[0][i][j];
 	  char strbuff[20]="P_k_00001";
 	  List P_k=List::create(Named(strbuff,firstmatrix));
@@ -17213,7 +17241,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    {
 	      NumericMatrix nextmatrix(num_states, num_states);
 	      for(i=0;i<num_states;i++)
-		for(j=0;j<num_states;j++)
+		for(j=0;j<(int)num_states;j++)
 		  nextmatrix(i,j)=P_k_smooth[k][i][j];
 	      snprintf(strbuff, 19, "P_k_%05d",k+1);
 	      P_k[strbuff]=nextmatrix;
@@ -17241,7 +17269,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(do_realizations && numit_realizations_made>0 && x_k_realized_all!=NULL)
     {
       NumericVector realization_time_points(meas_smooth_len);
-      for(j=0;j<meas_smooth_len;j++)
+      for(j=0;j<(int)meas_smooth_len;j++)
 	realization_time_points(j)=meas_smooth[j].tm;
       out["realization.time.points"]=realization_time_points;
       
@@ -17259,9 +17287,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		     "%s_site%03d_layer%03d",ser[s].name,site,l+1);
 	}
       
-      int k;
+      unsigned int k;
       NumericMatrix firstmatrix(meas_smooth_len,numit_realizations_made);
-      for(j=0;j<meas_smooth_len;j++)
+      for(j=0;j<(int)meas_smooth_len;j++)
 	for(k=0;k<numit_realizations_made;k++)
 	  {
 	    if(!silent)
@@ -17274,7 +17302,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	{
 	  // DEBUG: Rcout << "state=" << i << std::endl;
 	  NumericMatrix nextmatrix(meas_smooth_len,numit_realizations_made);
-	  for(j=0;j<meas_smooth_len;j++)
+	  for(j=0;j<(int)meas_smooth_len;j++)
 	    for(k=0;k<numit_realizations_made;k++)
 	      {
 		if(!silent)
@@ -17313,13 +17341,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     {
       NumericMatrix mcmcsamples(numpar,numsamples);
       for(i=0;i<numpar;i++)
-	for(j=0;j<numsamples;j++)
+	for(j=0;j<(int)numsamples;j++)
 	  mcmcsamples(i,j)=parsample[i][j];
       out["mcmc"]=mcmcsamples;
       
       NumericMatrix mcmcsamples2(numpar,numsamples);
       for(i=0;i<numpar;i++)
-	for(j=0;j<numsamples;j++)
+	for(j=0;j<(int)numsamples;j++)
 	  mcmcsamples2(i,j)=parsample_repar[i][j];
       out["mcmc.origpar"]=mcmcsamples2;
     }
@@ -17327,7 +17355,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(lliks)
     {
       NumericVector llik(num_lliks);
-      for(j=0;j<num_lliks;j++)
+      for(j=0;(int)j<num_lliks;j++)
 	llik(j)=lliks[j];
       out["loglik"]=llik;
       delete [] lliks;
@@ -17336,7 +17364,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(lpriors && !do_ml)
     {
       NumericVector lprior(num_lpriors);
-      for(j=0;j<num_lpriors;j++)
+      for(j=0;(int)j<num_lpriors;j++)
 	lprior(j)=lpriors[j];
       out["logprior"]=lprior;
       delete [] lpriors;
@@ -17621,7 +17649,7 @@ void test_analysis(int num_layers_real, int num_layers_checked)
   int num_layers=num_layers_checked;
   printf("num_layers_checked=%d\n",num_layers);
   
-  int s,i,j;
+  unsigned int s,i,j;
   if(m!=2)
     return;
   
@@ -17718,7 +17746,8 @@ int main(int argc, char **argv)
   // default on.
   bool *use_site=new bool[1000], plot_repar=false, 
     plot_sd=false, do_ml=false, report_sd=false, report_halflife=false;
-  int i, j, k,l,m,s; // index variables
+  unsigned int i, k,l,m,s; // index variables
+  int j;
   // Start and end time values, default is to include all:
   double start=MISSING_VALUE,end=MISSING_VALUE;
   int dosmooth=0, num_optim=0, sel_pres=0, preshow=0;
@@ -17967,14 +17996,14 @@ int main(int argc, char **argv)
 	  corr_to_series[num_series_corr]=atoi(argv[4]);
 	  corr_to_layer[num_series_corr]=atoi(argv[5]);
 	  
-	  if(corr_from_series[num_series_corr]>num_series)
+	  if(corr_from_series[num_series_corr]>(int)num_series)
 	    {
 	      cerr << "Series index too high:" << 
 		corr_from_series[num_series_corr] << endl;
 	      exit(0);
 	    }
 
-	  if(corr_to_series[num_series_corr]>num_series)
+	  if(corr_to_series[num_series_corr]>(int)num_series)
 	    {
 	      cerr << "Series index too high:" << 
 		corr_to_series[num_series_corr] << endl;
@@ -17996,7 +18025,7 @@ int main(int argc, char **argv)
 	    }
 
 	  if(corr_from_layer[num_series_corr]>
-	     ser[corr_from_series[num_series_corr]-1].numlayers)
+	     (int)ser[corr_from_series[num_series_corr]-1].numlayers)
 	    {
 	      cerr << "Layer index too high:" << 
 		corr_from_layer[num_series_corr] << endl;
@@ -18004,7 +18033,7 @@ int main(int argc, char **argv)
 	    }
 
 	  if(corr_to_layer[num_series_corr]>
-	     ser[corr_to_series[num_series_corr]-1].numlayers)
+	     (int)ser[corr_to_series[num_series_corr]-1].numlayers)
 	    {
 	      cerr << "Layer index too high:" << 
 		corr_to_layer[num_series_corr] << endl;
@@ -18152,14 +18181,14 @@ int main(int argc, char **argv)
 	  feed_to_layer[num_series_feed]=atoi(argv[5]);
 	  feed_symmetric[num_series_feed]=1;
 
-	  if(feed_from_series[num_series_feed]>num_series)
+	  if(feed_from_series[num_series_feed]>(int)num_series)
 	    {
 	      cerr << "Series index too high:" << 
 		feed_from_series[num_series_feed] << endl;
 	      exit(0);
 	    }
 
-	  if(feed_to_series[num_series_feed]>num_series)
+	  if(feed_to_series[num_series_feed]>(int)num_series)
 	    {
 	      cerr << "Series index too high:" << 
 		feed_to_series[num_series_feed] << endl;
@@ -18181,7 +18210,7 @@ int main(int argc, char **argv)
 	    }
 
 	  if(feed_from_layer[num_series_feed]>
-	     ser[feed_from_series[num_series_feed]-1].numlayers)
+	     (int)ser[feed_from_series[num_series_feed]-1].numlayers)
 	    {
 	      cerr << "Layer index too high:" << 
 		feed_from_layer[num_series_feed] << endl;
@@ -18189,7 +18218,7 @@ int main(int argc, char **argv)
 	    }
 
 	  if(feed_to_layer[num_series_feed]>
-	     ser[feed_to_series[num_series_feed]-1].numlayers)
+	     (int)ser[feed_to_series[num_series_feed]-1].numlayers)
 	    {
 	      cerr << "Layer index too high:" << 
 		feed_to_layer[num_series_feed] << endl;
@@ -18237,14 +18266,14 @@ int main(int argc, char **argv)
 	  feed_to_layer[num_series_feed]=atoi(argv[5]);
 	  feed_symmetric[num_series_feed]=0;
 	  
-	  if(feed_from_series[num_series_feed]>num_series)
+	  if(feed_from_series[num_series_feed]>(int)num_series)
 	    {
 	      cerr << "Series index too high:" << 
 		feed_from_series[num_series_feed] << endl;
 	      exit(0);
 	    }
 
-	  if(feed_to_series[num_series_feed]>num_series)
+	  if(feed_to_series[num_series_feed]>(int)num_series)
 	    {
 	      cerr << "Series index too high:" << 
 		feed_to_series[num_series_feed] << endl;
@@ -18266,7 +18295,7 @@ int main(int argc, char **argv)
 	    }
 
 	  if(feed_from_layer[num_series_feed]>
-	     ser[feed_from_series[num_series_feed]-1].numlayers)
+	     (int)ser[feed_from_series[num_series_feed]-1].numlayers)
 	    {
 	      cerr << "Layer index too high:" << 
 		feed_from_layer[num_series_feed] << endl;
@@ -18274,7 +18303,7 @@ int main(int argc, char **argv)
 	    }
 
 	  if(feed_to_layer[num_series_feed]>
-	     ser[feed_to_series[num_series_feed]-1].numlayers)
+	     (int)ser[feed_to_series[num_series_feed]-1].numlayers)
 	    {
 	      cerr << "Layer index too high:" << 
 		feed_to_layer[num_series_feed] << endl;
@@ -18417,7 +18446,7 @@ int main(int argc, char **argv)
   for(s=0;s<num_series;s++)
     {
       for(l=0;l<ser[s].numlayers;l++)
-	for(j=0;j<numsites;j++)
+	for(j=0;j<(int)numsites;j++)
 	  {
 	    state_series[num_states+l*numsites+j]=s;
 	    state_layer[num_states+l*numsites+j]=l;
@@ -18521,22 +18550,22 @@ int main(int argc, char **argv)
   for(i=0;i<meas_tot_len;i++)
     {
       int *handled=new int[meas_tot[i].num_measurements];
-      for(j=0;j<meas_tot[i].num_measurements;j++)
+      for(j=0;j<(int)meas_tot[i].num_measurements;j++)
 	handled[j]=0;
       
       double **total_corr_matrix=Make_matrix(meas_tot[i].num_measurements,
 					     meas_tot[i].num_measurements);
       
-      for(j=0;j<meas_tot[i].num_measurements;j++)
+      for(j=0;j<(int)meas_tot[i].num_measurements;j++)
 	if(!handled[j])
 	  {
 	    // site+time associated with observational correlation matrix?
 	    
-	    for(k=0;k<obs_corr_len;k++)
+	    for(k=0;(int)k<obs_corr_len;k++)
 	      if(obs_corr_t[k]>=(meas_tot[i].tm-min_time_diff/2) &&
 		 obs_corr_t[k]<=(meas_tot[i].tm+min_time_diff/2))
 		break;
-	    if(k<obs_corr_len) // observational correlation matrix found
+	    if((int)k<obs_corr_len) // observational correlation matrix found
 	      {
 		// Make observational correlation matrix for this site+time:
 		double **corr_matrix=Make_matrix(num_series,num_series);
@@ -18564,12 +18593,12 @@ int main(int argc, char **argv)
 	      }
 	  }
       
-      for(j=0;j<meas_tot[i].num_measurements;j++)
+      for(j=0;j<(int)meas_tot[i].num_measurements;j++)
 	total_corr_matrix[j][j]=1.0;
       
       meas_tot[i].corr_matrix=Make_matrix(meas_tot[i].num_measurements,
 					  meas_tot[i].num_measurements);
-      for(j=0;j<meas_tot[i].num_measurements;j++)
+      for(j=0;j<(int)meas_tot[i].num_measurements;j++)
 	for(k=0;k<meas_tot[i].num_measurements;k++)
 	  meas_tot[i].corr_matrix[j][k]=total_corr_matrix[j][k];
 
@@ -18629,7 +18658,7 @@ int main(int argc, char **argv)
 	  cout << "Meas_smooth_len=" << meas_smooth_len << endl;
 	  
 	  meas_smooth=new measurement_cluster[meas_smooth_len+meas_tot_len+10];
-	  int j=0,k=0;
+	  unsigned int j=0,k=0;
 
 	  i=0;
 	  t=MINIM(t1,meas_tot[0].tm);
@@ -18707,7 +18736,7 @@ int main(int argc, char **argv)
 	filenames[s]=new char[1000];
       
       double ll;
-      for(i=0;i<numsim;i++)
+      for(i=0;(int)i<numsim;i++)
 	{
 	  if(num_series>0)
 	    for(s=0;s<num_series;s++)
@@ -18746,11 +18775,11 @@ int main(int argc, char **argv)
   int numsamples=atoi(argv[1]);
   int burnin=atoi(argv[2]);
   int indep=atoi(argv[3]);
-  int numtemp=atoi(argv[4]);
+  unsigned int numtemp=(unsigned int)atoi(argv[4]);
     
   if(preshow)
     for(s=0;s<num_series;s++)
-      for(j=0;j<numsites;j++)
+      for(j=0;j<(int)numsites;j++)
 	{
 	  char cmd[1000];
 	  
@@ -18771,7 +18800,7 @@ int main(int argc, char **argv)
 	  fprintf(p, "########################\n");
 	  s=state_series[i];
 	  for(k=0;k<ser[s].meas_len;k++)
-	    if(ser[s].meas[k].site==j)
+	    if(ser[s].meas[k].site==(int)j)
 	      {
 		if(ser[s].meas[0].dt!=NoHydDateTime)
 		  {
@@ -18802,7 +18831,7 @@ int main(int argc, char **argv)
 	  
 	  if(ser[s].comp_meas)
 	    for(k=0;k<ser[s].comp_len;k++)
-	      if(ser[s].comp_meas[k].site==j)
+	      if(ser[s].comp_meas[k].site==(int)j)
 		{
 		  if(ser[s].meas[0].dt!=NoHydDateTime)
 		    {
@@ -18891,7 +18920,7 @@ int main(int argc, char **argv)
   double **parsample=Make_matrix(numpar,numsamples);
   double **parsample_repar=Make_matrix(numpar,numsamples);
   for(i=0;i<numpar;i++)
-    for(j=0;j<numsamples;j++)
+    for(j=0;(int)j<numsamples;j++)
       {
 	parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
 	parsample_repar[i][j]=pars[j].param[i];
@@ -18914,13 +18943,13 @@ int main(int argc, char **argv)
 	  if(par_type[i]==MU)
 	    {
 	      snprintf(par_name[i],99,"exp(%s)",par_name_orig[i]);
-	      for(j=0;j<numsamples;j++)
+	      for(j=0;(int)j<numsamples;j++)
 		parsample[i][j]=exp(parsample[i][j]);
 	    }
 	  if(par_type[i]==OBS_SD)
 	    {
 	      snprintf(par_name[i],99,"%s_origscale",par_name_orig[i]);
-	      for(j=0;j<numsamples;j++)
+	      for(j=0;(int)j<numsamples;j++)
 		parsample[i][j]=(ser[s].pr->is_log==2 ? 
 				 exp(ser[s].mean_val) : ser[s].mean_val)*
 		  sqrt(exp(parsample[i][j]*parsample[i][j])-1.0)*
@@ -18933,7 +18962,7 @@ int main(int argc, char **argv)
   
   // show mean, median and 95% credibility interval for
   // each parameter:
-  for(j=0;j<numpar;j++)
+  for(j=0;j<(int)numpar;j++)
   {
     double mean=find_statistics(parsample[j], numsamples, MEAN);
     double med=find_statistics(parsample[j], numsamples, MEDIAN);
@@ -18960,11 +18989,11 @@ int main(int argc, char **argv)
       double *best_pars=new double[numpar];
       double best_loglik=MISSING_VALUE;
       
-      for(i=0;i<num_optim;i++)
+      for(i=0;(int)i<num_optim;i++)
 	{
 	  double *curr_par=new double[numpar];
 	  
-	  for(j=0;j<numpar;j++)
+	  for(j=0;j<(int)numpar;j++)
 	    {
 	      if(i==0)
 		curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEDIAN);
@@ -18998,7 +19027,7 @@ int main(int argc, char **argv)
 	  if(i==0 || curr_loglik>best_loglik)
 	    {
 	      // If so, store the parameter array and the log-likelihood:
-	      for(j=0;j<numpar;j++)
+	      for(j=0;j<(int)numpar;j++)
 		best_pars_repar[j]=pars2[j];
 	      best_loglik=curr_loglik;
 	    }
@@ -19009,7 +19038,7 @@ int main(int argc, char **argv)
       
       // transform the expectancies from logarithmic size ot
       // original size:
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	{
 	  best_pars[j]=invtransform_parameter(best_pars_repar[j], 
 					      par_trans_type[j]);
@@ -19027,7 +19056,7 @@ int main(int argc, char **argv)
 	}
       
       printf("\nML: %g\n", best_loglik);
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	printf("%s - ML: %f \n", 
 	       par_name[j], best_pars[j]);
       printf("\n");
@@ -19052,7 +19081,7 @@ int main(int argc, char **argv)
     {
       double *iscomplex=new double[numsamples];
 
-      for(j=0;j<numsamples;j++)
+      for(j=0;(int)j<numsamples;j++)
 	iscomplex[j]=pars[j].iscomplex ? 1.0 : 0.0;
 
       printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
@@ -19068,7 +19097,7 @@ int main(int argc, char **argv)
       for(i=0;i<MINIM(ser[0].numlayers,10);i++)
 	{
 	  double *cycle=new double[numsamples];
-	  for(j=0;j<numsamples;j++)
+	  for(j=0;(int)j<numsamples;j++)
 	    cycle[j]=pars[j].cycles[i];
 
 	  printf("%s%02d: mean=%f median=%f    95%% cred=(%f-%f)\n", 
@@ -19147,7 +19176,7 @@ int main(int argc, char **argv)
 			filestart,ser[s].name);
 		p=fopen(filename,"w");
 	      }
-	    for(j=0;j<numsites;j++)
+	    for(j=0;j<(int)numsites;j++)
 	      {
 		fprintf(p, "# Column %d: mean %s, site %d, layer %d, x%d\n", 
 			2*j+1,ser[s].name,j, l+1, j);
@@ -19171,14 +19200,14 @@ int main(int argc, char **argv)
 		else
 		  fprintf(p,"%f ", t_k_smooth[k]);
 		
-		for(j=0;j<numsites;j++)
+		for(j=0;j<(int)numsites;j++)
 		  {
 		    bool done=false;
 		    for(m=0;m<=meas_smooth[k].num_measurements && !done;m++)
 		      if(m==meas_smooth[k].num_measurements ||
 			 (meas_smooth[k].meanval[m]!=MISSING_VALUE &&
-			  meas_smooth[k].site[m]==j && 
-			  meas_smooth[k].serie_num[m]==s))
+			  meas_smooth[k].site[m]==(int)j && 
+			  meas_smooth[k].serie_num[m]==(int)s))
 			{
 			  if(!ser[s].pr->is_log)
 			    fprintf(p,"%f %f ",
@@ -19243,8 +19272,8 @@ int main(int argc, char **argv)
 	      for(m=0;m<=meas_smooth[k].num_measurements && !done;m++)
 		if(m==meas_smooth[k].num_measurements ||
 		   (meas_smooth[k].meanval[m]!=MISSING_VALUE &&
-		    meas_smooth[k].site[m]==i%numsites &&
-		    meas_smooth[k].serie_num[m]==s))
+		    meas_smooth[k].site[m]==(int)(i%numsites) &&
+		    meas_smooth[k].serie_num[m]==(int)s))
 		  {
 		    if(ser[s].meas[0].dt!=NoHydDateTime)
 		      {
@@ -19289,7 +19318,7 @@ int main(int argc, char **argv)
 	  
 	  if(ser[s].comp_meas)
 	    for(k=0;k<ser[s].comp_len;k++)
-	      if(ser[s].comp_meas[k].site==i%numsites)
+	      if(ser[s].comp_meas[k].site==(int)(i%numsites))
 		{
 		  if(ser[s].meas[0].dt!=NoHydDateTime)
 		    {
@@ -19331,7 +19360,7 @@ int main(int argc, char **argv)
 	    for(l=0;l<ser[s].numlayers;l++)
 	      {
 		FILE *p;
-		int j,k;
+		unsigned int j,k;
 		
 		if(ser[s].meas[0].dt!=NoHydDateTime)
 		  snprintf(cmd,999,"timeseriegraph -x t -y %s",ser[s].name);
@@ -19386,7 +19415,7 @@ int main(int argc, char **argv)
       for(s=0;s<num_series;s++)
 	if(ser[s].numlayers>=2)
 	  {
-	    for(j=0;j<numsites;j++)
+	    for(j=0;j<(int)numsites;j++)
 	      {
 		FILE *p;
 		if(!*filestart)
@@ -19439,8 +19468,8 @@ int main(int argc, char **argv)
 		    for(m=0;m<=meas_smooth[k].num_measurements && !done;m++)
 		      if(m==meas_smooth[k].num_measurements ||
 			 (meas_smooth[k].meanval[m]!=MISSING_VALUE &&
-			  meas_smooth[k].site[m]==j &&
-			  meas_smooth[k].serie_num[m]==s))
+			  meas_smooth[k].site[m]==(int)j &&
+			  meas_smooth[k].serie_num[m]==(int)s))
 			{
 			  if(!ser[s].pr->is_log)
 			    fprintf(p,"%f ",
@@ -19459,7 +19488,7 @@ int main(int argc, char **argv)
 		
 		if(ser[s].comp_meas)
 		  for(k=0;k<ser[s].comp_len;k++)
-		    if(ser[s].comp_meas[k].site==j)
+		    if(ser[s].comp_meas[k].site==(int)j)
 		      {
 			if(ser[s].meas[0].dt!=NoHydDateTime)
 			  fprintf(p,"%s ",  ser[s].comp_meas[k].dt.syCh(5));
@@ -19505,7 +19534,7 @@ int main(int argc, char **argv)
       
       // show mean, median and 95% credibility interval for
       // each parameter:
-      for(j=0;j<numpar;j++)
+      for(j=0;j<(int)numpar;j++)
 	printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
 	       repar_name[j], 
 	       find_statistics(parsample_repar[j], numsamples, MEAN),
@@ -19518,7 +19547,7 @@ int main(int argc, char **argv)
       if(!silent)
 	{
 	  for(i=0;i<numpar;i++)
-	    for(j=i+1;j<numpar;j++)
+	    for(j=i+1;j<(int)numpar;j++)
 	      show_scatter(parsample_repar[i], parsample_repar[j], numsamples, 
 			   repar_name[i], repar_name[j], filestart);
 	}
@@ -19534,7 +19563,7 @@ int main(int argc, char **argv)
 	  for(l=0;l<ser[s].numlayers;l++)
 	    {
 	      bool all_global=false;
-	      for(j=0;j<numsites && !all_global;j++)
+	      for(j=0;j<(int)numsites && !all_global;j++)
 		{
 		  int  index_diffusion=-1, index_pull=-1;
 		  bool found_diffusion=false, found_pull=false;
@@ -19542,8 +19571,8 @@ int main(int argc, char **argv)
 		  
 		  for(i=0;i<numpar && (!found_diffusion || !found_pull);i++)
 		    {
-		      if(par_series[i]==s && par_layer[i]==(l+1) &&
-			 (par_region[i]==j || par_region[i]<0))
+		      if(par_series[i]==(int)s && par_layer[i]==(int)(l+1) &&
+			 (par_region[i]==(int)j || par_region[i]<0))
 			{
 			  if(par_type[i]==SIGMA)
 			    {
@@ -19575,7 +19604,7 @@ int main(int argc, char **argv)
 		      else
 			snprintf(s_name,999, "sd_s%d_l%d_r%d", s+1,l+1,j);
 
-		      for(i=0;i<numsamples;i++)
+		      for(i=0;(int)i<numsamples;i++)
 			sd[i]=parsample[index_diffusion][i]*
 			  sqrt(parsample[index_pull][i]/2.0);
 		      
@@ -19613,16 +19642,16 @@ int main(int argc, char **argv)
   if(!silent)
     {
       for(i=0;i<numpar;i++)
-	for(j=i+1;j<numpar;j++)
+	for(j=i+1;j<(int)numpar;j++)
 	  show_scatter(parsample[i], parsample[j], numsamples, 
 		       par_name[i], par_name[j], filestart);
     }
   
-  for(j=0;j<numpar;j++)
+  for(j=0;j<(int)numpar;j++)
     if(!strncasecmp(par_name[j],"beta",4))
       {
 	int belowzero=0;
-	for(i=0;i<numsamples;i++)
+	for(i=0;(int)i<numsamples;i++)
 	  if(parsample[j][i]<0.0)
 	    belowzero++;
 	cout << par_name[j] << " " << 

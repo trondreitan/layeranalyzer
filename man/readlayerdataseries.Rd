@@ -6,14 +6,14 @@
 This class function reads a file representing a measurement time series. Can include multiple sites. Individual measurement error can be added. 
 }
 \usage{
-read.layer.data.series=function(filename,name,column.type=c("time","value"), 
+read.layer.data.series(filename,name,column.type=c("time","value"), 
                 header=FALSE,dec=".",sep="", 
                 quote="\"'", numerals = c("allow.loss", "warn.loss", "no.loss"),
                 row.names=NULL, col.names=column.type, 
                 na.strings = "NA", colClasses = NA, nrows = -1,
                 skip = 0, check.names = TRUE, fill = !blank.lines.skip,
                 strip.white = FALSE, blank.lines.skip = TRUE,
-                comment.char = "\#",
+                comment.char = "#",
                 allowEscapes = FALSE, flush = FALSE,
                 stringsAsFactors = FALSE, as.is = !stringsAsFactors,
                 fileEncoding = "", encoding = "unknown", text, skipNul = FALSE)
