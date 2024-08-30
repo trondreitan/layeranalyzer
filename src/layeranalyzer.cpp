@@ -1264,9 +1264,9 @@ HydDateTime::HydDateTime(char *datetime,int form)
   char temp[5]; temp[4] = '\0'; 
   char temp1[3]; temp1[2] = '\0';
   char *ptr1,*ptr2,*ptr3,*ptr4,*ptr5;
-  yearType  y;
-  monthType m;
-  dayType d;
+  yearType  y=2000;
+  monthType m=1;
+  dayType d=1;
   short h=0,mi=0,sec=0;
 
   if(!datetime)
