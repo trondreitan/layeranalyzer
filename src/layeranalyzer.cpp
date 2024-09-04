@@ -15373,16 +15373,26 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 const double loglikwrapper(const NumericVector &vals)
-{
+{ 
   int len=vals.size();
   double *val2=new double[len];
 
   for(int i=0;i<len;i++)
-    val2[i]=vals[i];
-
+    {
+      //if(!silent)
+      //printf("  par %d (%s): %f\n", i, par_name[i], vals[i]);
+      val2[i]=vals[i];
+    }
+   
   double ret=-minusloglik(val2);
   delete [] val2;
 
+  if(!(ret> -1e+200 && ret < 1e+200))
+    ret=-1e+200;
+
+  //if(!silent)
+  //printf("ret=%f\n",ret);
+  
   return -ret;
 }
 
@@ -16356,7 +16366,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  Function optim=stats["optim"];
 		  List optres=optim(Rcpp::_["par"]= initpars,
 				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
-				    Rcpp::_["method"]="BFGS");
+				    Rcpp::_["method"]="L-BFGS-B",
+				    Rcpp::_["lower"]=-1e+20,
+				    Rcpp::_["upper"]=+1e+20  );
 		  NumericVector outpars2=as<NumericVector>(optres["par"]);
 		  NumericVector outval=as<NumericVector>(optres["value"]);
 		  
@@ -16741,6 +16753,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	{
 	  if(!silent)
 	    Rcout << "Optimization nr. " << i << std::endl;
+
 	  
 	  double *curr_par=new double[numpar];
 	  
@@ -16782,7 +16795,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  Function optim=stats["optim"];
 	  List optres=optim(Rcpp::_["par"]= initpars,
 			    Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
-			    Rcpp::_["method"]="BFGS");
+			    Rcpp::_["method"]="L-BFGS-B",
+			    Rcpp::_["lower"]=-1e+20,
+			    Rcpp::_["upper"]=+1e+20  );
 	  NumericVector outpars=as<NumericVector>(optres["par"]);
 	  double *pars2=new double[numpar];
 	  for(j=0;j<(int)numpar;j++)
@@ -16816,8 +16831,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      best_loglik=curr_loglik;
 	    }
 	  
-	  delete [] curr_par;
 	  delete [] pars2;
+	  delete [] curr_par;
 	}
       
       // transform the expectancies from logarithmic size to
