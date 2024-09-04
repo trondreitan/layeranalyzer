@@ -401,28 +401,75 @@ traverse.standalone.layered=function(timeseries,
          if(timeint>1)
            curr.time.integral=time.integral[[timeint]]
          
-         struct=layer.series.structure(timeseries, numlayers=numlayers,
-            lin.time=lin.time[lowest], time.integral=curr.time.integral,
+       if(talkative)
+       {
+        print.srcref("Showing R calls:")
+        print.srcref(sprintf("length(lowest)=%d",length(lowest) ))
+        print.srcref(sprintf("lowest=%d",lowest))
+
+        print.srcref(sprintf("struct=layer.series.structure(timeseries,  numlayers=%d, lin.time=%s, time.integral=%d, no.pull=%s, no.sigma=%d, init.0=%s,prior=prior)", 
+        numlayers,
+        as.character(lin.time[lowest]), 
+        length(curr.time.integral),  
+        as.character(no.pull[lowest]),    
+        length(curr.no.sigma),  
+        as.character(init.0)   ))
+       }
+
+         struct=layer.series.structure(timeseries, 
+            numlayers=numlayers,
+            lin.time=lin.time[lowest], 
+            time.integral=curr.time.integral,
             no.pull=no.pull[lowest], no.sigma=curr.no.sigma,
             init.0=init.0,prior=prior)
-         
-         res=layer.analyzer(struct, num.MCMC=num.MCMC, spacing=spacing, 
-	     burnin=burnin, num.temp=num.temp,
-             do.model.likelihood=TRUE, do.maximum.likelihood=do.maximum.likelihood, 
-	     maximum.likelihood.numstart=maximum.likelihood.numstart,
-             silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-             id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
-             T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=curr.causal)
 
-layer.analyzer.timeseries.list(list(struct),num.MCMC=num.MCMC, spacing=spacing, 
-	     burnin=burnin, num.temp=num.temp,
-             do.model.likelihood=TRUE, do.maximum.likelihood=do.maximum.likelihood, 
-	     maximum.likelihood.numstart=maximum.likelihood.numstart,
-             silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-             id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
-             T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=curr.causal)
+       if(talkative)
+       {
+        print.srcref(sprintf("res=layer.analyzer(struct, num.MCMC=%d, spacing=%d, burnin=%d, num.temp=%d, do.model.likelihood=TRUE,   do.maximum.likelihood=%s, maximum.likelihood.numstart=%d,    silent.mode=TRUE, talkative.burnin=FALSE,  talkative.likelihood=FALSE  id.strategy=%d,   use.stationary.stdev=%s,   T.ground=%f, use.half.lives=%s, mcmc=%s, causal=%s )",
+          num.MCMC, spacing, burnin, num.temp,
+          as.character(do.maximum.likelihood),
+          maximum.likelihood.numstart,
+          id.strategy, 
+          as.character(use.stationary.stdev),
+          T.ground, 
+          as.character(use.stationary.stdev),
+          as.character(mcmc), 
+          as.character(!is.null(curr.causal)) ))
+       }
+
+
+         res=layer.analyzer(struct, num.MCMC=num.MCMC, 
+           spacing=spacing, burnin=burnin, num.temp=num.temp,
+           do.model.likelihood=TRUE, 
+           do.maximum.likelihood=do.maximum.likelihood,
+           maximum.likelihood.numstart=
+           maximum.likelihood.numstart,   
+           silent.mode=TRUE,
+           talkative.burnin=FALSE,
+           talkative.likelihood=FALSE,            
+           id.strategy=id.strategy,
+           use.stationary.stdev=use.stationary.stdev,
+           T.ground=T.ground, 
+           use.half.lives=use.half.lives, 
+           mcmc=mcmc,
+           causal=curr.causal)
+
+         #layer.analyzer.timeseries.list(list(struct),
+         #  num.MCMC=num.MCMC, spacing=spacing, 
+	    #  burnin=burnin, num.temp=num.temp,
+         #   do.model.likelihood=TRUE,
+         #  do.maximum.likelihood=do.maximum.likelihood,
+         #  maximum.likelihood.numstart=
+         #  maximum.likelihood.numstart,           
+         #  silent.mode=TRUE,
+         #  talkative.burnin=FALSE,
+         #  talkative.likelihood=FALSE,   
+         #  id.strategy=id.strategy,
+         #  use.stationary.stdev=use.stationary.stdev,
+         #  T.ground=T.ground, 
+         #  use.half.lives=use.half.lives, 
+         #  mcmc=mcmc,
+         #  causal=curr.causal)
 
          models[[k]]=res
        }
