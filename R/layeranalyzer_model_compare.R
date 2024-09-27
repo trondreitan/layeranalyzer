@@ -30,7 +30,7 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
       input=input[[1]]
   
   n=length(input)
-  
+
   all.ml=FALSE
   for(i in 1:n)
   {
@@ -56,6 +56,15 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
        stop(sprintf("Object number %d does not have a Bayesian model likelihood!",i))
    }
   }
+  
+  no.lineshift=TRUE
+  for(i in 1:n)
+    if(length(grep("\n",input[[i]]$description))>0)
+      no.lineshift=FALSE
+  maxdesc=0
+  for(i in 1:n)
+    maxdesc=max(maxdesc,nchar(input[[i]]$description))
+  use.desc=no.lineshift & maxdesc<70
   
   l=rep(0,n)
   for(i in 1:n)
@@ -96,7 +105,15 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
   
   outmatrix=cbind(l,p)
   if(is.null(names(input)))
+  {
     names(input)=sprintf("Model %3d",1:n)
+    if(use.desc)
+    {
+      for(i in 1:n)
+        names(input)[i]=sprintf(sprintf("Model %%3d: %%%ds",maxdesc),
+	                        i,input[[i]]$description)
+    }
+  }
   if(!all.ml)
     critname="log(lik)"
   if(all.ml)

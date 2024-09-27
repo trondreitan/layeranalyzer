@@ -220,6 +220,180 @@ read.layer.data.series=function(filename,name,column.type=c("time","value"),
 # options for the model structure. Default is a one-layered
 # Ornstein-Uhlenbeck process with standard prior specification.
 
+layer.struct.name=function(struct)
+{
+ if(class(struct)!="layer.series.structure")
+   stop("Input must be a 'layer.series.structure' object!")
+
+ out=""
+ if(struct$numlayers>1)
+   out=sprintf("%d-layered:",struct$numlayers)
+
+ for(layer in struct$numlayers:1)
+ {
+   if(struct$numlayers>1)
+   {
+     if(layer<struct$numlayers &
+        (struct$numlayers>2 |
+         (sum(names(struct$timeseries)=="site")>0 &
+	  length(unique(struct$timeseries$site))>1)))
+     {
+       out=paste(out,sprintf("\n           Layer %d: ",layer))
+     }
+     if(layer<struct$numlayers &
+        (struct$numlayers==2 &
+         !(sum(names(struct$timeseries)=="site")>0 &
+	   length(unique(struct$timeseries$site))>1)))
+     {
+       out=paste(out, sprintf(", Layer %d: ", layer))
+     }
+     if(layer==struct$numlayers)
+     {
+       out=paste(out, sprintf("Layer %d: ", layer))
+     }
+   }
+   
+   if(layer==struct$numlayers)
+   {
+     if(struct$no.pull)
+     {
+       out=sprintf("%s%s",out,"RW")
+     }
+     else
+     {
+       out=sprintf("%s%s",out,"OU")
+     }
+     if(struct$lin.time)
+     {
+       out=paste(out,", lin.trend")
+     }
+     if(struct$allow.pos.pull & !struct$no.pull)
+     {
+       out=paste(out,", positive pull allowed")
+     }
+   }
+   
+   if(layer<struct$numlayers)
+   {
+     ordinary=TRUE
+     if(sum(struct$no.sigma==layer)>0)
+     {
+       out=sprintf("%s%s",out,"deterministic tracking")
+       ordinary=FALSE
+     }
+     if(sum(struct$time.integral==layer)>0)
+     {
+       out=sprintf("%s%s",out,"integration layer")
+       ordinary=FALSE
+     }
+     if(ordinary)
+     {
+       out=sprintf("%s%s",out,"OU-like tracking")
+     }
+   }
+
+   # Site structure?
+   if(sum(names(struct$timeseries)=="site")>0 &
+      length(unique(struct$timeseries$site))>1)
+   {
+     if(layer==struct$numlayers)
+     {
+       if(struct$regional.mu)
+       {
+	 out=paste(out,", regional mu")
+       }
+       else
+       {
+         out=paste(out,", global mu")
+       } 
+    
+       if(struct$lin.time)
+       {
+         if(struct$regional.lin.time)
+	 {
+             out=paste(out,", regional lin.time")
+	   }
+	 else
+	 {
+           out=paste(out,", global lin.time")
+         }
+       }
+     }
+     
+     if(sum(struct$regional.pull==layer)==1)
+     {
+       out=paste(out,", regional pull")
+     }
+     else
+     {
+       out=paste(out,", global pull")
+     }
+
+     if(sum(struct$regional.sigma==layer)==1)
+     {
+       out=paste(out,", regional sigma")
+     }
+     else
+     {
+       out=paste(out,", global sigma")
+     }
+
+     has.corr=FALSE
+     if(sum(struct$correlated.sigma==layer)==1)
+     {
+       out=paste(out,", correlation between sites")
+       has.corr=TRUE
+     }
+     if(sum(struct$pairwise.correlated.sigma==layer)==1)
+     {
+       out=paste(out,", pairwise correlated")
+       has.corr=TRUE
+     }
+     if(sum(struct$one.dim.sigma==layer)==1)
+     {
+       out=paste(out,", perfect correlation")
+       has.corr=TRUE
+     }
+     if(sum(struct$grouping.sigma==layer)==1)
+     {
+       out=paste(out,", grouped sigma")
+       has.corr=TRUE
+     }
+     if(sum(struct$remove.sigma)==1)
+     {
+       out=paste(out,", remove some corr.")
+       has.corr=TRUE
+     }
+     if(sum(struct$differentiate.sigma)==1)
+     {
+       out=paste(out,", grouped corr. strength")
+       has.corr=TRUE
+     }
+     if(!has.corr)
+     {
+       out=paste(out,", no site correlation")
+     }
+
+     if(sum(struct$differentiate.pull)==1)
+     {
+       out=paste(out,", grouped char.time")
+     }
+     if(sum(struct$differentiate.mu)==1)
+     {
+         out=paste(out,", grouped mu")
+     }
+     if(sum(struct$differentiate.lin.time)==1 &
+            struct$lin.time)
+     {
+      out=paste(out,", grouped lin. time")
+     }
+   }
+ }
+
+ return(out)
+}
+   
+
 layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
                               time.integral=NULL, no.pull=FALSE, no.sigma=NULL,
                               regional.mu=FALSE, regional.lin.time=FALSE,
@@ -647,13 +821,16 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     prior=layer.standard.prior
   ret$prior=prior  
 
-
   # Set output type and return:
   class(ret)="layer.series.structure"
+  
+  ret$description=layer.struct.name(ret)
+
   return(ret)
 }
-		      
 
-
+print.layer.series.structure=function(x)
+  cat(sprintf("Timeseries: %s, structure:\n%s\n",x$timeseries$name, x$description))
+  
 
 

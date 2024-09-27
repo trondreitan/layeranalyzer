@@ -64,7 +64,9 @@ layer.analyzer=function(... ,
 
 ###################################################################
 # 'layer.analyzer.timeseries.list', is the real analysis function
-# which takes a list of time series+structures.
+# which takes a list of time series+structures. Is used by
+# 'layer.analyzer' but also 'layer.predict.mcmc', as
+# it is the sole entrance to the C++ engine of layeranalyzer.
 ###################################################################
 
 layer.analyzer.timeseries.list=function(data.structure ,
@@ -85,7 +87,10 @@ layer.analyzer.timeseries.list=function(data.structure ,
   )
 {
  # Number of time series/structures:
- n=length(data.structure)
+ n.ser=n=length(data.structure)
+
+ out.data.structure=data.structure # take a copy of the data structure before
+ # this function does anything with it.
 
  ######################
  # User input checks:
@@ -1145,7 +1150,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
  # Call to C++ code for the actual analysis:
  #################################################
  
- input.mcmc=matrix(as.numeric(c(0)),nrow=1) # used for indicating 
+ input.mcmc=matrix(as.numeric(c(-1e+7)),nrow=1) # used for indicating 
       # that no input MCMC is used.
       # Input MCMC is only used for later smoothing.
 
@@ -1163,9 +1168,23 @@ layer.analyzer.timeseries.list=function(data.structure ,
    }
 
    input.mcmc=previous.run$mcmc.origpar
-
-  #### todo: check if more needs to be done here
  }
+
+ if(smooth.previous.run==FALSE &  !is.null(previous.run))
+ {
+   # The other entrance to specifying MCMC () uses parameters in original scale
+   # not re-parametrized versions
+   if(is.null(previous.run$mcmc))
+     stop("Previous run has not MCMC samples (mcmc). Run again with the 'mcmc=TRUE' option!")
+
+   if(sum(class(previous.run$mcmc)=="mcmc")==0)
+   {
+     stop("MCMC sample structure 'previous.run$mcmc' is not an MCMC object!")
+   }
+
+   input.mcmc=previous.run$mcmc
+ }
+ 
 
  out=.Call('layeranalyzer',data.structure,num.MCMC,burnin,spacing,num.temp,
       as.integer(do.model.likelihood),
@@ -1183,7 +1202,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
  # Store the list of input time series/structures, in addition
  # to what the analysis returned:
- out$data.structure=data.structure
+ out$data.structure=out.data.structure
 
  # Store input options:
  out$input.options=
@@ -1241,6 +1260,129 @@ layer.analyzer.timeseries.list=function(data.structure ,
  out$causal.symmetric=causal.symmetric
  out$corr=corr
 
+
+
+ has.causal=FALSE
+ if(!is.null(causal))
+  if(dim(causal)[2]>0)
+   has.causal=TRUE
+ if(!is.null(causal.symmetric))
+  if(dim(causal.symmetric)[2]>0)
+   has.causal=TRUE
+ timeseries.prefix=""
+ if(has.causal)
+   timeseries.prefix="Standalone "
+   
+ out$description=""
+ for(s in 1:n.ser)
+ {
+  if(n.ser>1)
+  {
+    out$description=sprintf("%s%s%s:\n",out$description,
+      timeseries.prefix,out$data.structure[[s]]$timeseries$name)
+  }
+  out$description=sprintf("%s%s",out$description,
+     out$data.structure[[s]]$description)
+  if(n.ser>1)
+    out$description=sprintf("%s\n",out$description)
+ }
+ if(!is.null(causal))
+ if(dim(causal)[2]>0)
+ {
+   out$description=sprintf("%s\nCausal links:\n",out$description)
+   for(i in 1:dim(causal)[2])
+   {
+     s1=causal[1,i]
+     l1=causal[2,i]
+     s2=causal[3,i]
+     l2=causal[4,i]
+     if(out$data.structure[[s1]]$numlayers==1 &
+        out$data.structure[[s2]]$numlayers==1)
+       out$description=sprintf("%s  %s->%s\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,
+           out$data.structure[[s2]]$timeseries$name)
+     if(out$data.structure[[s1]]$numlayers>1 &
+        out$data.structure[[s2]]$numlayers==1)
+       out$description=sprintf("%s  %s,l%d->%s\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,l1,
+           out$data.structure[[s2]]$timeseries$name)
+     if(out$data.structure[[s1]]$numlayers==1 &
+        out$data.structure[[s2]]$numlayers>1)
+       out$description=sprintf("%s  %s->%s,l%d\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,
+           out$data.structure[[s2]]$timeseries$name,l2)
+     if(out$data.structure[[s1]]$numlayers>1 &
+        out$data.structure[[s2]]$numlayers>1)
+       out$description=sprintf("%s  %s,l%d->%s,l%d\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,l1,
+           out$data.structure[[s2]]$timeseries$name,l2)
+   }
+ }
+ if(!is.null(causal.symmetric))
+ if(dim(causal.symmetric)[2]>0)
+ {
+   out$description=sprintf("%s\nCausal symmetric links:\n",out$description)
+   for(i in 1:dim(causal.symmetric)[2])
+   {
+     s1=causal.symmetric[1,i]
+     l1=causal.symmetric[2,i]
+     s2=causal.symmetric[3,i]
+     l2=causal.symmetric[4,i]
+     if(out$data.structure[[s1]]$numlayers==1 &
+        out$data.structure[[s2]]$numlayers==1)
+       out$description=sprintf("%s  %s<->%s\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,
+           out$data.structure[[s2]]$timeseries$name)
+     if(out$data.structure[[s1]]$numlayers>1 &
+        out$data.structure[[s2]]$numlayers==1)
+       out$description=sprintf("%s  %s,l%d<->%s\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,l1,
+           out$data.structure[[s2]]$timeseries$name)
+     if(out$data.structure[[s1]]$numlayers==1 &
+        out$data.structure[[s2]]$numlayers>1)
+       out$description=sprintf("%s  %s<->%s,l%d\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,
+	   out$data.structure[[s2]]$timeseries$name,l2)
+     if(out$data.structure[[s1]]$numlayers>1 &
+        out$data.structure[[s2]]$numlayers>1)
+       out$description=sprintf("%s  %s,l%d<->%s,l%d\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,l1,
+           out$data.structure[[s2]]$timeseries$name,l2)
+   }
+ }
+ if(!is.null(corr))
+ if(dim(corr)[2]>0)
+ {
+   out$description=sprintf("%s\nCorrelative links:\n",out$description)
+   for(i in 1:dim(corr)[2])
+   {
+     s1=corr[1,i]
+     l1=corr[2,i]
+     s2=corr[3,i]
+     l2=corr[4,i]
+     if(out$data.structure[[s1]]$numlayers==1 &
+        out$data.structure[[s2]]$numlayers==1)
+       out$description=sprintf("%s  %s~%s\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,
+           out$data.structure[[s2]]$timeseries$name)
+     if(out$data.structure[[s1]]$numlayers>1 &
+        out$data.structure[[s2]]$numlayers==1)
+       out$description=sprintf("%s  %s,l%d~%s\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,l1,
+           out$data.structure[[s2]]$timeseries$name)
+     if(out$data.structure[[s1]]$numlayers==1 &
+        out$data.structure[[s2]]$numlayers>1)
+       out$description=sprintf("%s  %s~%s,l%d\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,
+           out$data.structure[[s2]]$timeseries$name,l2)
+     if(out$data.structure[[s1]]$numlayers>1 &
+        out$data.structure[[s2]]$numlayers>1)
+       out$description=sprintf("%s  %s,l%d~%s,l%d\n",out$description,
+           out$data.structure[[s1]]$timeseries$name,l1,
+           out$data.structure[[s2]]$timeseries$name,l2)
+   }
+ }
+ 
  
  # Set class type of output:
  class(out)="layered"
@@ -1253,7 +1395,11 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
 
 
-
+########################################################
+# layer.predict.mcmc - Predict (smooth) according to
+# new data but already existing parameter inference
+# in the form of MCMC samples.
+########################################################
 
 layer.predict.mcmc=function(... , analysis=NULL, 
    smoothing.time.diff=0,
@@ -1268,6 +1414,17 @@ layer.predict.mcmc=function(... , analysis=NULL,
   return(ret)
 }
 
+
+########################################################
+# layer.predict.mcmc.list - Predict (smooth) according
+# to new data but already existing parameter inference
+# in the form of MCMC samples. In this case, the
+# data come sin the form a list of layer.data.series
+# objects, rather than a set of such series, like in
+# 'layer.predict.mcmc'. This is what does the heavy
+# lifting of checking user input and then calling
+# layer.analyzer.timeseries.list.
+########################################################
 
 layer.predict.mcmc.list=function(new.data.list , analysis=NULL, 
    smoothing.time.diff=0,
@@ -1355,14 +1512,21 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
       realization.specs=
          list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=return.residuals,
-  smooth.previous.run=TRUE, previous.run=analysis)
+	 return.residuals=return.residuals,
+ 	 smooth.previous.run=TRUE, previous.run=analysis)
   
   return(ret)
 }
 
 
 
+########################################################
+# layer.predict.estimate - Predict (smooth) according to
+# new data but already existing parameter inference
+# in the form of the parameter estimates (Bayesian
+# mean for Bayesian inference and ML estimates for
+# ML inference). 
+########################################################
 
 layer.predict.estimate=function(... , analysis=NULL, 
    smoothing.time.diff=0,

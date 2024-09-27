@@ -33,7 +33,8 @@ summary.layered=function(object, ...)
      "Lower 95%", 
      "Upper 95%"))
     
-    ans=list(coefficients=round(mat,6), model.log.likelihood=object$model.log.lik)
+    ans=list(description=object$description,
+      coefficients=round(mat,6), model.log.likelihood=object$model.log.lik)
     class(ans)="summary.layered"
     
     return(ans)
@@ -56,7 +57,8 @@ summary.layered=function(object, ...)
     dimnames(mat)=list(par, c("ML estimate",
      "Bayesian Lower 95%", "Bayesian Upper 95%"))
     
-    ans=list(coefficients=round(mat,6), ML.loglik=object$ML.loglik, 
+    ans=list(description=object$description,
+      coefficients=round(mat,6), ML.loglik=object$ML.loglik, 
       AIC=object$AIC,AICc=object$AICc,BIC=object$BIC)
     class(ans)="summary.layered"
     
@@ -70,6 +72,11 @@ summary.layered=function(object, ...)
 print.summary.layered=function(x, ...)
 {
   input=list(...)
+
+  print.srcref("Description:")
+  cat(x$description)
+  print.srcref("")
+  print.srcref("")
   
   if(is.null(x$ML.loglik))
   {
