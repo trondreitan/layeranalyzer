@@ -1,4 +1,4 @@
-CXX_STD = CXX11
+CXX_STD = CXX
 
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) -I/usr/include/lapacke -I/Library/Frameworks/R.framework/Versions/4.2/PrivateHeaders/R_ext -I/Library/Frameworks/R.framework/Versions/4.3/PrivateHeaders/R_ext -I/Library/Frameworks/R.framework/Versions/4.3-x86_64/PrivateHeaders/R_ext -I/Library/Frameworks/R.framework/Versions/4.2-x86_64/PrivateHeaders/R_ext -I/Library/Frameworks/R.framework/Versions/4.4-x86_64/PrivateHeaders/R_ext -I/Library/Frameworks/R.framework/Versions/4.4/PrivateHeaders/R_ext
 PKG_LIBS = -U_GLIBCXX_ASSERTIONS $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) 

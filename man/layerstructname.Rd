@@ -5,8 +5,10 @@
 \description{
 This function generates a string describing the structure specified for a time series.
 }
+
 \usage{
 layer.struct.name(struct)
+}
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{struct}{
