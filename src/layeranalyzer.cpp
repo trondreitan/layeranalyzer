@@ -9,7 +9,7 @@
 
 #ifndef MAIN // Only for when compiling as R package
 
-#include <Rcpp.h>
+#include <Rcpp.h>// LGPL licenced.
 #include <RcppCommon.h>
 
 #include <stdlib.h>
@@ -17,7 +17,6 @@
 #include <inttypes.h>
 
 using namespace Rcpp;
-
 //#include <R_ext/Lapack.h> 
 
 #else // MAIN
@@ -33,6 +32,8 @@ using namespace Rcpp;
 // Made by Trond Reitan, University of Oslo, 15/1-2009.
 // LGPL licenced.
 //
+
+
 
 #include <lapack.h>
 
@@ -50,7 +51,7 @@ using namespace Rcpp;
 #define tripledelete(array,len,len2) {if(array) { for(unsigned int count=0;count<(unsigned int)len;count++){ if(array[count]){ for(unsigned int count2=0;count2<(unsigned int)len2;count2++) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
 #endif // tripledelete
 
-#define MAXIM(a, b) ((a) > (b) ? (a) : (b))
+#define MAXIM(a, b)  ((a) > (b) ? (a) : (b))
 #define MINIM(a, b) ((a) < (b) ? (a) : (b))
 #define ABSVAL(x) (x>0 ? x : -x)
 #define SIGN(x) (x>0 ? 1 : (x==0 ? 0 : -1))
@@ -1265,8 +1266,8 @@ HydDateTime::HydDateTime(char *datetime,int form)
   char temp1[3]; temp1[2] = '\0';
   char *ptr1,*ptr2,*ptr3,*ptr4,*ptr5;
   yearType  y=2000;
-  monthType m;
-  dayType d;
+  monthType m=1;
+  dayType d=1;
   short h=0,mi=0,sec=0;
 
   if(!datetime)
@@ -10049,7 +10050,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   timers[2][0]=clock();
 #endif // DETAILED_TIMERS
   
-  unsigned int s,i,j,k,l,t=0, t_0=0;
+  unsigned int s,i,j,l,t=0, t_0=0;
+  int k;
   numpar=0;
   bool pairwise_wrong=false;
 
@@ -10625,7 +10627,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
       
       int exist_missing_sd=0;
-      for(k=0;k<ser[s].meas_len;k++)
+      for(k=0;k<(int)ser[s].meas_len;k++)
 	if(ser[s].meas[k].sd==MISSING_VALUE)
 	  exist_missing_sd=1;
       
@@ -11214,7 +11216,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       VinvLambdaV_A=Make_Complex_matrix(num_states,num_states);
       for(i=0;i<num_states;i++)
 	for(j=0;j<num_states;j++)
-	  for(k=0;k<num_states;k++)
+	  for(k=0;k<(int)num_states;k++)
 	    VinvLambdaV_A[i][j]+=Vinv[i][k]*lambda[k]*V[k][j];
       
       static int numtrav=0;
@@ -11357,9 +11359,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
     }
   
   unsigned int len = dosmooth ? meas_smooth_len : meas_tot_len;
+
   
   measurement_cluster *me = (dosmooth ? meas_smooth : meas_tot);
-  
+ 
 #ifndef MAIN
   if(detailed_loglik)
     {
@@ -11412,7 +11415,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // Q_k = Qbuffer*Vinv=Vinv*Lambda_k*Vinv is the 
   // prediction uncertainty not due to uncertainty of the previous state
   double ***Q_k= new double**[len];
-  for(k=0;k<len;k++)
+  for(k=0;k<(int)len;k++)
     Q_k[k]=Make_matrix(num_states,num_states); 
   // x_k_prev=expectancy of the state given previous observations:
   double *x_k_prev=new double[num_states];
@@ -11443,16 +11446,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
     {
       resids[i]=new double[len];
       prior_expectancy[i]=new double[len];
-      for(k=0;k<len;k++)
+      for(k=0;k<(int)len;k++)
 	{
 	  resids[i][k]=MISSING_VALUE;
 	  prior_expectancy[i][k]=MISSING_VALUE;
 	}
     }
-  for(k=0;k<meas_tot_len;k++)
+  for(k=0;k<(int)meas_tot_len;k++)
     resids_time[k]=meas_tot[k].tm;
   if(debug && return_residuals)
-    for(k=0;k<meas_tot_len;k++)
+    for(k=0;k<(int)meas_tot_len;k++)
       meas_tot[k].print();
   
   // smoothing information
@@ -11488,7 +11491,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       if(!dt_k_smooth && ser[0].meas[0].dt!=NoHydDateTime)
 	dt_k_smooth=new HydDateTime[meas_smooth_len];
 
-      for(k=0;k<meas_smooth_len;k++)
+      for(k=0;k<(int)meas_smooth_len;k++)
 	{
 	  x_k_s[k]=new double[num_states];
 	  P_k_s[k]=Make_matrix(num_states,num_states);
@@ -11497,7 +11500,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       PAbuffer=Make_matrix(num_states,num_states);
     }
   
-  for(k=0;k<len;k++)
+  for(k=0;k<(int)len;k++)
     {
       x_k_now[k]=new double[num_states];
       u_k[k]=new double[num_states];
@@ -11511,7 +11514,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  P_k_prev[k][i]=new double[num_states];
 	}
     }
-  
 #ifndef MAIN
   if(detailed_loglik)
     Rcout << "Correlation3 starting" << std::endl;
@@ -11549,14 +11551,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	if(ser[s].sigma_1dim[l])
 	  {
 	    for(j=0;j<(numsites-1);j++)
-	      for(k=j+1;k<numsites;k++)
+	      for(k=j+1;k<(int)numsites;k++)
 		corr_layer[i][j][k]=corr_layer[i][k][j]=
 		  dosmooth ? 0.999999 : 1.0;
 	  }
 	else if(ser[s].sigma_pairwise_correlated[l])
 	  {
 	    for(j=0;j<(numsites-1);j++)
-	      for(k=j+1;k<numsites;k++)
+	      for(k=j+1;k<(int)numsites;k++)
 		if((!ser[s].indicator_corr[l] || 
 		    (indicator_array[j]==indicator_array[k])) &&
 		   (!ser[s].indicator_corr2[l] || 
@@ -11567,7 +11569,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	else if(ser[s].sigma_correlated[l])
 	  {
 	    for(j=0;j<(numsites-1);j++)
-	      for(k=j+1;k<numsites;k++)
+	      for(k=j+1;k<(int)numsites;k++)
 		if((!ser[s].indicator_corr[l] || 
 		    (indicator_array[j]==indicator_array[k])) &&
 		   (!ser[s].indicator_corr2[l] || 
@@ -11580,7 +11582,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    if(ser[s].sigma_1dim[l])
 	      {
 		for(j=0;j<numsites;j++)
-		  for(k=0;k<numsites;k++)
+		  for(k=0;k<(int)numsites;k++)
 		    corr_sqrt_layer[i][j][k]=1.0/sqrt(double(numsites));
 	      }
 	    else
@@ -11626,13 +11628,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		Complex **sqrtbuffer=Make_Complex_matrix(numsites,numsites);
 		
 		for(j=0;j<numsites;j++)
-		  for(k=0;k<numsites;k++)
+		  for(k=0;k<(int)numsites;k++)
 		    for(unsigned int k2=0;k2<numsites;k2++)
 		      sqrtbuffer[j][k]+=
 			sigma_Vinv[j][k2]*complex_sqrt(sigma_lambda[k2])*sigma_V[k2][k];
 		
 		for(j=0;j<numsites;j++)
-		  for(k=0;k<numsites;k++)
+		  for(k=0;k<(int)numsites;k++)
 		    {
 		      if(ABSVAL((sqrtbuffer[j][k].Im()))>0.001)
 			{
@@ -11667,7 +11669,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	i=(series_state_start[s]+numsites*l)/numsites;
 	
 	for(j=0;j<numsites;j++)
-	  for(k=0;k<numsites;k++)
+	  for(k=0;k<(int)numsites;k++)
 	    corr[i*numsites+j][i*numsites+k]=corr_layer[i][j][k];
       }
   //Rcout << "loglik init3" << std::endl;
@@ -11680,13 +11682,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  double **sqrtprod=Make_matrix(numsites,numsites);
 	  for(j=0;j<numsites;j++)
-	    for(k=0;k<numsites;k++)
+	    for(k=0;k<(int)numsites;k++)
 	      for(unsigned int k2=0;k2<numsites;k2++)
 		sqrtprod[j][k]+=
 		  corr_sqrt_layer[index1][j][k2]*corr_sqrt_layer[index2][k2][k];
 	  
 	  for(j=0;j<numsites;j++)
-	    for(k=0;k<numsites;k++)
+	    for(k=0;k<(int)numsites;k++)
 	      corr[index1*numsites+j][index2*numsites+k]=
 		corr[index2*numsites+k][index1*numsites+j]=
 		series_corr[i]*sqrtprod[j][k];
@@ -12004,10 +12006,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      
 	      cout << "A=matrix(c(";
 	      for(j=0;j<num_states;j++)
-		for(k=0;k<num_states;k++)
+		for(k=0;k<(int)num_states;k++)
 		  {
 		    cout << A[j][k];
-		    if(j<(num_states-1) || k<(num_states-1))
+		    if(j<(num_states-1) || k<((int)num_states-1))
 		      cout << ",";
 		  }
 	      cout << "),nrow=" << num_states << ")" << endl;
@@ -12032,30 +12034,30 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      
 	      cout << "V=matrix(c(";
 	      for(j=0;j<num_states;j++)
-		for(k=0;k<num_states;k++)
+		for(k=0;k<(int)num_states;k++)
 		  {
 		    cout << V[j][k];
-		    if(j<(num_states-1) || k<(num_states-1))
+		    if(j<(num_states-1) || k<((int)num_states-1))
 		      cout << ",";
 		  }
 	      cout << "),nrow=" << num_states << ")" << endl;
 	      
 	      cout << "Vinv=matrix(c(";
 	      for(j=0;j<num_states;j++)
-		for(k=0;k<num_states;k++)
+		for(k=0;k<(int)num_states;k++)
 		  {
 		    cout << Vinv[j][k];
-		    if(j<(num_states-1) || k<(num_states-1))
+		    if(j<(num_states-1) || k<((int)num_states-1))
 		      cout << ",";
 		  }
 	      cout << "),nrow=" << num_states << ")" << endl;
 	      
 	      cout << "VinvLambdaV=matrix(c(";
 	      for(j=0;j<num_states;j++)
-		for(k=0;k<num_states;k++)
+		for(k=0;k<(int)num_states;k++)
 		  {
 		    cout << VinvLambdaV_A[j][k];
-		    if(j<(num_states-1) || k<(num_states-1))
+		    if(j<(num_states-1) || k<((int)num_states-1))
 		      cout << ",";
 		  }
 	      cout << "),nrow=" << num_states << ")" << endl;
@@ -12303,7 +12305,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   // *********************************
   // Traverse the measurements:
-  for(k=0;k<len;k++)
+  for(k=0;k<(int)len;k++)
     {
 #ifndef MAIN
       if(detailed_loglik)
@@ -13243,7 +13245,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    }
 	}
 
-      for(k=len-2;k>=0;k--)
+      for(k=(int)len-2;k>=0;k--)
 	{
 	  double **P_k_prevbuffer=new double*[num_states];
 	  for(i=0;i<num_states;i++)
@@ -13252,7 +13254,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      for(j=0;j<num_states;j++)
 		P_k_prevbuffer[i][j]=P_k_prev[k+1][i][j];
 	    }
-
+	  
 	  double **P_k_plus_1_inv=matrix_inverse(P_k_prevbuffer,num_states);
 	  doubledelete(P_k_prevbuffer, num_states);
 	  
@@ -13272,7 +13274,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  C_k[i][j]+=PAbuffer[i][l]*P_k_plus_1_inv[l][j];
 	      }
 	  doubledelete(P_k_plus_1_inv,num_states);
-	  
+
 	  double *x_k_buffer=new double[num_states];
 	  for(i=0;i<num_states;i++)                    
 	    {
@@ -13290,7 +13292,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  double **P1=Make_matrix(num_states,num_states), 
 	    **P2=Make_matrix(num_states,num_states);
-
+	  
 	  for(i=0;i<num_states;i++)
 	    for(j=0;j<num_states;j++)
 	      {
@@ -13322,7 +13324,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
       // If periodicity in measuredments has been subtracted, add them into
       // the state again:
-      for(k=0;k<len;k++)
+      for(k=0;k<(int)len;k++)
 	for(i=0;i<num_states;i++)
 	  {
 	    s=state_series[i];
@@ -13370,7 +13372,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  stopped=0;
 
-	  for(k=(len-2);k>=0 && !stopped;k--)
+	  for(k=(int)len-2;k>=0 && !stopped;k--)
 	    {
 	      int missing=0;
 	      for(i=0;i<num_states;i++)
@@ -13567,12 +13569,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 	  if(real_strat!=NO_CENSORING && !stopped)
 	    {
-	      unsigned int *k2=new unsigned int[numsites];
+	      int *k2=new int[numsites];
 	      // stores the index of the last site specific measurement
 	      for(i=0;i<numsites;i++)
 		k2[i]=len-1;
 	      
-	      for(k=(len-2);k>=0 && !stopped;k--)
+	      for(k=(int)len-2;k>=0 && !stopped;k--)
 		{
 		  // Find the index of the last site specific measurement
 		  // before the currently examined time point:
@@ -13710,8 +13712,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   doubledelete(var,num_states);
   doubledelete(A,num_states);
   doubledelete(P_k_buffer,num_states);
-  
-  for(k=0;k<len;k++)
+
+  for(k=0;k<(int)len;k++)
     {
       doubledelete(P_k_now[k],num_states);
       doubledelete(P_k_prev[k],num_states);
@@ -13759,7 +13761,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   timers[1][1]=clock();
   timers[1][2]+=(timers[1][1]-timers[1][0]);
 #endif // DETAILED_TIMERS
-  
+
   // return the loglikelihood:
   return -ret;
 }
@@ -14551,7 +14553,7 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
   timers[20][0]=clock();
 #endif // DETAILED_TIMERS
   
-  
+
   // **************************************************************
   // initialization of the samples:
   for(t=0;t<numtemp;t++) // traverse the chains
@@ -14647,6 +14649,7 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 #endif // MAIN
 	  newsample(pars, log_prob, &acc, &rw,
 		    T, numtemp, swaps);
+  
 	}
       
       // update the acceptances:
@@ -14662,7 +14665,7 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 #else
 	  Rcout << j << " 2 " << i << std::endl;
 #endif // MAIN
-	    
+	  
 	  newsample(pars, log_prob, &acc, &rw,
 		    T, numtemp, swaps);
 
@@ -14723,9 +14726,12 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
       // For each wanted sample, do MCMC iterations 'indep' number
       // of times:
       for(j=0;j<indep;j++)
-	newsample(pars, log_prob, &acc, &rw,
-		  T, numtemp, swaps,
-		  j==(indep-1) ? dosmooth : 0, j==(indep-1) ? do_realization : 0);
+	{
+	  newsample(pars, log_prob, &acc, &rw,
+		    T, numtemp, swaps,
+		    j==(indep-1) ? dosmooth : 0, j==(indep-1) ? do_realization : 0);
+	}
+      
       // copy the result to the return array:
       ret[i].copy(pars);
       ll[i]=pars[0].log_lik;
@@ -14753,6 +14759,7 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 	}
       
       
+	    
       if(dosmooth && !do_realization)
 	{
 	  for(k=0;k<meas_smooth_len;k++)
@@ -14939,7 +14946,6 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 #endif // MAIN
 	}
     }
-
 
   if(do_importance)
     {
@@ -15373,16 +15379,26 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 const double loglikwrapper(const NumericVector &vals)
-{
+{ 
   int len=vals.size();
   double *val2=new double[len];
 
   for(int i=0;i<len;i++)
-    val2[i]=vals[i];
-
+    {
+      //if(!silent)
+      //printf("  par %d (%s): %f\n", i, par_name[i], vals[i]);
+      val2[i]=vals[i];
+    }
+   
   double ret=-minusloglik(val2);
   delete [] val2;
 
+  if(!(ret> -1e+200 && ret < 1e+200))
+    ret=-1e+200;
+
+  //if(!silent)
+  //printf("ret=%f\n",ret);
+  
   return -ret;
 }
 
@@ -16274,9 +16290,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     loglik(NULL); // gives us the global 'numpar', 
 
   // DEBUG 
-  Rcout << "inpars_numpars=" << inpars_numpars << " numpar=" << numpar << 
-    " inpars_numsets=" << inpars_numsets << " no_inpars=" << no_inpars <<
-    std::endl;
+  //Rcout << "inpars_numpars=" << inpars_numpars << " numpar=" << numpar << 
+  //" inpars_numsets=" << inpars_numsets << " no_inpars=" << no_inpars <<
+  //std::endl;
   
   if(no_inpars)
     {
@@ -16356,7 +16372,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  Function optim=stats["optim"];
 		  List optres=optim(Rcpp::_["par"]= initpars,
 				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
-				    Rcpp::_["method"]="BFGS");
+				    Rcpp::_["method"]="L-BFGS-B",
+				    Rcpp::_["lower"]=-1e+20,
+				    Rcpp::_["upper"]=+1e+20  );
 		  NumericVector outpars2=as<NumericVector>(optres["par"]);
 		  NumericVector outval=as<NumericVector>(optres["value"]);
 		  
@@ -16423,7 +16441,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     // parameter-estimate-based smoothing
     {
       // PS: Should *not* have any missing values!
-      // DEBUG: Rcout << "Fetching smoothing for estimates" << std::endl;
+      // DEBUG:
 
       num_mcmc=inpars_numsets;
       pars=new params[1];
@@ -16453,8 +16471,6 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   else if(inpars_numsets>=1 && dosmooth)
     {
-      // DEBUG: Rcout << "Getting MCMC from in_pars" << std::endl;
-      
       num_mcmc=inpars_numsets;
       pars=new params[num_mcmc];
       for(j=0;(int)j<num_mcmc;j++)
@@ -16547,7 +16563,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   unsigned int numsamples=(unsigned int) num_mcmc;
   // DEBUG:
-  Rcout << "numsamples=" << numsamples << std::endl;
+  //Rcout << "numsamples=" << numsamples << std::endl;
 
 
   // Something goes wrong here, for loglik mode!
@@ -16564,7 +16580,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  Rcout << " parameter samples fetched" << std::endl;
+  //Rcout << " parameter samples fetched" << std::endl;
 
   char **par_name_orig=new char*[numpar];
   char **par_name_new=new char*[numpar];
@@ -16575,7 +16591,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  Rcout << " parameter names fetched" << std::endl;
+  //Rcout << " parameter names fetched" << std::endl;
 
   // transform the expectancies from logarithmic size to
   // original size:
@@ -16606,12 +16622,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
     }
 
-  for(i=0;i<numpar;i++)
-    Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] << std::endl;
+  // DEBUG
+  //for(i=0;i<numpar;i++)
+  //Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] << std::endl;
   
   
   // DEBUG:
-  Rcout << "Stationary stdev?" << std::endl;
+  //Rcout << "Stationary stdev?" << std::endl;
 
   if(use_stationary_sdev)
   if(no_inpars || dosmooth || do_realizations)
@@ -16687,7 +16704,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  Rcout << "Add extra cycle info" << std::endl;
+  // Rcout << "Add extra cycle info" << std::endl;
 
   int numpar2=numpar;
   bool has_cycles[10];
@@ -16712,17 +16729,19 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   StringVector parnames(numpar2);
   
   // DEBUG:
-  Rcout << "best pars repar" << std::endl;
+  // Rcout << "best pars repar" << std::endl;
 
   double *best_pars_repar=new double[numpar];
   if(no_inpars || dosmooth || do_realizations)
-    if(!do_ml)
-      for(j=0;j<(int)numpar;j++)
-	best_pars_repar[j]=
-	  find_statistics(parsample_repar[j], numsamples, MEDIAN);
-      
+    {
+      if(!do_ml)
+	for(j=0;j<(int)numpar;j++)
+	  best_pars_repar[j]=
+	    find_statistics(parsample_repar[j], numsamples, MEDIAN);
+    }
+  
   // DEBUG:
-  Rcout << "ML, do_ml=" << do_ml << std::endl;
+  // Rcout << "ML, do_ml=" << do_ml << std::endl;
 
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
@@ -16741,6 +16760,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	{
 	  if(!silent)
 	    Rcout << "Optimization nr. " << i << std::endl;
+
 	  
 	  double *curr_par=new double[numpar];
 	  
@@ -16782,7 +16802,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  Function optim=stats["optim"];
 	  List optres=optim(Rcpp::_["par"]= initpars,
 			    Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
-			    Rcpp::_["method"]="BFGS");
+			    Rcpp::_["method"]="L-BFGS-B",
+			    Rcpp::_["lower"]=-1e+20,
+			    Rcpp::_["upper"]=+1e+20  );
 	  NumericVector outpars=as<NumericVector>(optres["par"]);
 	  double *pars2=new double[numpar];
 	  for(j=0;j<(int)numpar;j++)
@@ -16816,8 +16838,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      best_loglik=curr_loglik;
 	    }
 	  
-	  delete [] curr_par;
 	  delete [] pars2;
+	  delete [] curr_par;
 	}
       
       // transform the expectancies from logarithmic size to
@@ -16890,8 +16912,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       delete [] medpar;
     }
     }
-  
-  Rcout << "ML done" << std::endl;
+
+  // DEBUG
+  //Rcout << "ML done" << std::endl;
 
 #ifdef DETAILED_TIMERS
   List alltimers=List::create(
@@ -17037,10 +17060,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
 
   
-  // DEBUG:
-  Rcout << "Start summary statistics (2)" << std::endl;
-
   if(no_inpars || dosmooth || do_realizations)
+    {
   if(num_series_feed>0)
     {
       double *iscomplex=new double[numsamples];
@@ -17094,14 +17115,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    k++;
 	  }
     }
-  
-  // DEBUG:
-  Rcout << "Set parnames" << std::endl;
+    }
   
   out["parameter.names"]=parnames;
-
-  // DEBUG:
-  Rcout << "Residuals" << std::endl;
 
   if(no_inpars || dosmooth || do_realizations)
   if(return_residuals==1)
@@ -17141,7 +17157,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
    
   // DEBUG:
-  Rcout << "Start smoothing" << std::endl;
+  // Rcout << "Start smoothing" << std::endl;
 
   if(dosmooth && !do_realizations)
     {
@@ -17264,7 +17280,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   
   // DEBUG:
-  Rcout << "Smoothing done" << std::endl;
+  //Rcout << "Smoothing done" << std::endl;
 
   if(do_realizations && numit_realizations_made>0 && x_k_realized_all!=NULL)
     {
@@ -17322,9 +17338,6 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       doubledelete(procname,num_states);
     }
   
-  // DEBUG:
-  Rcout << "Realizations done" << std::endl;
-  
   if(no_inpars || dosmooth || do_realizations)
     {
       NumericVector est_origpar(numpar);
@@ -17334,9 +17347,6 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       delete [] best_pars_repar;
     }
   
-  // DEBUG:
-  Rcout << " Returning MCMC" << std::endl;
-
   if(return_mcmc)
     {
       NumericMatrix mcmcsamples(numpar,numsamples);
@@ -17372,25 +17382,24 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   
   // DEBUG:
-  Rcout << " Returned MCMCg" << std::endl;
-
+  //Rcout << " Returned MCMCg" << std::endl;
   doubledelete(par_name_orig,numpar);
-  Rcout << " deleted par_name_orig" << std::endl;
+  //Rcout << " deleted par_name_orig" << std::endl;
   doubledelete(par_name_new,numpar);
-  Rcout << " deleted par_name" << std::endl;
+  //Rcout << " deleted par_name" << std::endl;
   doubledelete(parsample,numpar);
-  Rcout << " deleted parsample" << std::endl;
+  //Rcout << " deleted parsample" << std::endl;
   doubledelete(parsample_repar,numpar);
-  Rcout << " deleted parsample_repar" << std::endl;
+  //Rcout << " deleted parsample_repar" << std::endl;
   
   delete [] pars;
-  Rcout << " deleted pars" << std::endl;
+  //Rcout << " deleted pars" << std::endl;
   delete [] meas_buffer;
-  Rcout << " deleted meas_buffer" << std::endl;
+  //Rcout << " deleted meas_buffer" << std::endl;
   reset_global_variables();
   
   // DEBUG:
-  Rcout << " Returning" << std::endl;
+  //Rcout << " Returning" << std::endl;
 
   PutRNGstate();
   return(out);
