@@ -245,6 +245,7 @@ X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
 #  num.MCMC=200,spacing=10,burnin=2000, prior=p)
 #
 #compare.layered(models)
+#cat(models[[3]]$description)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

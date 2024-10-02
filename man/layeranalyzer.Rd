@@ -378,6 +378,7 @@ realizations: Process realizations given measurements. Only returned if "realiza
 
 realization.time.points: Time point for each realization. Only returned if "realization.specs=list(do.realizations=TRUE,...)" is set.
 
+description: A description of the model can be found in the field 'description',containing structure descriptions and causal and correlative connections.
 
 }
 \references{
