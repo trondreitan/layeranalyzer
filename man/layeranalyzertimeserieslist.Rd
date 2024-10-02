@@ -32,7 +32,7 @@ layer.analyzer.timeseries.list(data.structure ,
   realization.specs=
      list(do.realizations=FALSE,num.realizations=1000,strategy="N",
           realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE)
+  return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -308,6 +308,19 @@ layer.analyzer.timeseries.list(data.structure ,
  is used for process inference), as it is the deviations in the
  Kalman filter that are assumed to be independent from measurement
  to measurement.
+ }
+ \item{smooth.previous.run}{
+   If set true, performs smoothing (process inference) on a previously performed
+   MCMC run, defined in the subsecquent item, 'previous.run'. Does not perform
+   an new MCMC analysis. Note that the new data can still be given, so that
+   the inference is for the process parameters as revealed by the previously
+   run MCMC sampling, but with data equal to the new input. Note that
+   the 'smoothing.specs' option also has to be set, in order for this to make sense.
+ }
+ \item{previous.run}{
+   A 'layered' object representing a previous run analysis, where MCMC samples
+   have been saved (using the 'mcmc=True' option). Only makes sense if the
+   'smooth.previous.run' has been set to TRUE, otherwise the object is irrelevant.
  }
 }
 \details{

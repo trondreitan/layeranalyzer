@@ -28,7 +28,7 @@ and "traverse.connections.layered".
 }
 \value{
 A matrix where each row represents a unique sequence of 
-{0,1,...,base.number}.
+\{0,1,...,base.number\}.
 }
 \references{
 Reitan, T., Schweder, T., Henderiks, J. (2012),

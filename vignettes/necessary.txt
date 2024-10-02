@@ -1,0 +1,4 @@
+sudo yum install curl-devel
+sudo yum install fribidi-devel
+sudo yum install libtiff-devel
+

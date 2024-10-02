@@ -1,4 +1,7 @@
 ## C code
+importFrom(stats, nobs)
+importFrom(stats, logLik)
+importFrom(stats, anova)
 importFrom(Rcpp, evalCpp)
 importFrom("utils", "read.csv", "read.table")
 useDynLib("layeranalyzer")
@@ -7,3 +10,10 @@ exportPattern("^[^\\.]")
 exportPattern("malta")
 export(anova.layered)
 
+
+
+S3method(nobs,layered)
+S3method(logLik,layered)
+S3method(anova,layered)
+S3method(summary,layered)
+S3method(print,summary.layered)
