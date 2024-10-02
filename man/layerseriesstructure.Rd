@@ -181,7 +181,9 @@ The objects of this class is used as input in the 'layer.analyzer' routine.
 }
 \value{
 Returns the modelling specifications for a time series data set as a 
-'layer.series.structure' object.
+'layer.series.structure' object. Note the field 'description' which
+contains a description of the object. Best outputted with
+'cat(obj$description)
 }
 \references{
 Reitan, T., Schweder, T., Henderiks, J. (2012),
