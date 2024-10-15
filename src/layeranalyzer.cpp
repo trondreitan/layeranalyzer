@@ -15425,6 +15425,9 @@ const double partial_loglikwrapper(const NumericVector &vals)
   
   double ret=-minusloglik(val2);
   delete [] val2;
+
+  if(!(ret>-1e+200 && ret<+1e+200))
+    return +1e+200;
   
   return -ret;
 }
