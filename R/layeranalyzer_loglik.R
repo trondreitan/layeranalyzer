@@ -1,7 +1,10 @@
 library(coda)
 
 
-layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE, num.optim=100)
+layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
+		            num.optim=100, do.preanalysis.mcmc=FALSE,
+			    num.MCMC=1000,spacing=10,
+			    burnin=10000,num.temp=1)
 {
  if(is.null(analysis))
  {
@@ -38,14 +41,29 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE, n
  analysis2$mcmc.origpar[which(is.na(analysis2$mcmc.origpar), arr.ind=TRUE)] = -1e+7
  analysis2$mcmc=coda::as.mcmc(rbind(analysis2$mcmc))
  analysis2$mcmc.origpar=coda::as.mcmc(rbind(analysis2$mcmc.origpar))
-     
- res=layer.analyzer.timeseries.list(analysis$data.structure,previous.run=analysis2,silent.mode=silent.mode, maximum.likelihood.numstart=num.optim)
+
+ if(!do.preanalysis.mcmc)
+   res=layer.analyzer.timeseries.list(analysis$data.structure,
+     previous.run=analysis2,silent.mode=silent.mode,
+      causal=analysis$causal,corr=analysis$corr,
+      causal.symmetric=analysis$causal.symmetric,
+     maximum.likelihood.numstart=num.optim,
+     num.MCMC=0,spacing=0,burnin=0,num.temp=0)
+ if(do.preanalysis.mcmc)
+   res=layer.analyzer.timeseries.list(analysis$data.structure,
+     previous.run=analysis2,silent.mode=silent.mode,
+      causal=analysis$causal,corr=analysis$corr,
+      causal.symmetric=analysis$causal.symmetric,
+     maximum.likelihood.numstart=num.optim,
+     num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp)
      
  return(res$loglik)
 }
 
 
-layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE, num.optim=100)
+layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
+         num.optim=100, do.preanalysis.mcmc=FALSE,
+	 num.MCMC=1000,spacing=10,burnin=10000,num.temp=1)
 {
  if(is.null(analysis))
  {
@@ -80,7 +98,20 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE, n
  analysis2$mcmc=coda::as.mcmc(analysis2$mcmc)
  analysis2$mcmc.origpar=coda::as.mcmc(analysis2$mcmc.origpar)
      
- res=layer.analyzer.timeseries.list(analysis$data.structure,previous.run=analysis2,silent.mode=silent.mode, maximum.likelihood.numstart=num.optim)
+ if(!do.preanalysis.mcmc)
+   res=layer.analyzer.timeseries.list(analysis$data.structure,
+      previous.run=analysis2,silent.mode=silent.mode,
+      causal=analysis$causal,corr=analysis$corr,
+      causal.symmetric=analysis$causal.symmetric,
+      maximum.likelihood.numstart=num.optim,
+      num.MCMC=0,spacing=0,burnin=0,num.temp=0)
+ if(do.preanalysis.mcmc)
+   res=layer.analyzer.timeseries.list(analysis$data.structure,
+      previous.run=analysis2,silent.mode=silent.mode,
+      causal=analysis$causal,corr=analysis$corr,
+      causal.symmetric=analysis$causal.symmetric,
+      maximum.likelihood.numstart=num.optim,
+      num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp)
      
  return(res$loglik)
 }

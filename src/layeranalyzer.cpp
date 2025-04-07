@@ -194,6 +194,8 @@ double *beta_feed=NULL;
 bool is_complex=false;
 double cycle_time[10];
 
+double first_init_time;
+
 // Measurement data and external data series:
 unsigned int ext_len=0;
 double_2d *extdata=NULL;
@@ -204,6 +206,7 @@ int silent=0; // indicates silent modues. Default switched off.
 int talkative_likelihood=0;
 int talkative_burnin=0;
 
+double *partial_par;
 
 // *************************************************
 // Purging mechanism for global variables, so that
@@ -569,6 +572,7 @@ public:
     double as_floating_point_year(void);
 						     
 };
+HydDateTime first_init_dt;
 
 
 static HydDateTime NoHydDateTime(1753, 1, 1, 0, 0, 0); //erikt
@@ -2104,6 +2108,7 @@ double linear(HydDateTime x0, double y0, HydDateTime x1, double y1, HydDateTime 
 // Diverse functions:
 
 int almost_equal(double v1, double v2);
+int almost_equal_lax(double v1, double v2);
 
 // Count the number of spaces between contents
 // For instant "ajksdh   skjdfh     sasasd" would return "2".
@@ -4057,10 +4062,21 @@ int almost_equal(double v1, double v2)
   if(fabs(v1-v2)<1e-20)
     return 1;
 
-  if(fabs(v1)>0.999999*fabs(v2) && fabs(v1)<1.0000001*fabs(v2) &&
+  if(fabs(v1)>0.999999*fabs(v2) && fabs(v1)<1.000001*fabs(v2) &&
      ((v1<0.0 && v2< 0.0) || (v1>0.0 && v2>0.0)))
     return 1;
 
+  return 0;
+}
+
+
+
+int almost_equal_lax(double v1, double v2)
+{
+  if(fabs(v1)>0.9999*fabs(v2) && fabs(v1)<1.0001*fabs(v2) &&
+     ((v1<0.0 && v2< 0.0) || (v1>0.0 && v2>0.0)))
+    return 1;
+  
   return 0;
 }
 
@@ -6991,6 +7007,9 @@ double minusloglik(double *pars);
 void analyze_residuals(double *residuals, double *tm, HydDateTime *dt, int len,
 		       char *filestart);
 
+
+int get_closest_param(params &target_param, params *sample_params, int num_sample_params);
+
 // **************************************************************
 // logprob: Returns log-probability (prior times likelihood).
 // Input: transformed parameter vector, measurements, prior, 
@@ -7255,6 +7274,12 @@ void reset_global_variables(void)
   p_pos_site_sigma2=0.0;
   p_pos_series_sigma2=0.0;
   num_series_corr=0;
+  partial_par=NULL;
+  
+  first_init_time=MISSING_VALUE;
+  HydDateTime dt(9000,1,1); // Hope the program isn't still in use at that
+			    // time!
+  first_init_dt=dt;
 }
 
 
@@ -10035,6 +10060,67 @@ void cleanup_x_and_P(int len)
   size_x_k_s_kept=0;
 }
 
+bool sanity_check_variance(const char *name,int iteration,
+			   double **var,int size)
+{
+  int i,j,k=iteration;
+  
+  for(i=0;i<size;i++)
+    {
+      if(var[i][i] < (-1e-20))
+	{
+	  if(!silent)
+	    {
+	      Rcout << "Warning: Stopped calculation at iteration " << k <<
+		". Diagonal term number " << i << " of " << name <<
+		" has negative value " << var[i][i] << std::endl;	
+	      show_mat_R(name, var,size,size);
+	    }
+	  return(false);
+	}
+
+      for(j=0;j<size;j++)
+	if(j!=i)
+	  {
+	    if(!almost_equal_lax(var[i][j],var[j][i]) &&
+	       (fabs(var[i][j])>1e-12 || fabs(var[j][i])>1e-12) &&
+	       var[i][j]*var[i][j]>1e-10*var[i][i]*var[j][j])
+	      {
+		if(!silent)
+		  {
+		    Rcout << "Warning: Stopped calculation at iteration " <<
+		      k << ". Nondiagonal terms number " << i << " and " << 
+		      j << " of " << name << " is not symmetric " <<
+		      var[i][j] << "!=" << var[j][i] << std::endl;	
+		    show_mat_R(name, var,size,size);
+		  }
+		return(false);
+	      }
+	    if(!almost_equal(var[i][j],var[j][i]))
+	      var[j][i]=var[i][j];
+	    
+	    if(var[i][j]*var[i][j]>var[i][i]*var[j][j] &&
+	       fabs(var[i][j]*var[i][j])>1e-20)
+	      {
+		if(!silent)
+		  {
+		    Rcout << "Warning: Stopped calculation at iteration " <<
+		      k << ". Nondiagonal terms number " << i << "," << 
+		      j << " of " << name << " has higher covariance than "
+		      "possible given the diagonal terms. " <<
+		      "var[i][j]*var[i][j]=" << var[i][j]*var[i][j] << ">" <<
+		      "var[i][i]*var[j][j]="<< var[i][i]*var[j][j] <<
+		      std::endl;	
+		    show_mat_R(name, var,size,size);
+		  }
+		return(false);
+	      }
+	  }
+    }
+  
+  return(true);
+}
+
 
 double loglik(double *pars, int dosmooth, int do_realize,
 	      int residual_analysis, char *res_filestart, 
@@ -10164,76 +10250,79 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   for(s=0;s<num_series;s++)
     {
-      if(ser[s].regional_mu) // regional expectancy?
+      // Expected value?
+      if(ser[s].no_pull_lower==0 || ser[s].init_treatment==0)
 	{
-	  for(i=0;i<numsites;i++) // traverse the sites
-	    if(pars) // parameter value array is given?
-	      ser[s].mu[i]=pars[i+numpar]; // fetch the parameter value
-	    else
-	      {
-		// fill the global parameter arrays with
-		// appropriate contents:
-		par_trans_type[i+numpar]=T_LIN;
-		par_type[i+numpar]=MU;
-		par_layer[i+numpar]=ser[s].numlayers+1;
-		par_region[i+numpar]=i;
-		par_series[i+numpar]=s;
-		snprintf(par_name[i+numpar], 250,"mu_%s_%d",ser[s].name,i);
-	      }
-	  numpar+=numsites; // update the number of parameters
-	}
-      else if(ser[s].indicator_mu) // indicator-separated expectancy?
-	{
-	  // indicator always first parameters, if used
-	  
-	  if(pars) // parameter value array is given?
+	  if(ser[s].regional_mu) // regional expectancy?
 	    {
-	      // fetch the parameter value
 	      for(i=0;i<numsites;i++) // traverse the sites
-		if(!indicator_array[i])
-		  ser[s].mu[i]=pars[numpar];
+		if(pars) // parameter value array is given?
+		  ser[s].mu[i]=pars[i+numpar]; // fetch the parameter value
 		else
-		  ser[s].mu[i]=pars[numpar+1];
+		  {
+		    // fill the global parameter arrays with
+		    // appropriate contents:
+		    par_trans_type[i+numpar]=T_LIN;
+		    par_type[i+numpar]=MU;
+		    par_layer[i+numpar]=ser[s].numlayers+1;
+		    par_region[i+numpar]=i;
+		    par_series[i+numpar]=s;
+		    snprintf(par_name[i+numpar], 250,"mu_%s_%d",ser[s].name,i);
+		  }
+	      numpar+=numsites; // update the number of parameters
 	    }
-	  else
+	  else if(ser[s].indicator_mu) // indicator-separated expectancy?
 	    {
-	      // fill the global parameter arrays with
-	      // appropriate contents:
-	      for(i=0;i<2;i++)
+	      // indicator always first parameters, if used
+	      
+	      if(pars) // parameter value array is given?
 		{
-		  par_trans_type[numpar+i]=T_LIN;
-		  par_type[numpar+i]=MU;
-		  par_layer[numpar+i]=ser[s].numlayers+1;
-		  par_region[numpar+i]=-1; // global
-		  par_series[numpar+i]=s;
-		  snprintf(par_name[numpar+i], 250, "mu_%s_%d", ser[s].name,i);
+		  // fetch the parameter value
+		  for(i=0;i<numsites;i++) // traverse the sites
+		    if(!indicator_array[i])
+		      ser[s].mu[i]=pars[numpar];
+		    else
+		      ser[s].mu[i]=pars[numpar+1];
 		}
+	      else
+		{
+		  // fill the global parameter arrays with
+		  // appropriate contents:
+		  for(i=0;i<2;i++)
+		    {
+		      par_trans_type[numpar+i]=T_LIN;
+		      par_type[numpar+i]=MU;
+		      par_layer[numpar+i]=ser[s].numlayers+1;
+		      par_region[numpar+i]=-1; // global
+		      par_series[numpar+i]=s;
+		      snprintf(par_name[numpar+i], 250, "mu_%s_%d", ser[s].name,i);
+		    }
+		}
+	      
+	      numpar+=2; // update the number of parameters
 	    }
-	  
-	  numpar+=2; // update the number of parameters
-	}
-      else // global expectancy
-	{
-	  if(pars) // parameter value array is given?
-	    // fetch the parameter value:
-	    for(i=0;i<numsites;i++) // traverse the sites
-	      ser[s].mu[i]=pars[numpar];
-	  if(!pars)
+	  else // global expectancy
 	    {
-	      // fill the global parameter arrays with
-	      // appropriate contents:
-	      par_trans_type[numpar]=T_LIN;
-	      par_type[numpar]=MU;
-	      par_layer[numpar]=ser[s].numlayers+1;
-	      par_region[numpar]=-1;
-	      par_series[numpar]=s;
-	      snprintf(par_name[numpar], 250, "mu_%s",ser[s].name);
+	      if(pars) // parameter value array is given?
+		// fetch the parameter value:
+		for(i=0;i<numsites;i++) // traverse the sites
+		  ser[s].mu[i]=pars[numpar];
+	      if(!pars)
+		{
+		  // fill the global parameter arrays with
+		  // appropriate contents:
+		  par_trans_type[numpar]=T_LIN;
+		  par_type[numpar]=MU;
+		  par_layer[numpar]=ser[s].numlayers+1;
+		  par_region[numpar]=-1;
+		  par_series[numpar]=s;
+		  snprintf(par_name[numpar], 250, "mu_%s",ser[s].name);
+		}
+	      
+	      numpar++; // update the number of parameters
 	    }
-      
-	  numpar++; // update the number of parameters
 	}
-
-      
+	  
       if(ser[s].linear_time_dep) // linear time dependency?
 	{
 	  if(ser[s].regional_lin_t) // regional linear time dependency?
@@ -10735,7 +10824,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(detailed_loglik)
     Rcout << "end useext, start init treatment" << std::endl;
 #endif // MAIN
-  
+
   for(s=0;s<num_series;s++)
     if(!ser[s].no_layers)
       {
@@ -10836,7 +10925,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		ser[s].init_mu[l][i]=ser[s].pr->init_m;
 	  }
       }
-
+  
 #ifndef MAIN
   if(detailed_loglik)
     Rcout << "start correlations" << std::endl;
@@ -11345,15 +11434,25 @@ double loglik(double *pars, int dosmooth, int do_realize,
     {
       s=state_series[i];
       l=state_layer[i];
-      
+
+
       if(l<(ser[s].numlayers-1))
 	m[i]=0.0;
+      else if(ser[s].no_pull_lower!=0 && ser[s].init_treatment!=0) 
+	m[i]=ser[s].init_mu[ser[s].numlayers-1][i%numsites];
       else
 	m[i]=ser[s].mu[i%numsites];
       
       for(j=0;j<num_series_feed;j++)
 	if(feed_to_series[j]==(int)s && feed_to_layer[j]==(int)l)
-	  m[i] -= beta_feed[j]*ser[feed_from_series[j]].mu[i%numsites];
+	  {
+	    int s2=feed_from_series[j];
+	    int nl2=ser[s2].numlayers;
+	    if(ser[s2].no_pull_lower!=0 && ser[s2].init_treatment!=0)
+	      m[i] -= beta_feed[j]*ser[s2].init_mu[nl2-1][i%numsites];
+	    else
+	      m[i] -= beta_feed[j]*ser[s2].mu[i%numsites];
+	  }
       
       m[i]*=ser[s].pull[l][i%numsites];
     }
@@ -11423,7 +11522,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   double step=useext ? extdata[1].x-extdata[0].x : 0.0;
   
   
-  // return value:
+  // -return value, represents minux log-likelihood
   double ret=0.0;
   
   double *t_k=new double[len];
@@ -12307,11 +12406,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // Traverse the measurements:
   for(k=0;k<(int)len;k++)
     {
-#ifndef MAIN
+      
       if(detailed_loglik)
 	Rcout << "k=" << k << std::endl;
-#endif // MAIN
-  
+	  
       // fetch the time of the current measurement:
       t_k[k]=me[k].tm;
       
@@ -12325,7 +12423,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      // calculate the Lambda matrix
 	      for(i=0;i<num_states;i++) // traverse the state vector
 		for(j=0;j<num_states;j++) // traverse the state vector
-		  if(lambda[i]!=0.0 || lambda[j]!=0.0)
+		  if((lambda[i]!=0.0 || lambda[j]!=0.0) &&
+		     !ser[state_series[i]].init_treatment &&
+		     !ser[state_series[j]].init_treatment)
 		    Lambda_k[i][j]=-1.0/(lambda[i]+(lambda[j].conjugate()))*Omega[i][j];
 		  else
 		    Lambda_k[i][j]=0.0;
@@ -12335,7 +12435,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      // calculate the Lambda matrix
 	      for(i=0;i<num_states;i++) // traverse the state vector
 		for(j=0;j<num_states;j++) // traverse the state vector
-		  if(lambda_r[i]!=0.0 || lambda_r[j]!=0.0)
+		  if((lambda_r[i]!=0.0 || lambda_r[j]!=0.0) &&
+		     !ser[state_series[i]].init_treatment &&
+		     !ser[state_series[j]].init_treatment)
 		    Lambda_k_r[i][j]=-1.0/(lambda_r[i]+lambda_r[j])*Omega_r[i][j];
 		  else
 		    Lambda_k_r[i][j]=0.0;
@@ -12619,6 +12721,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    x_k_prev[i]+=F_k[k][i][l]*x_k_now[(k>0 ? k-1 : 0)][l];
 	}
       
+      
       // Calculate Q_k = Vinv * Lambda_k * Vinv' :
       if(is_complex)
 	{
@@ -12763,7 +12866,21 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    Q_k[k][i][j]+=Qbuffer_r[i][l]*Vinv_r[j][l];
 	      }
 	}
+	    
       
+      if(detailed_loglik)
+	{
+	  show_mat_R("Q_k", Q_k[k],num_states,num_states);
+	  show_mat_R("F_k", F_k[k],num_states,num_states);
+	  show_mat_R("P_k_now[prev]", P_k_now[k>0 ? k-1 : 0],
+		     num_states,num_states);
+	}
+
+      // Sanity check of Q_k
+      if(!sanity_check_variance("Q_k",k,Q_k[k],num_states))
+	return -1e+200;
+	
+
       // Calculate P_k_(k-1) = Q_k + F_k * P_(k-1),(k-1) * F_k' :
       for(i=0;i<num_states;i++)
 	for(j=0;j<num_states;j++)
@@ -12780,24 +12897,39 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    int start_j = num_series_feed>0 ? j%numsites2 : j;
 	    for(l=start_j;l<num_states;l+=numsites2)
 	      P_k_prev[k][i][j]+=P_k_buffer[i][l]*F_k[k][j][l];
-	  }
+	  }    				 
 
+      if(detailed_loglik)
+	show_mat_R("P_k_prev", P_k_prev[k],num_states,num_states);
+	
+      // Sanity check of P_k_prev
+      if(!sanity_check_variance("P_k_prev",k,P_k_prev[k],num_states))
+	return -1e+200;
+	
+
+      // Initial value treatment:
       for(s=0;s<num_series;s++)
-	if(ser[s].init_treatment &&
-	   (me[k].tm==ser[s].init_time || 
-	    (k==0 && me[k].tm==ser[s].meas[0].tm)))
+	if(ser[s].init_treatment)
 	  {
-	    int start=series_state_start[s];
-	    
-	    for(l=0;l<ser[s].numlayers;l++)
-	      for(i=0;i<numsites;i++)
-		x_k_prev[start+l*numsites+i]=ser[s].init_mu[l][i];
-	    
-	    for(i=0;i<ser[s].numlayers*numsites;i++)
-	      for(j=0;j<ser[s].numlayers*numsites;j++)
-		P_k_prev[k][start+i][start+j]=0.0;
+	    if((me[k].tm==ser[s].init_time || 
+		(k==0 && me[k].tm==ser[s].meas[0].tm)))
+	      {
+		int start=series_state_start[s];
+		
+		for(l=0;l<ser[s].numlayers;l++)
+		  for(i=0;i<numsites;i++)
+		    x_k_prev[start+l*numsites+i]=ser[s].init_mu[l][i];
+		
+		for(i=0;i<ser[s].numlayers*numsites;i++)
+		  for(j=0;j<ser[s].numlayers*numsites;j++)
+		    P_k_prev[k][start+i][start+j]=0.0;
+	      }
 	  }
       
+      if(detailed_loglik)
+	Rcout << "end initvalue" << k << std::endl;
+	  
+      // Check that P_k__prev values are finite 
       for(i=0;i<num_states;i++)
 	for(j=0;j<num_states;j++)
 	  if(!(P_k_prev[k][i][j]> -1e+200 && P_k_prev[k][i][j]< 1e+200))
@@ -12817,11 +12949,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
       if(debug && return_residuals)
 #ifdef MAIN
 	cout << "k=" << k << " me[k].num_measurements=" <<
-	  me[k].num_measurements << " ret=" << ret << endl;
+	  me[k].num_measurements << " ll=" << -ret << endl;
 #else
       Rcout << "k=" << k << " me[k].num_measurements=" <<
-	me[k].num_measurements << " ret=" << ret << std::endl;
+	me[k].num_measurements << " ll=" << -ret << std::endl;
 #endif // MAIN
+      
       
       if(me[k].num_measurements==1)
 	{
@@ -12853,7 +12986,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    cout << "k=" << k << " " << me[k].meanval[0] << " " << 
 	      x_k_prev[me[k].index[0]] << " " << S_k << " " << 
 	      R_k << endl;
-
+	  
 	  if(simulation_files)
 	    {
 	      double observation=x_k_prev[me[k].index[0]]+
@@ -12902,10 +13035,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    for(j2=0;j2<num_states;j2++)
 	      P_k_now[k][j1][j2] = P_k_prev[k][j1][j2] -
 		K_k[j1]*P_k_prev[k][me[k].index[0]][j2];
-		
+
+	  
+	  // Sanity check of P_k_now
+	  if(!sanity_check_variance("P_k_now",k,P_k_now[k],num_states))
+	    return -1e+200;
+	
+	
+	  
 	  //bool isok=(ret>-1e+200 && ret<1e+200) ? true : false;
 
-	  // Calculate log(f(y_k | D-1)), which is
+	  // Calculate -log(f(y_k | D-1)), which is
 	  // the likelihood contribution from the current measurement:
 	  ret += 0.5*(log(2.0*M_PI) + log(S_k) + y_k*y_k/S_k);
 	  
@@ -12922,12 +13062,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      cout << "k=" << k << " meas=" << me[k].meanval[0] <<
 		" x_k_prev[" << me[k].index[0] << "]=" <<
 		x_k_prev[me[k].index[0]] << " y_k=" << y_k << " S_k= " <<
-		S_k << " ret= " << ret << endl;
+		S_k << " ll= " << -ret << " P_k_prev=" <<
+		P_k_prev[k][me[k].index[0]][me[k].index[0]] << " u_k=" <<
+		u_k[me[k].index[0]][0] << endl;
 #else
 	      Rcout << "k=" << k << " meas=" << me[k].meanval[0] <<
 		" x_k_prev[" << me[k].index[0] << "]=" <<
 		x_k_prev[me[k].index[0]] << " y_k=" << y_k << " S_k= " <<
-		S_k << " ret= " << ret << endl;
+		S_k << " ll= " << -ret << " P_k_prev=" <<
+		P_k_prev[k][me[k].index[0]][me[k].index[0]] << " u_k=" <<
+		u_k[me[k].index[0]][0] << endl;
 #endif
 	    }
 	  
@@ -12962,13 +13106,16 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  delete [] K_k;
 	}
       else if(me[k].num_measurements>1)
-	{
+	{ 
 	  unsigned int n=me[k].num_measurements, i2,j1,j2;
 	  double *y_k=new double[n];
 	  double *zeroes_k=new double[n];
 	  double **S_k=Make_matrix(n,n);
 	  double **R_k=Make_matrix(n,n);
 
+	  if(detailed_loglik)
+	    Rcout << "start multimesaurement" << std::endl;
+	  
 	  // Calculate y_k = Z_k - H_k*x_k,(k-1)
 	  for(i=0;i<n;i++)
 	    {
@@ -13092,6 +13239,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  P_k_now[k][j1][j2] -= K_k[j1][i]*P_k_prev[k][me[k].index[i]][j2];
 	      }
 	  
+	  // Sanity check of P_k_now
+	  if(!sanity_check_variance("P_k_now",k,P_k_now[k],num_states))
+	    return -1e+200;
+	
+	  
 	  /* DEBUG stuff
 	     Rcout << "loglik mainloop " << k << std::endl;
 
@@ -13130,20 +13282,23 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 	  if(detailed_loglik)
 	    {
-#ifdef MAIN
-	      cout << "k=" << k << " ret= " << ret << endl;
-#else
-	      Rcout << "k=" << k << " ret= " << ret << endl;
-#endif
-	      double *x_k_prev_buffer=new double[n];
-	      for(i=0;i<n;i++)
-		x_k_prev_buffer[i]=x_k_prev[me[k].index[i]];
+	      Rcout << "n=" << n << std::endl;
 	      
-	      y_k[i]=me[k].meanval[i]-x_k_prev[me[k].index[i]];
-	      show_vec("meas",me[k].meanval,n);
+	      double *x_k_prev_buffer=new double[n];
+
+	      for(i=0;i<n;i++)
+		{
+		  Rcout << "me[" << k << "].index[" << i << "]=" <<
+		    me[k].index[i] << std::endl;
+		  x_k_prev_buffer[i]=x_k_prev[me[k].index[i]];
+		  y_k[i]=me[k].meanval[i]-x_k_prev[me[k].index[i]];
+		  Rcout << "meas[" << i << "]=" << me[k].meanval[i] << std::endl;
+		}
 	      show_vec("x_k_prev", x_k_prev_buffer,n);
 	      show_vec("y_k", y_k,n);
+	      show_mat("R_k", R_k, n, n);
 	      show_mat("S_k", S_k, n, n);
+	      Rcout << "ll=" << -ret << std::endl;
 	      
 	      delete [] x_k_prev_buffer;
 	    }
@@ -13152,7 +13307,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  if(simulation_files)
 	    {
 	      cout << k << " n=" << n << " m0=" << me[k].meanval[0] << 
-		" ret=" << ret << endl;
+		" ll=" << -ret << endl;
 
 	      cout << "u_k:";
 	      for(i=0;i<num_states;i++)
@@ -13195,7 +13350,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  if(debug)
 	    cout << "k=" << k << " l=" << -ret << endl;
 #endif // MAIN	  
-
+	
 	  // Cleanup:
 	  delete [] y_k;
 	  delete [] zeroes_k;
@@ -13203,7 +13358,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  doubledelete(S_k_inv,n);
 	  doubledelete(R_k,n);
 	  doubledelete(K_k, num_states);
-	}
+	} 
       else
 	{
 #ifdef MAIN
@@ -13219,7 +13374,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    for(j=0;j<num_states;j++)
 	      P_k_now[k][i][j] = P_k_prev[k][i][j];
 	}
-    }
+}
   
 #ifdef DETAILED_TIMERS
   timers[3][1]=clock();
@@ -15119,10 +15274,10 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 	  if(!(prob<1e+200))
 	    {
 #ifdef MAIN
-	      cout << "noe er galt3!" << endl;
+	      cout << "Failed sanity check for model log-likelihood calculation!" << std::endl;
 	      cout << "prob=" << prob << " logprob=lp-lp0-log_prop_g=" << lp-lp0-log_prop_g << " lp=" << lp << " lp0=" << lp0 << "log_prop_g=" << log_prop_g << endl;
 #else
-	      Rcout << "noe er galt3!" << std::endl;
+	      Rcout << "Failed sanity check for model log-likelihood calculation!" << std::endl;
 	      Rcout << "prob=" << prob << " logprob=lp-lp0-log_prop_g=" << lp-lp0-log_prop_g << " lp=" << lp << " lp0=" << lp0 << "log_prop_g=" << log_prop_g << std::endl;
 #endif // MAIN
 	      prob=exp(lp-lp0-log_prop_g);
@@ -15377,6 +15532,31 @@ void show_scatter(double *par1, double *par2, int N,
 #include <RcppCommon.h>
 
 
+// Find the parameter in a set of optional parameter values (MCMC)
+// that is closest to a target parameter value set, ignoring
+// the unspecified parameters (parameter value=MISSING_VALUE).
+int get_closest_param(params &target_param,
+		       params *sample_params, int num_sample_params)
+{
+  double closest_dist_squared=1e+200;
+  int i,closest_index=-1;
+  
+  for(i=0;i<num_sample_params;i++)
+    {
+      double dist_squared=0.0;
+      for(int j=0;j<target_param.numparam;j++)
+	if(target_param.param[j]!=MISSING_VALUE)
+	  dist_squared += (target_param.param[j]-sample_params[i].param[j])*
+	    (target_param.param[j]-sample_params[i].param[j]);
+      if(dist_squared<closest_dist_squared)
+	{
+	  closest_dist_squared=dist_squared;
+	  closest_index=i;
+	}
+    }
+  
+  return closest_index;
+}
 
 const double loglikwrapper(const NumericVector &vals)
 { 
@@ -15403,7 +15583,6 @@ const double loglikwrapper(const NumericVector &vals)
 }
 
 
-double *partial_par=NULL;
 const double partial_loglikwrapper(const NumericVector &vals)
 {
   if(partial_par==NULL)
@@ -15584,9 +15763,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       List indata=as<List>(inlist["timeseries"]);
       
-      NumericVector loglik(1);
+      NumericVector loglikbuff(1);
       
-      loglik=MISSING_VALUE;
+      loglikbuff=MISSING_VALUE;
       
       // int N=inlist.size();
       //NumericMatrix X=as<NumericMatrix>(inlist["datamatrix"]); 
@@ -15824,6 +16003,12 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      dt+=(int) init_time;
 	      ser[s].init_dt=dt;
 	    }
+
+	  if(first_init_time==MISSING_VALUE || first_init_time>init_time)
+	    first_init_time=init_time;
+	  
+	  if(init_datetime && first_init_dt>ser[s].init_dt)
+	    first_init_dt=ser[s].init_dt;
 	}
       if(init_same_sites)
 	ser[s].regional_init=0;
@@ -15834,7 +16019,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       else
 	ser[s].layered_init=1;
       if(num_init_specified!=2)
-	Rcout << "Input vector for init.specified should be of size 2!" << std::endl;
+	Rcout << "Input vector for init.specified should be "
+	  "of size 2!" << std::endl;
       else if(init_specified[0]!=MISSING_VALUE)
 	{
 	  ser[s].init_treatment=1;
@@ -15844,6 +16030,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  ser[s].init_dt=dt; 
 	  if(init_specified[1]!=MISSING_VALUE)
 	    ser[s].init_value=init_specified[1];
+	  
+	  if(first_init_time==MISSING_VALUE ||
+	     first_init_time>init_specified[0])
+	    first_init_time=init_specified[0];
 	}
       if(allow_pos_pull)
 	{
@@ -15857,7 +16047,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    ser[s].num_per++;
 	  }
     }
-  
+
   num_states=0;
   num_tot_layers=0;
   for(s=0;s<num_series;s++)
@@ -15881,16 +16071,60 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(i=0;i<ser[s].meas_len;i++)
 	ser[s].meas[i].index=series_state_start[s]+ser[s].meas[i].site;
     }
+
+  series_measurements *meas_buffer=new series_measurements[meas_tot_len+2];
   
-    
-  series_measurements *meas_buffer=new series_measurements[meas_tot_len];	  
+  double first_time=MISSING_VALUE;
+  for(s=0;s<num_series;s++)
+    for(i=0;i<ser[s].meas_len;i++)
+      if(first_time==MISSING_VALUE ||
+	 ser[s].meas[i].tm<first_time)
+	first_time=ser[s].meas[i].tm;
+  
+  // Check if an extra missing measurement should be injected to account
+  // for init time:
   j=0;
+  if(first_init_time!=MISSING_VALUE)
+    {
+      if(first_init_time>first_time)
+	{
+	  char errstr[1000];
+	  sprintf(errstr,"Error: First specified initial time, %f > "
+		  "first measurement time, %f! Setting first initial "
+		  "time to %f.\n", first_init_time,first_time,first_time);
+	  Rcout << errstr << std::endl;
+	}
+      else if(first_init_time<first_time)
+	{
+	  series_measurements ms0;
+	  ms0.site=0;
+	  ms0.n=ms0.serie_num=ms0.index=0;
+	  ms0.dt=first_init_dt;
+	  ms0.tm=first_init_time;
+	  ms0.meanval=ms0.sd=MISSING_VALUE;
+	  
+	  meas_buffer[j++]=ms0;
+	  meas_tot_len++;
+	}
+    }
+  else
+    {
+      // check if there is init treamtent and if so, set the
+      // first_init_time to that:
+      bool has_init_ser=false;
+      for(s=0;s<num_series && !has_init_ser;s++)
+	if(ser[s].init_treatment!=0)
+	  has_init_ser=true;
+      if(has_init_ser)
+	first_init_time=first_time;
+    }
+  
   for(s=0;s<num_series;s++)
     for(i=0;i<ser[s].meas_len;i++)
       meas_buffer[j++]=ser[s].meas[i];
   qsort(meas_buffer,(size_t) meas_tot_len,sizeof(series_measurements), 
 	compare_meas);
-  
+
   meas_tot=new measurement_cluster[meas_tot_len];
   j=-1;
   for(i=0;i<meas_tot_len;i++)
@@ -16322,12 +16556,24 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   else if(inpars_numsets>=1 && !dosmooth && !do_realizations)
     {
+      params *help_params=NULL;
+      
       Rcout << "*********************************" << std::endl;
       Rcout << "*********************************" << std::endl;
       Rcout << " Starting loglik treatment" << std::endl;
       Rcout << "*********************************" << std::endl;
       Rcout << "*********************************" << std::endl;
-	
+      
+      if(num_mcmc>0 && burnin>0 && spacing>=0 && numtemp>=0)
+	{
+	  Rcout << "Fetching " << num_mcmc << " samples, burnin=" <<
+	    burnin << " spacing=" << spacing << " numtemp=" << numtemp <<
+	    std::endl;
+	  help_params=layer_mcmc(num_mcmc, burnin, spacing, numtemp, 
+				 false, false, false,
+				 NULL, NULL, NULL, T_ground);
+	}
+      
       if(!silent && inpars_numsets==1)
 	detailed_loglik=true;
       
@@ -16335,19 +16581,26 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       lliks=new double[inpars_numsets];
       lpriors=new double[inpars_numsets];
       
+      pars=new params[inpars_numsets];
+      
       for(int k=0;k<inpars_numsets;k++)
 	{
+	  Rcout << "k=" << k << std::endl;
+	  
 	  int num_missing=0;
 	  for(j=0;(int)j<inpars_numpars;j++)
 	    if(in_pars(k,j)==MISSING_VALUE)
 	      num_missing++;
-	    
-	  pars=new params[1];
-	  pars[0].numparam=inpars_numpars;
-	  pars[0].param=new double[inpars_numpars];
-
-	  Rcout << "k=" << k << std::endl;
-	
+	  
+	  pars[k].numparam=inpars_numpars;
+	  pars[k].param=new double[inpars_numpars];
+	  
+	  params currparam(inpars_numpars);
+	  for(j=0;(int)j<inpars_numpars;j++)
+	    currparam.param[j]=in_pars(k,j);
+	  
+	  show_vec("currparams",currparam.param,inpars_numpars);
+	  
 	  if(num_missing>0)
 	    {
 	      Rcout << "optim started" << std::endl;
@@ -16356,23 +16609,40 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      double lbest=-1e+200;
 	      NumericVector outpars(inpars_numpars);
 	      
+	      int closest=-1;
+	      // todo: Find out why use of help parameters
+	      // causes crash. Seems to stem from using find_closest_param
+	      if(help_params)
+	      {
+		Rcout << "currparam.numparam=" << currparam.numparam << " help_params[last].numparam=" << help_params[num_mcmc-1].numparam << " inpars_numpars=" << inpars_numpars << " numpar=" << numpar << std::endl;
+		closest=get_closest_param(currparam, help_params, num_mcmc);
+		Rcout << "closest1:" << closest << std::endl;
+	      }
+	      
+	      Rcout << "closest2:" << closest << std::endl;
+	      
 	      detailed_loglik=false;
 	      for(i=0;(int)i<num_optim;i++)
 		{
+		  Environment stats("package:stats");
+		  Function optim=stats["optim"];
 		  NumericVector initpars(num_missing);
+		  
 		  int jj=0;
 		  for(j=0;(int)j<inpars_numpars;j++)
 		    if(in_pars(k,j)==MISSING_VALUE)
 		      {
-			initpars[jj]=init_par(j);
+			if(closest>=0 && i==0)
+			  initpars[jj]=help_params[closest].param[j];
+			else
+			  initpars[jj]=init_par(j);
 			jj++;
 		      }
+		  
 		  partial_par=new double[inpars_numpars];
 		  for(j=0;(int)j<inpars_numpars;j++)
 		    partial_par[j]=transform_parameter(in_pars(k,j),
 						       par_trans_type[j]);
-		  Environment stats("package:stats");
-		  Function optim=stats["optim"];
 		  List optres=optim(Rcpp::_["par"]= initpars,
 				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
 				    Rcpp::_["method"]="L-BFGS-B",
@@ -16380,6 +16650,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 				    Rcpp::_["upper"]=+1e+20  );
 		  NumericVector outpars2=as<NumericVector>(optres["par"]);
 		  NumericVector outval=as<NumericVector>(optres["value"]);
+
+		  if(partial_par)
+		    delete [] partial_par;
+		  partial_par=NULL; 
 		  
 		  double ll=-outval(0);
 		  if(ll > lbest)
@@ -16408,35 +16682,38 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		{
 		  if(in_pars(k,j)!=MISSING_VALUE)
 		    {
-		      pars[0].param[j]=transform_parameter(in_pars(k,j),
+		      pars[k].param[j]=transform_parameter(in_pars(k,j),
 							   par_trans_type[j]);
 		    }
 		  else
 		    {
-		      pars[0].param[j]=outpars(j);
+		      pars[k].param[j]=outpars(j);
 		    }
 		}
-	      
+
+	      Rcout << "lbest=" << lbest  << std::endl;
 	      Rcout << "fill out done" << std::endl;
-	
-	      delete [] partial_par;
 	    }
 	  else
 	    {
 	      Rcout << "fill out started" << std::endl;
 	      for(j=0;(int)j<inpars_numpars;j++)
-		pars[0].param[j]=transform_parameter(in_pars(k,j),
+		pars[k].param[j]=transform_parameter(in_pars(k,j),
 						     par_trans_type[j]);
 	      Rcout << "fill out done" << std::endl;
 	    }
 
-	  show_vec("params",pars[0].param,inpars_numpars);
+	  show_vec("params",pars[k].param,inpars_numpars);
 	  Rcout << "Fill in loglik and logprior" << std::endl;
-	  lliks[k]=loglik(pars[0].param, 0, 0);
-	  Rcout << "Filled in loglik" << std::endl;
-	  lpriors[k]=logprob(pars[0],0.0)-lliks[k];
-	  Rcout << "Filled in logprior" << std::endl;
+	  lliks[k]=loglik(pars[k].param, 0, 0);
+	  Rcout << "Filled in loglik=" << lliks[k] << std::endl;
+	  lpriors[k]=logprob(pars[k],0.0)-lliks[k];
+	  Rcout << "Filled in logprior=" << lpriors[k] << std::endl;
 	}
+
+      if(help_params)
+	delete [] help_params;
+      help_params=NULL;
       
       Rcout << " Ending loglik treatment" << std::endl;
     }
@@ -16570,10 +16847,40 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 
 
   // Something goes wrong here, for loglik mode!
-  double **parsample=Make_matrix(numpar,numsamples);
-  double **parsample_repar=Make_matrix(numpar,numsamples);
-  if(no_inpars || dosmooth || do_realizations)
+  double **parsample=NULL;
+  double **parsample_repar=NULL; 
+  if(!no_inpars && inpars_numsets>=1 && !dosmooth && !do_realizations)
     {
+      if(int(inpars_numpars)!=int(numpar))
+	{
+	  Rcout << "Warning: Number of parameters in input parameter set " <<
+	    inpars_numpars << " does "
+	    "not match the number of parameters in the model, " <<
+	    numpar << "!" << std::endl;
+
+	  for(i=0;i<numpar;i++)
+	    Rcout << "i=" << i << " name=" << par_name[i] << std::endl;
+	}
+      
+      Rcout << no_inpars << " " << inpars_numsets << " " << inpars_numpars <<
+	" " << numpar << " " << dosmooth << " " << do_realizations << std::endl;
+      
+      parsample=Make_matrix(numpar,inpars_numsets);
+      parsample_repar=Make_matrix(numpar,inpars_numsets);
+      
+      for(i=0;int(i)<MINIM(int(inpars_numpars),int(numpar));i++)
+	for(j=0;j<(int)inpars_numsets;j++)
+	  {
+	    Rcout << i << " " << j << std::endl;
+	    
+	    parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
+	    parsample_repar[i][j]=pars[j].param[i];
+	  }
+    }
+  else if(no_inpars || dosmooth || do_realizations)
+    {
+      parsample=Make_matrix(numpar,numsamples);
+      parsample_repar=Make_matrix(numpar,numsamples);
       for(i=0;i<numpar;i++)
 	for(j=0;j<(int)numsamples;j++)
 	  {
@@ -16751,174 +17058,174 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   double best_loglik=MISSING_VALUE;
   if(no_inpars || dosmooth || do_realizations)
     {
-  if(do_ml)
-    {
-      // traverse the number of wanted hill-climbs:
-      
-      if(!silent)
-	Rcout << "ML started" << std::endl;
-      ml_started=true;
-      
-      for(i=0;(int)i<num_optim;i++)
+      if(do_ml)
 	{
+	  // traverse the number of wanted hill-climbs:
+	  
 	  if(!silent)
-	    Rcout << "Optimization nr. " << i << std::endl;
-
+	    Rcout << "ML started" << std::endl;
+	  ml_started=true;
 	  
-	  double *curr_par=new double[numpar];
-	  
-	  for(j=0;j<(int)numpar;j++)
+	  for(i=0;(int)i<num_optim;i++)
 	    {
-	      if(i==0)
-		curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEDIAN);
-	      else if(i==1)
-		curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEAN);
-	      else if(num_optim==3)
-		curr_par[j]=parsample_repar[j][numsamples/2];
-	      else
-		curr_par[j]=parsample_repar[j][(i-2)*(numsamples-1)/(num_optim-3)];
-	    }
-	  
-	  
-	  
-	  /*
-	  // do the optimization:
-	  int maxiter=1000;
-	  //double *pars2=gsl_optimization_cover(minusloglik, 
-	  double *pars2=quasi_newton(minusloglik,
-	  numpar, // number of parameters 
-	  curr_par, // starting values  
-	  0.00000001, // precision 
-	  maxiter, // Maximum number of
-	  // iterations. The number of iterations
-	  // neccessary will be stored here after the
-	  // optimization and can be checked 
-	  true,false,
-	  silent);
-	  */
-	  
-	  
-	  NumericVector initpars(numpar);
-	  for(j=0;j<(int)numpar;j++)
-	    initpars[j]=curr_par[j];
-	  Environment stats("package:stats");
-	  Function optim=stats["optim"];
-	  List optres=optim(Rcpp::_["par"]= initpars,
-			    Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
-			    Rcpp::_["method"]="L-BFGS-B",
-			    Rcpp::_["lower"]=-1e+20,
-			    Rcpp::_["upper"]=+1e+20  );
-	  NumericVector outpars=as<NumericVector>(optres["par"]);
-	  double *pars2=new double[numpar];
-	  for(j=0;j<(int)numpar;j++)
-	    pars2[j]=outpars[j];
-	  
-	  
-	  /* RInside R;
-	     R["loglikwrapper"] = Rcpp::InternalFunction(&loglikwrapper);
-	     R["initpars"] = initpars;
-	     
-	     NumericVector initpars(numpar);
-	     for(j=0;j<numpar;j++)
-	     initpars[j]=curr_par[j];
-	     List optres=R.parseEval("optim(initpars,loglikwrapper)");
-	     NumericVector outpars=as<NumericVector>(optres["par"]);
-	     double *pars2=new double[numpar];
-	     for(j=0;j<numpar;j++)
-	     pars2[j]=outpars[j];
-	  */
-	  
-	  
-	  // Fetch the log-likelihood for the optimized parameters:
-	  double curr_loglik=loglik(pars2);
-	  
-	  // Check if this is the best result so far:
-	  if(i==0 || curr_loglik>best_loglik)
-	    {
-	      // If so, store the parameter array and the log-likelihood:
-	      for(j=0;j<(int)numpar;j++)
-		best_pars_repar[j]=pars2[j];
-	      best_loglik=curr_loglik;
-	    }
-	  
-	  delete [] pars2;
-	  delete [] curr_par;
-	}
-      
-      // transform the expectancies from logarithmic size to
-      // original size:
-      for(j=0;j<(int)numpar;j++)
-	{
-	  ml_pars[j]=invtransform_parameter(best_pars_repar[j], 
-					    par_trans_type[j]);
+	      if(!silent)
+		Rcout << "Optimization nr. " << i << std::endl;
 	      
-	  s=par_series[j];
-	  if(ser[s].pr->is_log)
-	    {
-	      if(par_type[j]==MU)
-		ml_pars[j]=exp(ml_pars[j]);
-	      if(par_type[j]==OBS_SD)
-		ml_pars[j]=ser[s].mean_val*
-		  sqrt(exp(ml_pars[j]*ml_pars[j])-1.0)*
-		  exp(ml_pars[j]*ml_pars[j]/2.0);
+	      
+	      double *curr_par=new double[numpar];
+	      
+	      for(j=0;j<(int)numpar;j++)
+		{
+		  if(i==0)
+		    curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEDIAN);
+		  else if(i==1)
+		    curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEAN);
+		  else if(num_optim==3)
+		    curr_par[j]=parsample_repar[j][numsamples/2];
+		  else
+		    curr_par[j]=parsample_repar[j][(i-2)*(numsamples-1)/(num_optim-3)];
+		}
+	      
+	      
+	      
+	      /*
+	      // do the optimization:
+	      int maxiter=1000;
+	      //double *pars2=gsl_optimization_cover(minusloglik, 
+	      double *pars2=quasi_newton(minusloglik,
+	      numpar, // number of parameters 
+	      curr_par, // starting values  
+	      0.00000001, // precision 
+	      maxiter, // Maximum number of
+	      // iterations. The number of iterations
+	      // neccessary will be stored here after the
+	      // optimization and can be checked 
+	      true,false,
+	      silent);
+	      */
+	      
+	      
+	      NumericVector initpars(numpar);
+	      for(j=0;j<(int)numpar;j++)
+		initpars[j]=curr_par[j];
+	      Environment stats("package:stats");
+	      Function optim=stats["optim"];
+	      List optres=optim(Rcpp::_["par"]= initpars,
+				Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
+				Rcpp::_["method"]="L-BFGS-B",
+				Rcpp::_["lower"]=-1e+20,
+				Rcpp::_["upper"]=+1e+20  );
+	      NumericVector outpars=as<NumericVector>(optres["par"]);
+	      double *pars2=new double[numpar];
+	      for(j=0;j<(int)numpar;j++)
+		pars2[j]=outpars[j];
+	      
+	      
+	      /* RInside R;
+		 R["loglikwrapper"] = Rcpp::InternalFunction(&loglikwrapper);
+		 R["initpars"] = initpars;
+		 
+		 NumericVector initpars(numpar);
+		 for(j=0;j<numpar;j++)
+		 initpars[j]=curr_par[j];
+		 List optres=R.parseEval("optim(initpars,loglikwrapper)");
+		 NumericVector outpars=as<NumericVector>(optres["par"]);
+		 double *pars2=new double[numpar];
+		 for(j=0;j<numpar;j++)
+		 pars2[j]=outpars[j];
+	      */
+	      
+	      
+	      // Fetch the log-likelihood for the optimized parameters:
+	      double curr_loglik=loglik(pars2);
+	      
+	      // Check if this is the best result so far:
+	      if(i==0 || curr_loglik>best_loglik)
+		{
+		  // If so, store the parameter array and the log-likelihood:
+		  for(j=0;j<(int)numpar;j++)
+		    best_pars_repar[j]=pars2[j];
+		  best_loglik=curr_loglik;
+		}
+	      
+	      delete [] pars2;
+	      delete [] curr_par;
 	    }
-	}
-      
-      if(return_residuals==1)
-	{
-	  if(!silent)
-	    Rcout << "Running loglik to fetch ML residuals..." << std::endl;
 	  
-	  double lres=loglik(best_pars_repar, 0, 0, 0, NULL, 0, NULL,
-			     1, &resids_time,
+	  // transform the expectancies from logarithmic size to
+	  // original size:
+	  for(j=0;j<(int)numpar;j++)
+	    {
+	      ml_pars[j]=invtransform_parameter(best_pars_repar[j], 
+						par_trans_type[j]);
+	      
+	      s=par_series[j];
+	      if(ser[s].pr->is_log)
+		{
+		  if(par_type[j]==MU)
+		    ml_pars[j]=exp(ml_pars[j]);
+		  if(par_type[j]==OBS_SD)
+		    ml_pars[j]=ser[s].mean_val*
+		      sqrt(exp(ml_pars[j]*ml_pars[j])-1.0)*
+		      exp(ml_pars[j]*ml_pars[j]/2.0);
+		}
+	    }
+	  
+	  if(return_residuals==1)
+	    {
+	      if(!silent)
+		Rcout << "Running loglik to fetch ML residuals..." << std::endl;
+	      
+	      double lres=loglik(best_pars_repar, 0, 0, 0, NULL, 0, NULL,
+				 1, &resids_time,
 				 &resids, &prior_expected_values,
+				 &resid_numcol, &resid_len);
+	      
+	      if(!resids)
+		Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
+		  lres << std::endl;
+	      else if(!silent)
+		Rcout << "lres=" << lres << std::endl;
+	    }
+	  //loglik(best_pars_repar, 0, 0,1,filestart);
+	  
+	  
+	  
+	  int k=numpar;
+	  int nn=0;
+	  for(s=0;s<num_series;s++)
+	    nn+=double(ser[s].meas_len);
+	  
+	  aic=-2*best_loglik + 2.0*double(k);
+	  aicc=-2*best_loglik + 2.0*double(k) + double(k*(k+1))/double(nn-k-1);
+	  bic=-2*best_loglik + log(double(nn))*double(k);
+	}
+      if(!do_ml && return_residuals==1)
+	{
+	  double *medpar=new double[numpar];
+	  for(j=0;j<(int)numpar;j++)
+	    medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
+	  
+	  if(!silent)
+	    Rcout << "Running loglik to fetch Bayesian median residuals..." << std::endl;
+	  
+	  double lres=loglik(medpar, 0, 0, 0, NULL, 0, NULL,
+			     1, &resids_time, &resids, &prior_expected_values,
 			     &resid_numcol, &resid_len);
 	  
 	  if(!resids)
 	    Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
-		  lres << std::endl;
+	      lres << std::endl;
 	  else if(!silent)
 	    Rcout << "lres=" << lres << std::endl;
+	  
+	  delete [] medpar;
 	}
-      //loglik(best_pars_repar, 0, 0,1,filestart);
-      
-      
-      
-      int k=numpar;
-      int nn=0;
-      for(s=0;s<num_series;s++)
-	nn+=double(ser[s].meas_len);
-      
-      aic=-2*best_loglik + 2.0*double(k);
-      aicc=-2*best_loglik + 2.0*double(k) + double(k*(k+1))/double(nn-k-1);
-      bic=-2*best_loglik + log(double(nn))*double(k);
     }
-  if(!do_ml && return_residuals==1)
-    {
-      double *medpar=new double[numpar];
-      for(j=0;j<(int)numpar;j++)
-	medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
-      
-      if(!silent)
-	Rcout << "Running loglik to fetch Bayesian median residuals..." << std::endl;
-	  
-      double lres=loglik(medpar, 0, 0, 0, NULL, 0, NULL,
-			 1, &resids_time, &resids, &prior_expected_values,
-			 &resid_numcol, &resid_len);
-      
-      if(!resids)
-	Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
-	  lres << std::endl;
-      else if(!silent)
-	Rcout << "lres=" << lres << std::endl;
-	  
-      delete [] medpar;
-    }
-    }
-
+  
   // DEBUG
   //Rcout << "ML done" << std::endl;
-
+  
 #ifdef DETAILED_TIMERS
   List alltimers=List::create(
 		     Named("loglik.time",double(timers[1][2])/
@@ -17363,7 +17670,21 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	for(j=0;j<(int)numsamples;j++)
 	  mcmcsamples2(i,j)=parsample_repar[i][j];
       out["mcmc.origpar"]=mcmcsamples2;
-    }
+    }  
+  else if(!no_inpars && inpars_numsets>=1 && !dosmooth && !do_realizations)
+    {
+      NumericMatrix mcmcsamples(numpar,inpars_numsets);
+      for(i=0;i<numpar;i++)
+	for(j=0;j<(int)inpars_numsets;j++)
+	  mcmcsamples(i,j)=parsample[i][j];
+      out["mcmc"]=mcmcsamples;
+      
+      NumericMatrix mcmcsamples2(numpar,inpars_numsets);
+      for(i=0;i<numpar;i++)
+	for(j=0;j<(int)inpars_numsets;j++)
+	  mcmcsamples2(i,j)=parsample_repar[i][j];
+      out["mcmc.origpar"]=mcmcsamples2;
+    } 
 
   if(lliks)
     {

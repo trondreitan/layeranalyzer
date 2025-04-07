@@ -92,6 +92,17 @@ layer.analyzer.timeseries.list=function(data.structure ,
  out.data.structure=data.structure # take a copy of the data structure before
  # this function does anything with it.
 
+ # likelihood mode?
+ likelihood.mode=FALSE
+ if(!is.null(previous.run))
+    if(!is.null(previous.run$mcmc) & smooth.previous.run==FALSE)
+   {
+     show("likelihood calculation mode!")
+     likelihood.mode=TRUE
+   }
+
+
+
  ######################
  # User input checks:
  ######################
@@ -830,7 +841,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
    stop("Option 'num.MCMC' must be an integer!") 
  num.MCMC=as.integer(num.MCMC)
 
- if(num.MCMC<1)
+ if(num.MCMC<1 & !likelihood.mode)
   stop("Option 'num.MCMC' must be 1 or larger  (preferrably much larger)!")
 
  if(typeof(spacing)!="integer" & typeof(spacing)!="numeric" & 
@@ -838,7 +849,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
    stop("Option 'spacing' must be an integer!") 
  spacing=as.integer(spacing)
 
- if(spacing<1)
+ if(spacing<1 & !likelihood.mode)
   stop("Option 'spacing' must be 1 or larger!")
 
  if(typeof(burnin)!="integer" & typeof(burnin)!="numeric" & 
@@ -846,7 +857,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
    stop("Option 'burnin' must be an integer!")
  burnin=as.integer(burnin) 
 
- if(burnin<0)
+ if(burnin<0 & !likelihood.mode)
   stop("Option 'num.temp' must be 0 or larger!")
 
  if(typeof(num.temp)!="integer" & typeof(num.temp)!="numeric" & 
@@ -854,7 +865,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
    stop("Option 'num.temp' must be an integer!") 
  num.temp=as.integer(num.temp) 
 
- if(num.temp<1)
+ if(num.temp<1 & !likelihood.mode)
   stop("Option 'num.temp' must be 1 or larger!")
 
  if(typeof(id.strategy)!="integer" & typeof(id.strategy)!="numeric" & 

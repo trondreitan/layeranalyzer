@@ -56,7 +56,16 @@ layer.data.series=function(time.points, value.points, name, std.dev=NULL,
   if(typeof(time)=="POSIXct")
     is.datetime=1
   time=as.numeric(time)
-  
+
+  o=order(time)
+  reorder=FALSE
+  if(sum((1:length(time))!=o)>0)
+  {
+    reorder=TRUE
+    print.srcref("Warning: time points are not ordered chronologiclaly (from smallest to highest value). Will reorder automatically.")
+    print.srcref("(PS: This could be because you have fed the timeseries structure *age* instead of time. Set time=-age, if so, to avoid this warning.") 
+  }	
+
   if(typeof(value)!="integer" & typeof(time)!="numeric" & typeof(time)!="double")
     stop("The 'value' array must be numeric!")
   if(sum(is.na(value))>0)
@@ -124,15 +133,31 @@ layer.data.series=function(time.points, value.points, name, std.dev=NULL,
   if(name=="")
     stop("Name must be given!")
 
-  ret=list(time=time.points,value=value.points,name=name)
-  if(!is.null(std.dev))
-    ret$std.dev=std.dev
-  if(!is.null(num.meas.per.value))
-    ret$num.meas.per.value=num.meas.per.value
-  if(!is.null(site))
-    ret$site=site
-  if(!is.null(is.datetime))
-    ret$is.datetime=is.datetime
+  if(!reorder)
+  {
+    ret=list(time=time.points,value=value.points,name=name)
+    if(!is.null(std.dev))
+      ret$std.dev=std.dev
+    if(!is.null(num.meas.per.value))
+      ret$num.meas.per.value=num.meas.per.value
+    if(!is.null(site))
+      ret$site=site
+    if(!is.null(is.datetime))
+      ret$is.datetime=is.datetime
+  }
+  if(reorder)
+  {
+    ret=list(time=time.points[o],value=value.points[o],name=name)
+    if(!is.null(std.dev))
+      ret$std.dev=std.dev[o]
+    if(!is.null(num.meas.per.value))
+      ret$num.meas.per.value=num.meas.per.value[o]
+    if(!is.null(site))
+      ret$site=site[o]
+    if(!is.null(is.datetime))
+      ret$is.datetime=is.datetime[o]
+  }
+      
   class(ret)="layer.data.series"
   
   return(ret)
@@ -229,7 +254,21 @@ layer.struct.name=function(struct)
  if(struct$numlayers>1)
    out=sprintf("%d-layered:",struct$numlayers)
 
- for(layer in struct$numlayers:1)
+ if(struct$numlayers==0)
+ {
+   out=sprintf("%s%s",out,"No stochasticity")
+   if(struct$lin.time)
+     {
+       out=paste(out," - lin.trend")
+     }
+   if(struct$lin.time)
+     {
+       out=paste(out," - constant")
+     }
+ }
+ 
+ if(struct$numlayers>=1)
+  for(layer in struct$numlayers:1)
  {
    if(struct$numlayers>1)
    {
@@ -709,12 +748,15 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
       stop("Differentiated linear time indicator, 'differentiate.lin.time', must be a logical")
     ret$differentiate.lin.time=differentiate.lin.time
   }
-  
+
+  init.treatment=FALSE
+
   if(!is.null(init.0))
   {
     if(typeof(init.0)!="logical")
       stop("Initial value treatement indicator, 'init.0', must be a logical")
     ret$init.0=init.0
+  init.treatment=TRUE
   }
   
   if(!is.null(init.time))
@@ -734,6 +776,7 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
 
     ret$init.time=init.time
     ret$init.datetime=init.datetime
+    init.treatment=TRUE
   }
   
   if(!is.null(init.same.sites))
@@ -741,6 +784,9 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     if(typeof(init.same.sites)!="logical")
       stop("Initial value same for all sites indicator, 'init.same.sites', must be a logical")
     ret$init.same.sites=init.same.sites
+
+    if(!init.treatment && init.same.sites)
+      print.srcref("Warning: Specifying init.same.sites=TRUE without any initial value treatment makes no sense!")
   }
   
   if(!is.null(init.same.layers))
@@ -748,6 +794,9 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     if(typeof(init.same.layers)!="logical")
       stop("Initial value same for all sites indicator, 'init.same.layers', must be a logical")
     ret$init.same.layers=init.same.layers
+    
+    if(!init.treatment && init.same.layers)
+      print.srcref("Warning: Specifying init.same.layers=TRUE without any initial value treatment makes no sense!")
   }
   
   if(!is.null(init.specified))
@@ -758,8 +807,14 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
       stop("Specified initial value, 'init.specified', must be a vector with 2 values, 'time' and 'value'. If time has been specified with POSIXct, cast this as numeric")
     init.specified=as.numeric(init.specified)
     ret$init.specified=init.specified
+    init.treatment=TRUE
   }
-  
+
+  if(no.pull && !init.treatment)
+  {
+    print.srcref("Warning: no.pull=TRUE (i.e. Brownian motion on the bottom layer) *should* have initial state treatment. If not, a very vague prior distribution is given to the initial state.")
+  }
+
   if(!is.null(allow.pos.pull))
   {
     if(typeof(allow.pos.pull)!="logical")
