@@ -4198,7 +4198,7 @@ void show_mat_R(const char *name, double **X, int n, int m)
     {
       for(j=0;j<m;j++)
 	{
-	  snprintf(str,999,"%9.5f  ", X[i][j]);
+	  snprintf(str,999,"%14.10f  ", X[i][j]);
 #ifdef MAIN
 	  cout << str;
 #else
@@ -4206,7 +4206,7 @@ void show_mat_R(const char *name, double **X, int n, int m)
 #endif // MAIN
 	}
       if(i<(n-1))
-        snprintf(str,999," )\n%11s("," ");
+        snprintf(str,999," )\n%16s("," ");
       else
 	snprintf(str,99," )\n\n");
 #ifdef MAIN
@@ -4258,7 +4258,7 @@ void show_vec(const char *name, double *X, int n)
 #ifdef MAIN
   printf("%10s=(",name);
   for(j=0;j<n;j++)
-    printf("%9.5f  ", X[j]);
+    printf("%14.10f  ", X[j]);
   printf(")\n");
 #else
   Rcout << name << "=(";
@@ -11439,7 +11439,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       if(l<(ser[s].numlayers-1))
 	m[i]=0.0;
       else if(ser[s].no_pull_lower!=0 && ser[s].init_treatment!=0) 
-	m[i]=ser[s].init_mu[ser[s].numlayers-1][i%numsites];
+	m[i]=0; // ser[s].init_mu[ser[s].numlayers-1][i%numsites];
       else
 	m[i]=ser[s].mu[i%numsites];
       
@@ -11454,7 +11454,19 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      m[i] -= beta_feed[j]*ser[s2].mu[i%numsites];
 	  }
       
+      if(detailed_loglik)
+	{
+	  Rcout << "i=" << i << " m_prev[i]=" << m[i] << " pull=" <<
+	    ser[s].pull[l][i%numsites] << " m_after[i]=" <<
+	    m[i]*ser[s].pull[l][i%numsites] << std::endl;
+	}
+      
       m[i]*=ser[s].pull[l][i%numsites];
+    }
+
+  if(detailed_loglik)
+    {
+      show_vec("m",m,num_states);
     }
   
   unsigned int len = dosmooth ? meas_smooth_len : meas_tot_len;
@@ -12043,7 +12055,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       
       l=state_layer[i];
       
-      if(!ser[s].no_pull_lower)
+      //if(!ser[s].no_pull_lower)
 	{
 	  if((is_complex && lambda[i]!=0.0) ||
 	     (!is_complex && lambda_r[i]!=0))
@@ -12062,7 +12074,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  double t00=me[0].tm;
 		  unsigned int nl=ser[s].numlayers;
 		  b=series_state_start[s]+numsites*(nl-1)+i%numsites;
-	      
+		  
 	          if(is_complex)
 		    W[i] -= ser[s].pull[nl-1][i%numsites]/lambda[i]*V[i][b]*
 		      ser[s].lin_t[i%numsites]*
@@ -12085,7 +12097,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
 #ifndef MAIN
   if(detailed_loglik)
-    Rcout << "Fill u" << std::endl;
+    {
+      if(!is_complex)
+	show_vec("W_r",W_r,num_states);
+      Rcout << "Fill u" << std::endl;
+    }
 #endif // MAIN
   
   for(i=0;i<num_states;i++) // traverse the states
@@ -12397,6 +12413,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	show_mat("V_r",V_r,num_states,num_states);
       else
 	show_Complex_mat("V",V,num_states,num_states);
+      if(!is_complex)
+	show_mat("Vinv_r",Vinv_r,num_states,num_states);
+      else
+	show_Complex_mat("Vinv",Vinv,num_states,num_states);
       
       if(is_complex)
 	show_Complex_mat("VinvLambdaV_A",VinvLambdaV_A,num_states,num_states);
@@ -12448,7 +12468,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  // Calculate u_k:
 	  double dt=t_k[k]-t_k[k-1];
 	  
-	  for(i=0;i<num_states;i++) // traverse the sites
+	  for(i=0;i<num_states;i++) // traverse the processes
 	    {
 	      u_k[k][i]=0.0;
 	      if(is_complex)
@@ -12473,7 +12493,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif // MAIN
 		}
 	      
-	      if(!ser[s].no_pull_lower &&
+	      if(//!ser[s].no_pull_lower &&
 		 ((is_complex && lambda && lambda[i]!=0.0) ||
 		  (!is_complex && lambda_r && lambda_r[i]!=0.0)))
 		{
@@ -12562,7 +12582,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    }
 	  if(useext)
 	    t_0=t;
-	  
+		  
 	  for(i=0;i<num_states;i++) // traverse the sites
 	    if(is_complex)
 	      {
@@ -12710,7 +12730,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  }
 	    }
 	}  // end if(!first)
-    
+
+      if(detailed_loglik)
+	{
+	  show_vec("u_k",u_k[k],num_states);
+	}
       
       // Calculate x_k,(k-1) = F_k * x_(k-1),(k-1) + u_k
       for(i=0;i<num_states;i++)
@@ -12872,6 +12896,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	{
 	  show_mat_R("Q_k", Q_k[k],num_states,num_states);
 	  show_mat_R("F_k", F_k[k],num_states,num_states);
+	  show_vec("x_k_now[prev]",x_k_now[k>0 ? k-1 : 0], num_states);
 	  show_mat_R("P_k_now[prev]", P_k_now[k>0 ? k-1 : 0],
 		     num_states,num_states);
 	}
@@ -12899,9 +12924,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      P_k_prev[k][i][j]+=P_k_buffer[i][l]*F_k[k][j][l];
 	  }    				 
 
-      if(detailed_loglik)
-	show_mat_R("P_k_prev", P_k_prev[k],num_states,num_states);
-	
       // Sanity check of P_k_prev
       if(!sanity_check_variance("P_k_prev",k,P_k_prev[k],num_states))
 	return -1e+200;
@@ -12911,7 +12933,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       for(s=0;s<num_series;s++)
 	if(ser[s].init_treatment)
 	  {
-	    if((me[k].tm==ser[s].init_time || 
+	    if((me[k].tm==first_init_time || 
 		(k==0 && me[k].tm==ser[s].meas[0].tm)))
 	      {
 		int start=series_state_start[s];
@@ -12925,6 +12947,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    P_k_prev[k][start+i][start+j]=0.0;
 	      }
 	  }
+      
+      if(detailed_loglik)
+	{
+	  show_vec("x_k_prev", x_k_prev,num_states);
+	  show_mat_R("P_k_prev", P_k_prev[k],num_states,num_states);
+	}
       
       if(detailed_loglik)
 	Rcout << "end initvalue" << k << std::endl;

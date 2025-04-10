@@ -588,6 +588,10 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
       stop("No pull indicator, 'no.pull', must be a logical")
     ret$no.pull=no.pull
   }
+  if(is.null(no.pull))
+  {
+    ret$no.pull=FALSE
+  }
   
   if(!is.null(no.sigma))
   {
@@ -756,7 +760,7 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     if(typeof(init.0)!="logical")
       stop("Initial value treatement indicator, 'init.0', must be a logical")
     ret$init.0=init.0
-  init.treatment=TRUE
+    init.treatment=init.0
   }
   
   if(!is.null(init.time))
@@ -810,9 +814,11 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     init.treatment=TRUE
   }
 
-  if(no.pull && !init.treatment)
+  if(no.pull==TRUE & init.treatment==FALSE)
   {
-    print.srcref("Warning: no.pull=TRUE (i.e. Brownian motion on the bottom layer) *should* have initial state treatment. If not, a very vague prior distribution is given to the initial state.")
+    print.srcref("Warning: no.pull=TRUE (i.e. Brownian motion on the bottom layer) *must* have some form of initial state treatment. Setting init.0=TRUE (initial state at first mueasurement time in the dataset(s).")
+    ret$init.0=TRUE
+    init.treatment=TRUE
   }
 
   if(!is.null(allow.pos.pull))
