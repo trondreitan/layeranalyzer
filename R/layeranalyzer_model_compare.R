@@ -173,7 +173,7 @@ logLik.layered=function(object,...)
 
   ll=object$ML.loglik
 
-  df=length(object$parameter.names)
+  df=length(object$parameter.names[substr(object$parameter.name,1,7)!="complex"])
   attr(ll,"class")="logLik"
   attr(ll,"df")=df
   attr(ll,"nobs")=nobs.layered(object)
