@@ -5594,7 +5594,7 @@ double *quasi_newton(double (*func)(double *),
 	      f2=(*func)(x1);
 	      if(f2!=MISSING_VALUE &&
 		 ((do_min && f2<ex) || (!do_min && f2>ex)))
-		{
+		{ 
 		  sign=-1.0;
 		  ex=f2;
 		  llmax=ll;
