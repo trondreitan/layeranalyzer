@@ -94,6 +94,8 @@ class series;
 class measurement_cluster;
 class HydDateTime;
 
+double meantime=0.0;
+
 // Parameter info:
 char **par_name=NULL; // parameter name
 param_type *par_type=NULL; // parameter type
@@ -9014,15 +9016,18 @@ void series::set_series(char *serie_name, int serienum,
   int k=0;
   for(i=0;i<meas_len;i++)
     {
-      mean_time+=meas[i].tm;
       if(meas[i].meanval!=MISSING_VALUE)
 	{
+          mean_time+=meas[i].tm;
 	  mean_val+=meas[i].meanval;
 	  k++;
 	}
     }
-  mean_time/=double(meas_len);
-  mean_val/=double(k);
+  if(k>0)
+    {
+      mean_time/=double(k);
+      mean_val/=double(k);
+    }
   
   if(useprior)
     pr=new prior(useprior);
@@ -11428,13 +11433,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(detailed_loglik)
     Rcout << "m vector stuff" << std::endl;
 #endif // MAIN
-  
+
+  double *B=new double[num_states]; // linear time vector
   double *m=new double[num_states]; // expectation vector
   for(i=0;i<num_states;i++)
     {
       s=state_series[i];
       l=state_layer[i];
-
 
       if(l<(ser[s].numlayers-1))
 	m[i]=0.0;
@@ -11442,7 +11447,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	m[i]=0; // ser[s].init_mu[ser[s].numlayers-1][i%numsites];
       else
 	m[i]=ser[s].mu[i%numsites];
-      
+
       for(j=0;j<num_series_feed;j++)
 	if(feed_to_series[j]==(int)s && feed_to_layer[j]==(int)l)
 	  {
@@ -11452,8 +11457,26 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      m[i] -= beta_feed[j]*ser[s2].init_mu[nl2-1][i%numsites];
 	    else
 	      m[i] -= beta_feed[j]*ser[s2].mu[i%numsites];
+	    
 	  }
       
+      B[i]=0.0;
+      if(ser[s].linear_time_dep)
+	{
+	  if(l<(ser[s].numlayers-1))
+	    B[i]=0.0;
+	  else if(ser[s].no_pull_lower!=0 && ser[s].init_treatment!=0)
+	    B[i]=0.0;
+	  else
+	    B[i]=ser[s].lin_t[i%numsites];
+	  for(j=0;j<num_series_feed;j++)
+	    {
+	      int s2=feed_from_series[j];
+	      if(feed_to_series[j]==(int)s && feed_to_layer[j]==(int)l)
+		B[i] -= beta_feed[j]*ser[s2].lin_t[i%numsites];
+	    }
+	}
+	 
       if(detailed_loglik)
 	{
 	  Rcout << "i=" << i << " m_prev[i]=" << m[i] << " pull=" <<
@@ -11462,11 +11485,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
       
       m[i]*=ser[s].pull[l][i%numsites];
+      B[i]*=ser[s].pull[l][i%numsites];
     }
-
+  
   if(detailed_loglik)
     {
       show_vec("m",m,num_states);
+      if(ser[s].linear_time_dep)
+	show_vec("B",B,num_states);
     }
   
   unsigned int len = dosmooth ? meas_smooth_len : meas_tot_len;
@@ -11972,14 +11998,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
     Rcout << "W,u initialized" << std::endl;
 #endif // MAIN
   
-  double meantime=0.0;
+  meantime=0.0;
   for(s=0;s<num_series;s++)
     meantime+=ser[s].mean_time;
   meantime/=double(num_series);
-
+  
 #ifndef MAIN
   if(detailed_loglik)
-    Rcout << "meantime filled" << std::endl;
+    {
+      Rcout << "meantime filled" << std::endl;
+      Rcout << "meantime=" << meantime << std::endl;
+    }
 #endif // MAIN
   
 #ifdef MAIN
@@ -12038,8 +12067,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 #ifndef MAIN
   if(detailed_loglik)
-    Rcout << "Fill W, initialize x, u" << std::endl;
+    {
+      Rcout << "Fill W, initialize x, u" << std::endl;
+      Rcout << "t00=" << me[0].tm << " first_init_time=" << first_init_time <<
+	" meantime=" << meantime << std::endl;
+    }
 #endif // MAIN
+
+  
   
   for(i=0;i<num_states;i++)
     {
@@ -12063,27 +12098,200 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      unsigned int b;
 	      for(b=i%numsites2;b<num_states;b+=numsites2)
 		{
-		  if(is_complex)
-		    W[i] -= 1.0/lambda[i]*V[i][b]*m[b];
+		  if(ser[s].init_treatment)
+		    {
+		      double t00=me[0].tm;
+		      if(is_complex)
+			{
+			  Complex ee=lambda[i]*(t00-first_init_time);
+			  W[i] -= 1.0/lambda[i]*(1.0-complex_exp(ee))*
+			    V[i][b]*m[b] - 1.0/lambda[i]*
+			      (1.0/lambda[i]*complex_exp(ee)+t00-meantime-
+			       (first_init_time-meantime)*(1.0-complex_exp(ee)))*
+			      V[i][b]*B[b];
+			}
+		      else
+			{
+			  double ee=lambda_r[i]*(t00-first_init_time);
+			  W_r[i] -= 1.0/lambda_r[i]*
+			    (1.0-exp(ee))*V_r[i][b]*m[b]-1.0/lambda_r[i]*
+			    (1.0/lambda_r[i]*exp(ee)+t00-meantime-
+			     (first_init_time-meantime)*(1.0-exp(ee)))*
+			    V_r[i][b]*B[b];
+			}
+		    }
 		  else
-		    W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b];
+		    {
+		      double t00=me[0].tm;
+		      if(is_complex)
+			{
+			  W[i] -= 1.0/lambda[i]*V[i][b]*m[b]-1.0/lambda[i]*
+			    (1.0/lambda[i]+t00-meantime)*V[i][b]*B[b];
+			}
+		      else
+			{
+			  W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]-1.0/lambda_r[i]*
+			    (1.0/lambda_r[i]+t00-meantime)*V_r[i][b]*B[b];
+			}
+		    }
 		}
 	      
-	      if(ser[s].linear_time_dep)
+	      /*
+		if(ser[s].linear_time_dep)
 		{
 		  double t00=me[0].tm;
 		  unsigned int nl=ser[s].numlayers;
-		  b=series_state_start[s]+numsites*(nl-1)+i%numsites;
+		  //b=series_state_start[s]+numsites*(nl-1)+i%numsites;
 		  
-	          if(is_complex)
-		    W[i] -= ser[s].pull[nl-1][i%numsites]/lambda[i]*V[i][b]*
-		      ser[s].lin_t[i%numsites]*
-		      ((t00-meantime)+1.0/lambda[i]);
+		  if(ser[s].init_treatment)
+		    {
+		      if(is_complex)
+			{
+			  Complex ee=lambda[i]*(t00-first_init_time);
+			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+			  //    (first_init_time-meantime)*exp(ee))
+			  Complex **buffer=
+			    Make_Complex_matrix(num_states,num_states);
+			  // buffer2=buffer*V=(inv(lambda)+
+			  //  1*t(1)*(t00-meantime)-
+			  //         (first_init_time-meantime)*exp(ee))*V
+			  Complex **buffer2=
+			    Make_Complex_matrix(num_states,num_states);
+			  unsigned int ii,jj,kk;
+
+			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+			  //    (first_init_time-meantime)*exp(ee))
+			  for(ii=0;ii<num_states;ii++)
+			    {
+			      if(lambda[ii]!=0.0)
+				buffer[ii][ii]+=1.0/lambda[ii];
+			      for(jj=0;jj<num_states;jj++)
+				buffer[ii][jj]+=t00-meantime+
+				  (first_init_time-meantime)*complex_exp(ee);
+			    }
+			  
+			  // buffer2=buffer*V
+			  for(ii=0;ii<num_states;ii++)
+			    for(jj=0;jj<num_states;jj++)
+			      for(kk=0;kk<num_states;kk++)
+				buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
+			  
+			  for(ii=0;ii<num_states;ii++)
+			    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
+			  
+			  doubledelete(buffer,num_states);
+			  doubledelete(buffer2,num_states);
+			}
+		      else
+			{
+			  double ee=lambda_r[i]*(t00-first_init_time);
+			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+			  //    (first_init_time-meantime)*exp(ee))
+			  double **buffer=Make_matrix(num_states,num_states);
+			  // buffer2=buffer*V=(inv(lambda)+
+			  //  1*t(1)*(t00-meantime)-
+			  //         (first_init_time-meantime)*exp(ee))*V
+			  double **buffer2=Make_matrix(num_states,num_states);
+			  unsigned int ii,jj,kk;
+
+			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+			  //    (first_init_time-meantime)*exp(ee))
+			  for(ii=0;ii<num_states;ii++)
+			    {
+			      if(lambda_r[ii]!=0.0)
+				buffer[ii][ii]+=1.0/lambda_r[ii];
+			      for(jj=0;jj<num_states;jj++)
+				buffer[ii][jj]+=t00-meantime+
+				  (first_init_time-meantime)*exp(ee);
+			    }
+			  
+			  // buffer2=buffer*V
+			  for(ii=0;ii<num_states;ii++)
+			    for(jj=0;jj<num_states;jj++)
+			      for(kk=0;kk<num_states;kk++)
+				buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
+			  
+			  for(ii=0;ii<num_states;ii++)
+			    W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
+			  
+			  doubledelete(buffer,num_states);
+			  doubledelete(buffer2,num_states);
+			}
+		    }
 		  else
-		    W_r[i] -= ser[s].pull[nl-1][i%numsites]/lambda_r[i]*V_r[i][b]*
-		      ser[s].lin_t[i%numsites]*
-		      ((t00-meantime)+1.0/lambda_r[i]);
+		    {
+		      if(is_complex)
+			{
+			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+			  Complex **buffer=
+			    Make_Complex_matrix(num_states,num_states);
+			  // buffer2=buffer*V=(inv(lambda)+1*t(1)*(t00-meantime))*V
+			  Complex **buffer2=
+			    Make_Complex_matrix(num_states,num_states);
+			  unsigned int ii,jj,kk;
+
+			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+			  for(ii=0;ii<num_states;ii++)
+			    {
+			      if(lambda[ii]!=0.0)
+				buffer[ii][ii]+=1.0/lambda[ii];
+			      for(jj=0;jj<num_states;jj++)
+				buffer[ii][jj]+=t00-meantime;
+			    }
+			  
+			  // buffer2=buffer*V
+			  for(ii=0;ii<num_states;ii++)
+			    for(jj=0;jj<num_states;jj++)
+			      for(kk=0;kk<num_states;kk++)
+				buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
+			  
+			  for(ii=0;ii<num_states;ii++)
+			    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
+			  
+			  doubledelete(buffer,num_states);
+			  doubledelete(buffer2,num_states);
+
+			}
+		      else
+			{
+			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+			  double **buffer=Make_matrix(num_states,num_states);
+			  // buffer2=buffer*V=(inv(lambda)+1*t(1)*(t00-meantime))*V
+			  double **buffer2=Make_matrix(num_states,num_states);
+			  unsigned int ii,jj,kk;
+			  
+			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+			  for(ii=0;ii<num_states;ii++)
+			    {
+			      if(lambda_r[ii]!=0.0)
+				buffer[ii][ii]+=1.0/lambda_r[ii];
+			      for(jj=0;jj<num_states;jj++)
+				buffer[ii][jj]+=t00-meantime;
+			    }
+
+			  // buffer2=buffer*V
+			  for(ii=0;ii<num_states;ii++)
+			    for(jj=0;jj<num_states;jj++)
+			      for(kk=0;kk<num_states;kk++)
+				buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
+			  
+			  if(detailed_loglik)
+			    {
+			      show_mat("buffer",buffer,num_states,num_states);
+			      show_mat("buffer2",buffer2,num_states,num_states);
+			    }
+			  
+			  for(ii=0;ii<num_states;ii++)
+			    W_r[i] -= 1.0/lambda_r[i]*
+			      (1.0/lambda_r[i]+t00-meantime)*V_r[i][ii]*B[ii];
+			    //  W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
+			  
+			  doubledelete(buffer,num_states);
+			  doubledelete(buffer2,num_states);
+			}
+		    }
 		}
+	      */
 	    }
 	  else
 	    {
@@ -12094,7 +12302,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    }
 	}
     }
-  
+
 #ifndef MAIN
   if(detailed_loglik)
     {
@@ -12103,7 +12311,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       Rcout << "Fill u" << std::endl;
     }
 #endif // MAIN
-  
+
   for(i=0;i<num_states;i++) // traverse the states
     {
       if(is_complex)
@@ -12502,16 +12710,26 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      Complex ee=lambda[i]*dt;
 		      
 		      for(b=i%numsites2;b<num_states;b+=numsites2)
-			W[i] -= 1.0/lambda[i]*V[i][b]*m[b]*(1.0-complex_exp(ee));
+			W[i] -= 1.0/lambda[i]*V[i][b]*m[b]*(1.0-complex_exp(ee))-
+			  1.0/lambda[i]*(1.0/lambda[i]*complex_exp(ee)+
+					 t_k[k]-meantime-
+					 (t_k[k-1]-meantime)*
+					 (1.0-complex_exp(ee)))*
+			  V[i][b]*B[b];
 		    }
 		  else
 		    {
 		      double ee=lambda_r[i]*dt;
 		      
 		      for(b=i%numsites2;b<num_states;b+=numsites2)
-			W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]*(1.0-exp(ee));
+			W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]*(1.0-exp(ee))-
+			  1.0/lambda_r[i]*(1.0/lambda_r[i]*exp(ee)+
+					   t_k[k]-meantime-
+					   (t_k[k-1]-meantime)*(1.0-exp(ee)))*
+			  V_r[i][b]*B[b];
 		    }
-		  
+
+		  /*
 		  if(ser[s].linear_time_dep)
 		    {
 		      b=series_state_start[s]+numsites*(nl-1)+i%numsites;
@@ -12519,22 +12737,75 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      if(is_complex)
 			{
 			  Complex ee=lambda[i]*dt;
-			  W[i] -= ser[s].pull[nl-1][i%numsites]/
-			    lambda[i]*V[i][b]*ser[s].lin_t[i%numsites]*
-			    ((t_k[k]-meantime)-
-			     (t_k[k-1]-meantime)*complex_exp(ee)+
-			     1.0/lambda[i]*(1.0-complex_exp(ee)));
+			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+			  //    (t_k[k-1]-meantime)*exp(ee))
+			  Complex **buffer=
+			    Make_Complex_matrix(num_states,num_states);
+			  // buffer2=buffer*V
+			  Complex **buffer2=
+			    Make_Complex_matrix(num_states,num_states);
+			  unsigned int ii,jj,kk;
+			  
+			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+			  //    (t_k[k-1]-meantime)*exp(ee))
+			  for(ii=0;ii<num_states;ii++)
+			    {
+			      if(lambda[ii]!=0.0)
+				buffer[ii][ii]+=1.0/lambda[ii];
+			      for(jj=0;jj<num_states;jj++)
+				buffer[ii][jj]+=t_k[k]-meantime+
+				  (t_k[k-1]-meantime)*complex_exp(ee);
+			    }
+			  
+			  // buffer2=buffer*V
+			  for(ii=0;ii<num_states;ii++)
+			    for(jj=0;jj<num_states;jj++)
+			      for(kk=0;kk<num_states;kk++)
+				buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
+			  
+			  for(ii=0;ii<num_states;ii++)
+			    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
+			  
+			  doubledelete(buffer,num_states);
+			  doubledelete(buffer2,num_states);
 			}
 		      else
 			{
 			  double ee=lambda_r[i]*dt;
-			  W_r[i] -= ser[s].pull[nl-1][i%numsites]/
-			    lambda_r[i]*V_r[i][b]*ser[s].lin_t[i%numsites]*
-			    ((t_k[k]-meantime)-
-			     (t_k[k-1]-meantime)*exp(ee) +
-			     1.0/lambda_r[i]*(1.0-exp(ee)));
+			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+			  //    (t_k[k-1]-meantime)*exp(ee))
+			  double **buffer=Make_matrix(num_states,num_states);
+			  // buffer2=buffer*V
+			  double **buffer2=Make_matrix(num_states,num_states);
+			  unsigned int ii,jj,kk;
+			  
+			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+			  //    (t_k[k-1]-meantime)*exp(ee))
+			  for(ii=0;ii<num_states;ii++)
+			    {
+			      if(lambda_r[ii]!=0.0)
+				buffer[ii][ii]+=1.0/lambda_r[ii];
+			      for(jj=0;jj<num_states;jj++)
+				buffer[ii][jj]+=t_k[k]-meantime+
+				  (t_k[k-1]-meantime)*exp(ee);
+			    }
+			  
+			  // buffer2=buffer*V
+			  for(ii=0;ii<num_states;ii++)
+			    for(jj=0;jj<num_states;jj++)
+			      for(kk=0;kk<num_states;kk++)
+				buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
+			  
+			  for(ii=0;ii<num_states;ii++)
+			    W_r[i] -= 1.0/lambda_r[i]*
+			      (1.0/lambda_r[i]+t_k[k]-meantime-(t_k[k-1]-meantime)*(1.0-exp(ee)))*V_r[i][ii]*B[ii];
+			    //W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
+
+			  doubledelete(buffer,num_states);
+			  doubledelete(buffer2,num_states);
 			}
-		    }
+		     }
+		  */
 		}
 	      
 	      // If an external timeseries is given:
@@ -13922,6 +14193,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   delete [] x_k_prev;
   delete [] u_k;
   delete [] m;
+  delete [] B;
 
 #ifdef MAIN
   if(f)
@@ -17731,7 +18003,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       out["logprior"]=lprior;
       delete [] lpriors;
     }
-  
+
+  //NumericVector mean_time=meantime;
+  //out["meantime"]=mean_time;
   
   // DEBUG:
   //Rcout << " Returned MCMCg" << std::endl;
