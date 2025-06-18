@@ -15553,7 +15553,7 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 
       // Calculate the Bayesian probability estimates for the
       // posterior probability that the indicator=1:
-      double prob_indicator[numsites];
+      double *prob_indicator=new double[numsites];
       if(use_indicator)
 	{
 	  for(j=0;j<numsites;j++)
@@ -15796,9 +15796,13 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
       cout << "( DIC2: " << dic2 << " , mean_D=" << mean_D << " , p_eff2=" << 
 	p_eff2 << " , var_D=" << var_D << " )" << endl;
 #endif // MAIN
-      
-      delete [] mu_coefs;
+
+      // Cleanup
+      if(mu_coefs)
+	delete [] mu_coefs;
       doubledelete(sigma_coefs,numpar2);
+      if(prob_indicator)
+	delete [] prob_indicator;
       
 #ifdef DETAILED_TIMERS
       timers[23][1]=clock();
@@ -17227,7 +17231,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		    partial_par[j]=transform_parameter(in_pars(k,j),
 						       par_trans_type[j]);
 		  List optres=optim(Rcpp::_["par"]= initpars,
-				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper)
+				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
 				    Rcpp::_["method"]="Nelder-Mead" /*
 				    Rcpp::_["method"]="L-BFGS-B",
 				    Rcpp::_["lower"]=-1e+20,
