@@ -5,12 +5,12 @@ In addition to the R package itself, this page presents the C++ code (used in a 
 
 Originally, this was used for modelling phenotypic evolution towards a optima that itself could be a stochastic process depending responding to layers below it (climate or primary optimum). However, the method have be used for other applications as well.
 
-Note: Lapack, the library I use for linear algebra tasks, recently changed their input structure. I thus had to make a new version, layeranalyzer_0.2.2.tar.gz". This should work for newer computers and/or newer R installations. If you get a compilation error, it might be that your computer has the older version of the Lapack library. In that case, try the older version of layeranalyzer, "layeranalyzer_0.1.1.tar.gz". (Ideally. I'd like to get rid of Lapack entirely, due to the lack of structural stability, but that is further in the future. Please tell me if there's a library that can replace it!)
+Note: Lapack, the library I use for linear algebra tasks, recently changed their input structure.  This should work for newer computers and/or newer R installations. If you get a compilation error, it might be that your computer has the older version of the Lapack library. In that case, try the older version of layeranalyzer, "layeranalyzer_0.1.1.tar.gz". (Ideally. I'd like to get rid of Lapack entirely, due to the lack of structural stability, but that is further in the future. Please tell me if there's a library that can replace it!)
 
 
 Code:
 
-* The R package, layeranalyzer_0.2.2.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.2.2.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
+* The R package, layeranalyzer_0.3.1.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.3.1.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
 
 * Note that a new install file for upcoming version has been added. The old one can be installed with install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.1.tar.gz",type="source").
 
@@ -114,7 +114,10 @@ Simulations can be used for testing the behaviour of the analysis.
 
 Updates and older versions
 Update history:
-    07/04-2025: Massive debug effort.  Version 0.2.2 is now default, found in layeranalyzer_0.2.2.tar.gz.
+    17/06-2025: Big functionality upgrade. Possible to start ML optimization from user-specified parameter values in 'layer.analyzer.timeseries.list' or to simply ask for number of parameters and parameter names. This has to be considered "expert mode" susage. Simpler version avaiable in 'layer.analyzer', where one can start optimization for a connection model using parameter values from a non-connected model (run on the fly). Also added option for consistency checks ("laxness" options). Some general debugging, including changing from one optimization routine ("L-BFGS-B") to another (Nelder-Mead). (May later consider to let choice of optimization strategy to be user-specified.) Version 0.3.1 is now default, found in layeranalyzer_0.3.1.tar.gz.
+ 
+
+    07/04-2025: Massive debug effort.
  
     01/4-2024: Reverting to old lapack with new call structure.. Version 0.2.1 is now default, found in layeranalyzer_0.2.1.tar.gz.
     
