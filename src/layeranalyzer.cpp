@@ -17,11 +17,16 @@
 #include <inttypes.h>
 
 using namespace Rcpp;
-//#include <R_ext/Lapack.h> 
+#ifdef WINDOWS
+#include <lapack.h>
+#else // not Windows
+#include <R_ext/Lapack.h> 
+#endif // WINDOWS
 
 #else // MAIN
 
-//#include <R_ext/Lapack.h> 
+   //#include <lapack.h>
+#include <R_ext/Lapack.h> 
 
 #endif //MAIN
 
@@ -34,8 +39,6 @@ using namespace Rcpp;
 //
 
 
-
-#include <lapack.h>
 
 // *******************
 // *******************
@@ -127,6 +130,10 @@ long int timers[100][3];
 // Timer 26: analyze_residuals
 #endif // DETAILED_TIMERS
 
+
+enum LOGLIK_LAXNESS {LITTLE_LAXNESS=0, MODERATE_LAXNESS=1,
+		     HIGH_LAXNESS=2, COMPLETELY_LAX=3};
+LOGLIK_LAXNESS laxness_level=HIGH_LAXNESS;
 
 
 // Transformation of parameters:
@@ -2110,7 +2117,8 @@ double linear(HydDateTime x0, double y0, HydDateTime x1, double y1, HydDateTime 
 // Diverse functions:
 
 int almost_equal(double v1, double v2);
-int almost_equal_lax(double v1, double v2);
+int almost_equal_lax(double v1, double v2,
+		     LOGLIK_LAXNESS laxness);
 
 // Count the number of spaces between contents
 // For instant "ajksdh   skjdfh     sasasd" would return "2".
@@ -4073,11 +4081,29 @@ int almost_equal(double v1, double v2)
 
 
 
-int almost_equal_lax(double v1, double v2)
+int almost_equal_lax(double v1, double v2, LOGLIK_LAXNESS laxness)
 {
-  if(fabs(v1)>0.9999*fabs(v2) && fabs(v1)<1.0001*fabs(v2) &&
-     ((v1<0.0 && v2< 0.0) || (v1>0.0 && v2>0.0)))
-    return 1;
+  switch(laxness)
+    {
+    case LITTLE_LAXNESS:
+      if(!almost_equal(v1,v2))
+	return 1;
+      break;
+    case MODERATE_LAXNESS:
+      if(fabs(v1)>0.9999*fabs(v2) && fabs(v1)<1.0001*fabs(v2) &&
+	 ((v1<0.0 && v2< 0.0) || (v1>0.0 && v2>0.0)))
+	return 1;
+      break;
+    case HIGH_LAXNESS:
+      if(fabs(v1)>0.9*fabs(v2) && fabs(v1)<1.1*fabs(v2) &&
+	 ((v1<0.0 && v2< 0.0) || (v1>0.0 && v2>0.0)))
+	return 1;
+      break;
+    case COMPLETELY_LAX:
+    default:
+      return 0;
+      break;
+    }
   
   return 0;
 }
@@ -5534,7 +5560,7 @@ double *quasi_newton(double (*func)(double *),
 	  for(k=0;k<dimension;k++)
 	    x1[k]=x[k]-lambda[j]*s[k];
 	  double f2=(*func)(x1);
-	  if(f2!=MISSING_VALUE &&
+	  if(f2!=MISSING_VALUE && (f2> -1e+200 && f2< 1e+200) &&
 	     (ex==MISSING_VALUE  || (do_min && f2<ex) || (!do_min && f2>ex)))
 	    {
 	      sign=1.0;
@@ -5556,7 +5582,7 @@ double *quasi_newton(double (*func)(double *),
 	      for(k=0;k<dimension;k++)
 		x1[k]=x[k]-ll*s[k];
 	      f2=(*func)(x1);
-	      if(f2!=MISSING_VALUE &&
+	      if(f2!=MISSING_VALUE && (f2> -1e+200 && f2< 1e+200) &&
 		 ((do_min && f2<ex) || (!do_min && f2>ex)))
 		{
 		  sign=1.0;
@@ -5572,7 +5598,7 @@ double *quasi_newton(double (*func)(double *),
 	  for(k=0;k<dimension;k++)
 	    x1[k]=x[k]+lambda[j]*s[k];
 	  double f2=(*func)(x1);
-	  if(f2!=MISSING_VALUE && 
+	  if(f2!=MISSING_VALUE && (f2> -1e+200 && f2< 1e+200) &&
 	     (ex==MISSING_VALUE  || (do_min && f2<ex) || (!do_min && f2>ex)))
 	    {
 	      sign=-1.0;
@@ -5594,7 +5620,7 @@ double *quasi_newton(double (*func)(double *),
 	      for(k=0;k<dimension;k++)
 		x1[k]=x[k]+ll*s[k];
 	      f2=(*func)(x1);
-	      if(f2!=MISSING_VALUE &&
+	      if(f2!=MISSING_VALUE && (f2> -1e+200 && f2< 1e+200) &&
 		 ((do_min && f2<ex) || (!do_min && f2>ex)))
 		{ 
 		  sign=-1.0;
@@ -5645,15 +5671,8 @@ double *quasi_newton(double (*func)(double *),
 	  for(m=0;m<dimension;m++)
 	    Hnew[k][l]-=(H[k][m]*pqt[m][l]+H[l][m]*pqt[m][k])/ptq;
 
-      for(k=0;k<dimension;k++)
-	{
-	  x[k]=x1[k];
-	  for(l=0;l<dimension;l++)
-	    H[k][l]=Hnew[k][l];
-	}
-      
       f1=(*func)(x1);
-
+      
       /*
       if(!silent)
 	{
@@ -5669,6 +5688,14 @@ double *quasi_newton(double (*func)(double *),
 	  show_vec("s",s,dimension);
 	}
       */
+      
+      for(k=0;k<dimension;k++)
+	{
+	  x[k]=x1[k];
+	  for(l=0;l<dimension;l++)
+	    H[k][l]=Hnew[k][l];
+	}
+      
       
       delete [] df2;
       delete [] df;
@@ -6834,6 +6861,9 @@ public:
   double mean_time, mean_val; 
   bool linear_time_dep;
   bool no_layers;
+
+  // Summary statistics:
+  double mean, stddev;
   
   // Current parameters used in loglik:
   // (Full model parameters)
@@ -6864,6 +6894,8 @@ public:
   int time_integral[100];
   int serie_num;
 
+  void set_summary_stats(void);
+  
 #ifdef MAIN
   void read_series(char **&argv, int &argc, bool is_main_series, 
 		   int serie_number,
@@ -6999,7 +7031,8 @@ double loglik(double *pars, int dosmooth=0, int do_realize=0,
 	      int residual_analysis=0, char *res_filestart=NULL, 
 	      int debug=0, char **simulation_files=NULL,
 	      int return_residuals=0,
-	      double **residuals_time=NULL, double ***residuals=NULL,
+	      double **residuals_time=NULL,
+	      double ***residuals=NULL,
 	      double ***prior_expected_values=NULL,
 	      int *resid_numcolumns=NULL, int *resid_len=NULL);
 // For ML purposes:
@@ -7252,6 +7285,8 @@ void reset_global_variables(void)
     delete [] extdata;
   extdata=NULL;
 
+  laxness_level=HIGH_LAXNESS;
+  
   len_x_k_s_kept=0;
   size_x_k_s_kept=0;
   ext_len=0;
@@ -9035,6 +9070,8 @@ void series::set_series(char *serie_name, int serienum,
     pr=new prior(-10.0,10.0, 0.001,1000.0, 0.01,10.0, -1.0,1.0, -1.0,1.0, 
 		 -10.0,10.0, 0.01,1.0, 1.0);
   
+  set_summary_stats();
+  
   if(!silent)
     pr->show();
 }
@@ -9081,10 +9118,47 @@ void series::set_series(double **X, unsigned int n, unsigned int num_layers)
   mean_time/=double(meas_len);
   mean_val/=double(k);
   
+  set_summary_stats();
+  
   pr=new prior(-10.0,10.0, 0.001,1000.0, 0.01,10.0, -1.0,1.0, -1.0,1.0, 
 	       -10.0,10.0, 0.01,1.0, 1.0);
 }
 
+
+void series::set_summary_stats(void)
+{
+  unsigned int i,k=0;
+  
+  mean=stddev=0.0;
+
+  for(i=0;i<meas_len;i++)
+    {
+      if(meas[i].meanval!=MISSING_VALUE)
+	{
+	  mean+=meas[i].meanval;
+	  k++;
+	}
+    }
+  if(k>0)
+    {
+      mean/=double(k);
+      for(i=0;i<meas_len;i++)
+	{
+	  if(meas[i].meanval!=MISSING_VALUE)
+	    stddev+=(meas[i].meanval-mean)*(meas[i].meanval-mean);
+	}
+      if(k>1)
+	{
+	  stddev/=double(k-1);
+	  stddev=sqrt(stddev);
+	}
+      else
+	stddev=1.0;
+    }
+  
+  if(stddev==0.0)
+    stddev=1.0;
+}
 
 #ifdef MAIN
 void series::read_series(char **&argv, int &argc, bool is_main_series,  
@@ -9485,6 +9559,8 @@ void series::read_series(char **&argv, int &argc, bool is_main_series,
       pr->init_1=pr->init_m-1.96*pr->init_s;
       pr->init_2=pr->init_m+1.96*pr->init_s;
     }
+
+  set_summary_stats();
   
   argc-=2;
   argv+=2; // this is also done inside the main option loop,
@@ -10065,14 +10141,41 @@ void cleanup_x_and_P(int len)
   size_x_k_s_kept=0;
 }
 
+
 bool sanity_check_variance(const char *name,int iteration,
-			   double **var,int size)
+			   double **var,double *stddevs,
+			   int size, LOGLIK_LAXNESS laxness)
 {
+  if(laxness==COMPLETELY_LAX)
+    return(true);
+
   int i,j,k=iteration;
   
   for(i=0;i<size;i++)
     {
-      if(var[i][i] < (-1e-20))
+      double tolerance_diag=1.0;
+      double tolerance_nondiag=1.0;
+      switch(laxness)
+	{
+	case LITTLE_LAXNESS:
+	  tolerance_diag=1.0e-20;
+	  tolerance_nondiag=1.0e-14;
+	  break;
+	case MODERATE_LAXNESS:
+	  tolerance_diag=1.0e-10;
+	  tolerance_nondiag=1.0e-7;
+	  break;
+	case HIGH_LAXNESS:
+	  tolerance_diag=1.0e-4;
+	  tolerance_nondiag=1.0e-2;
+	  break;
+	case COMPLETELY_LAX:
+	default:
+	  tolerance_diag=tolerance_nondiag=1.0;
+	  break;
+	}
+      
+      if(var[i][i] < -tolerance_diag*stddevs[i]*stddevs[i])
 	{
 	  if(!silent)
 	    {
@@ -10084,12 +10187,15 @@ bool sanity_check_variance(const char *name,int iteration,
 	  return(false);
 	}
 
+      
       for(j=0;j<size;j++)
 	if(j!=i)
 	  {
-	    if(!almost_equal_lax(var[i][j],var[j][i]) &&
-	       (fabs(var[i][j])>1e-12 || fabs(var[j][i])>1e-12) &&
-	       var[i][j]*var[i][j]>1e-10*var[i][i]*var[j][j])
+	    if(!almost_equal_lax(var[i][j]/stddevs[i]/stddevs[j],var[j][i]/stddevs[i]/stddevs[j],laxness) &&
+	       (fabs(var[i][j])>tolerance_nondiag ||
+		fabs(var[j][i])>tolerance_nondiag) &&
+	       var[i][j]*var[i][j]>
+	       tolerance_nondiag*var[i][i]*var[j][j])
 	      {
 		if(!silent)
 		  {
@@ -10105,7 +10211,7 @@ bool sanity_check_variance(const char *name,int iteration,
 	      var[j][i]=var[i][j];
 	    
 	    if(var[i][j]*var[i][j]>var[i][i]*var[j][j] &&
-	       fabs(var[i][j]*var[i][j])>1e-20)
+	       fabs(var[i][j]*var[i][j])>tolerance_diag)
 	      {
 		if(!silent)
 		  {
@@ -10121,7 +10227,8 @@ bool sanity_check_variance(const char *name,int iteration,
 		return(false);
 	      }
 	  }
-    }
+      
+	  } 
   
   return(true);
 }
@@ -10151,8 +10258,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif // MAIN
   
   /*
-  static gsl_rng *rptr=NULL;
-  if(rptr==NULL)
+    static gsl_rng *rptr=NULL;
+    if(rptr==NULL)
     {
     rptr=gsl_rng_alloc(gsl_rng_rand48);
     gsl_rng_set(rptr, rand()); 
@@ -10590,7 +10697,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			    par_series[numpar]=s;
 			    snprintf(par_name[numpar], 250,
 				     "sigma_%s_%d",
-				    ser[s].name,l+1);
+				     ser[s].name,l+1);
 			  }
 			
 			numpar++; // update the number of parameters
@@ -10727,6 +10834,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       
       if(exist_missing_sd)
 	{
+	  static int firstwarn=1;
 	  if(ser[s].pr->los_m==MISSING_VALUE || 
 	     ser[s].pr->los_s==MISSING_VALUE)
 	    {
@@ -10735,8 +10843,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		"given for serie \"" << ser[s].name << "\"!" << endl;
 	      exit(0);
 #else
-	      Rcout << "Observational noise prior needed but not "
-		"given for serie \"" << ser[s].name << "\"!" << std::endl;
+	      if(firstwarn)
+		 Rcout << "Observational noise prior needed but not "
+		   "given for serie \"" << ser[s].name << "\"!" << std::endl;
+	      firstwarn=0;
 #endif // MAIN
 	    }
 	  
@@ -10951,8 +11061,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  par_region[numpar]=-1;
 	  par_series[numpar]=corr_from_series[i];
 	  snprintf(par_name[numpar], 250, "corr_%s,%d_%s,%d",
-		  ser[corr_from_series[i]].name,corr_from_layer[i]+1,
-		  ser[corr_to_series[i]].name,corr_to_layer[i]+1);
+		   ser[corr_from_series[i]].name,corr_from_layer[i]+1,
+		   ser[corr_to_series[i]].name,corr_to_layer[i]+1);
 	}
       
       numpar++; // update the number of parameters
@@ -10978,9 +11088,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  par_region[numpar]=-1;
 	  par_series[numpar]=feed_to_series[i];
 	  snprintf(par_name[numpar], 250, "beta_%s,%d_%s,%d",
-		  ser[feed_from_series[i]].name,
-		  feed_from_layer[i]+1,ser[feed_to_series[i]].name,
-		  feed_to_layer[i]+1);
+		   ser[feed_from_series[i]].name,
+		   feed_from_layer[i]+1,ser[feed_to_series[i]].name,
+		   feed_to_layer[i]+1);
 	}
       
       numpar++; // update the number of parameters
@@ -11188,6 +11298,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   double **var=Make_matrix(num_states,num_states); // diffusion matrix
 
+  double *stddevs=new double[num_states];
+  for(i=0;i<num_states;i++)
+    {
+      s=state_series[i];
+      stddevs[i]=ser[s].stddev;
+    }
+  
   double **A=Make_matrix(num_states,num_states);
   for(i=0;i<num_states;i++)
     {
@@ -11735,7 +11852,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    timers[2][1]=clock();
 		    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
-		  return -1e+200;
+		    return -1e+200;
 		  }
 		
 		Complex **sigma_Vinv=matrix_eigenvectors(corr_layer[i],
@@ -12091,216 +12208,216 @@ double loglik(double *pars, int dosmooth, int do_realize,
       l=state_layer[i];
       
       //if(!ser[s].no_pull_lower)
-	{
-	  if((is_complex && lambda[i]!=0.0) ||
-	     (!is_complex && lambda_r[i]!=0))
-	    {
-	      unsigned int b;
-	      for(b=i%numsites2;b<num_states;b+=numsites2)
-		{
-		  if(ser[s].init_treatment)
-		    {
-		      double t00=me[0].tm;
-		      if(is_complex)
-			{
-			  Complex ee=lambda[i]*(t00-first_init_time);
-			  W[i] -= 1.0/lambda[i]*(1.0-complex_exp(ee))*
-			    V[i][b]*m[b] - 1.0/lambda[i]*
-			      (1.0/lambda[i]*complex_exp(ee)+t00-meantime-
-			       (first_init_time-meantime)*(1.0-complex_exp(ee)))*
-			      V[i][b]*B[b];
-			}
-		      else
-			{
-			  double ee=lambda_r[i]*(t00-first_init_time);
-			  W_r[i] -= 1.0/lambda_r[i]*
-			    (1.0-exp(ee))*V_r[i][b]*m[b]-1.0/lambda_r[i]*
-			    (1.0/lambda_r[i]*exp(ee)+t00-meantime-
-			     (first_init_time-meantime)*(1.0-exp(ee)))*
-			    V_r[i][b]*B[b];
-			}
-		    }
-		  else
-		    {
-		      double t00=me[0].tm;
-		      if(is_complex)
-			{
-			  W[i] -= 1.0/lambda[i]*V[i][b]*m[b]-1.0/lambda[i]*
-			    (1.0/lambda[i]+t00-meantime)*V[i][b]*B[b];
-			}
-		      else
-			{
-			  W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]-1.0/lambda_r[i]*
-			    (1.0/lambda_r[i]+t00-meantime)*V_r[i][b]*B[b];
-			}
-		    }
-		}
+      {
+	if((is_complex && lambda[i]!=0.0) ||
+	   (!is_complex && lambda_r[i]!=0))
+	  {
+	    unsigned int b;
+	    for(b=i%numsites2;b<num_states;b+=numsites2)
+	      {
+		if(ser[s].init_treatment)
+		  {
+		    double t00=me[0].tm;
+		    if(is_complex)
+		      {
+			Complex ee=lambda[i]*(t00-first_init_time);
+			W[i] -= 1.0/lambda[i]*(1.0-complex_exp(ee))*
+			  V[i][b]*m[b] - 1.0/lambda[i]*
+			  (1.0/lambda[i]*complex_exp(ee)+t00-meantime-
+			   (first_init_time-meantime)*(1.0-complex_exp(ee)))*
+			  V[i][b]*B[b];
+		      }
+		    else
+		      {
+			double ee=lambda_r[i]*(t00-first_init_time);
+			W_r[i] -= 1.0/lambda_r[i]*
+			  (1.0-exp(ee))*V_r[i][b]*m[b]-1.0/lambda_r[i]*
+			  (1.0/lambda_r[i]*exp(ee)+t00-meantime-
+			   (first_init_time-meantime)*(1.0-exp(ee)))*
+			  V_r[i][b]*B[b];
+		      }
+		  }
+		else
+		  {
+		    double t00=me[0].tm;
+		    if(is_complex)
+		      {
+			W[i] -= 1.0/lambda[i]*V[i][b]*m[b]-1.0/lambda[i]*
+			  (1.0/lambda[i]+t00-meantime)*V[i][b]*B[b];
+		      }
+		    else
+		      {
+			W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]-1.0/lambda_r[i]*
+			  (1.0/lambda_r[i]+t00-meantime)*V_r[i][b]*B[b];
+		      }
+		  }
+	      }
 	      
-	      /*
-		if(ser[s].linear_time_dep)
-		{
-		  double t00=me[0].tm;
-		  unsigned int nl=ser[s].numlayers;
-		  //b=series_state_start[s]+numsites*(nl-1)+i%numsites;
+	    /*
+	      if(ser[s].linear_time_dep)
+	      {
+	      double t00=me[0].tm;
+	      unsigned int nl=ser[s].numlayers;
+	      //b=series_state_start[s]+numsites*(nl-1)+i%numsites;
 		  
-		  if(ser[s].init_treatment)
-		    {
-		      if(is_complex)
-			{
-			  Complex ee=lambda[i]*(t00-first_init_time);
-			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
-			  //    (first_init_time-meantime)*exp(ee))
-			  Complex **buffer=
-			    Make_Complex_matrix(num_states,num_states);
-			  // buffer2=buffer*V=(inv(lambda)+
-			  //  1*t(1)*(t00-meantime)-
-			  //         (first_init_time-meantime)*exp(ee))*V
-			  Complex **buffer2=
-			    Make_Complex_matrix(num_states,num_states);
-			  unsigned int ii,jj,kk;
-
-			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
-			  //    (first_init_time-meantime)*exp(ee))
-			  for(ii=0;ii<num_states;ii++)
-			    {
-			      if(lambda[ii]!=0.0)
-				buffer[ii][ii]+=1.0/lambda[ii];
-			      for(jj=0;jj<num_states;jj++)
-				buffer[ii][jj]+=t00-meantime+
-				  (first_init_time-meantime)*complex_exp(ee);
-			    }
-			  
-			  // buffer2=buffer*V
-			  for(ii=0;ii<num_states;ii++)
-			    for(jj=0;jj<num_states;jj++)
-			      for(kk=0;kk<num_states;kk++)
-				buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
-			  
-			  for(ii=0;ii<num_states;ii++)
-			    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
-			  
-			  doubledelete(buffer,num_states);
-			  doubledelete(buffer2,num_states);
-			}
-		      else
-			{
-			  double ee=lambda_r[i]*(t00-first_init_time);
-			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
-			  //    (first_init_time-meantime)*exp(ee))
-			  double **buffer=Make_matrix(num_states,num_states);
-			  // buffer2=buffer*V=(inv(lambda)+
-			  //  1*t(1)*(t00-meantime)-
-			  //         (first_init_time-meantime)*exp(ee))*V
-			  double **buffer2=Make_matrix(num_states,num_states);
-			  unsigned int ii,jj,kk;
-
-			  // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
-			  //    (first_init_time-meantime)*exp(ee))
-			  for(ii=0;ii<num_states;ii++)
-			    {
-			      if(lambda_r[ii]!=0.0)
-				buffer[ii][ii]+=1.0/lambda_r[ii];
-			      for(jj=0;jj<num_states;jj++)
-				buffer[ii][jj]+=t00-meantime+
-				  (first_init_time-meantime)*exp(ee);
-			    }
-			  
-			  // buffer2=buffer*V
-			  for(ii=0;ii<num_states;ii++)
-			    for(jj=0;jj<num_states;jj++)
-			      for(kk=0;kk<num_states;kk++)
-				buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
-			  
-			  for(ii=0;ii<num_states;ii++)
-			    W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
-			  
-			  doubledelete(buffer,num_states);
-			  doubledelete(buffer2,num_states);
-			}
-		    }
-		  else
-		    {
-		      if(is_complex)
-			{
-			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
-			  Complex **buffer=
-			    Make_Complex_matrix(num_states,num_states);
-			  // buffer2=buffer*V=(inv(lambda)+1*t(1)*(t00-meantime))*V
-			  Complex **buffer2=
-			    Make_Complex_matrix(num_states,num_states);
-			  unsigned int ii,jj,kk;
-
-			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
-			  for(ii=0;ii<num_states;ii++)
-			    {
-			      if(lambda[ii]!=0.0)
-				buffer[ii][ii]+=1.0/lambda[ii];
-			      for(jj=0;jj<num_states;jj++)
-				buffer[ii][jj]+=t00-meantime;
-			    }
-			  
-			  // buffer2=buffer*V
-			  for(ii=0;ii<num_states;ii++)
-			    for(jj=0;jj<num_states;jj++)
-			      for(kk=0;kk<num_states;kk++)
-				buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
-			  
-			  for(ii=0;ii<num_states;ii++)
-			    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
-			  
-			  doubledelete(buffer,num_states);
-			  doubledelete(buffer2,num_states);
-
-			}
-		      else
-			{
-			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
-			  double **buffer=Make_matrix(num_states,num_states);
-			  // buffer2=buffer*V=(inv(lambda)+1*t(1)*(t00-meantime))*V
-			  double **buffer2=Make_matrix(num_states,num_states);
-			  unsigned int ii,jj,kk;
-			  
-			  // buffer=inv(lambda)+1*t(1)*(t00-meantime)
-			  for(ii=0;ii<num_states;ii++)
-			    {
-			      if(lambda_r[ii]!=0.0)
-				buffer[ii][ii]+=1.0/lambda_r[ii];
-			      for(jj=0;jj<num_states;jj++)
-				buffer[ii][jj]+=t00-meantime;
-			    }
-
-			  // buffer2=buffer*V
-			  for(ii=0;ii<num_states;ii++)
-			    for(jj=0;jj<num_states;jj++)
-			      for(kk=0;kk<num_states;kk++)
-				buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
-			  
-			  if(detailed_loglik)
-			    {
-			      show_mat("buffer",buffer,num_states,num_states);
-			      show_mat("buffer2",buffer2,num_states,num_states);
-			    }
-			  
-			  for(ii=0;ii<num_states;ii++)
-			    W_r[i] -= 1.0/lambda_r[i]*
-			      (1.0/lambda_r[i]+t00-meantime)*V_r[i][ii]*B[ii];
-			    //  W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
-			  
-			  doubledelete(buffer,num_states);
-			  doubledelete(buffer2,num_states);
-			}
-		    }
-		}
-	      */
-	    }
-	  else
-	    {
+	      if(ser[s].init_treatment)
+	      {
 	      if(is_complex)
-		W[i]=0.0; // Assume fixed initial value
+	      {
+	      Complex ee=lambda[i]*(t00-first_init_time);
+	      // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+	      //    (first_init_time-meantime)*exp(ee))
+	      Complex **buffer=
+	      Make_Complex_matrix(num_states,num_states);
+	      // buffer2=buffer*V=(inv(lambda)+
+	      //  1*t(1)*(t00-meantime)-
+	      //         (first_init_time-meantime)*exp(ee))*V
+	      Complex **buffer2=
+	      Make_Complex_matrix(num_states,num_states);
+	      unsigned int ii,jj,kk;
+
+	      // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+	      //    (first_init_time-meantime)*exp(ee))
+	      for(ii=0;ii<num_states;ii++)
+	      {
+	      if(lambda[ii]!=0.0)
+	      buffer[ii][ii]+=1.0/lambda[ii];
+	      for(jj=0;jj<num_states;jj++)
+	      buffer[ii][jj]+=t00-meantime+
+	      (first_init_time-meantime)*complex_exp(ee);
+	      }
+			  
+	      // buffer2=buffer*V
+	      for(ii=0;ii<num_states;ii++)
+	      for(jj=0;jj<num_states;jj++)
+	      for(kk=0;kk<num_states;kk++)
+	      buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
+			  
+	      for(ii=0;ii<num_states;ii++)
+	      W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
+			  
+	      doubledelete(buffer,num_states);
+	      doubledelete(buffer2,num_states);
+	      }
 	      else
-		W_r[i]=0.0; // Assume fixed initial value
-	    }
-	}
+	      {
+	      double ee=lambda_r[i]*(t00-first_init_time);
+	      // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+	      //    (first_init_time-meantime)*exp(ee))
+	      double **buffer=Make_matrix(num_states,num_states);
+	      // buffer2=buffer*V=(inv(lambda)+
+	      //  1*t(1)*(t00-meantime)-
+	      //         (first_init_time-meantime)*exp(ee))*V
+	      double **buffer2=Make_matrix(num_states,num_states);
+	      unsigned int ii,jj,kk;
+
+	      // buffer=inv(lambda)+1*t(1)*((t00-meantime)-
+	      //    (first_init_time-meantime)*exp(ee))
+	      for(ii=0;ii<num_states;ii++)
+	      {
+	      if(lambda_r[ii]!=0.0)
+	      buffer[ii][ii]+=1.0/lambda_r[ii];
+	      for(jj=0;jj<num_states;jj++)
+	      buffer[ii][jj]+=t00-meantime+
+	      (first_init_time-meantime)*exp(ee);
+	      }
+			  
+	      // buffer2=buffer*V
+	      for(ii=0;ii<num_states;ii++)
+	      for(jj=0;jj<num_states;jj++)
+	      for(kk=0;kk<num_states;kk++)
+	      buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
+			  
+	      for(ii=0;ii<num_states;ii++)
+	      W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
+			  
+	      doubledelete(buffer,num_states);
+	      doubledelete(buffer2,num_states);
+	      }
+	      }
+	      else
+	      {
+	      if(is_complex)
+	      {
+	      // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+	      Complex **buffer=
+	      Make_Complex_matrix(num_states,num_states);
+	      // buffer2=buffer*V=(inv(lambda)+1*t(1)*(t00-meantime))*V
+	      Complex **buffer2=
+	      Make_Complex_matrix(num_states,num_states);
+	      unsigned int ii,jj,kk;
+
+	      // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+	      for(ii=0;ii<num_states;ii++)
+	      {
+	      if(lambda[ii]!=0.0)
+	      buffer[ii][ii]+=1.0/lambda[ii];
+	      for(jj=0;jj<num_states;jj++)
+	      buffer[ii][jj]+=t00-meantime;
+	      }
+			  
+	      // buffer2=buffer*V
+	      for(ii=0;ii<num_states;ii++)
+	      for(jj=0;jj<num_states;jj++)
+	      for(kk=0;kk<num_states;kk++)
+	      buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
+			  
+	      for(ii=0;ii<num_states;ii++)
+	      W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
+			  
+	      doubledelete(buffer,num_states);
+	      doubledelete(buffer2,num_states);
+
+	      }
+	      else
+	      {
+	      // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+	      double **buffer=Make_matrix(num_states,num_states);
+	      // buffer2=buffer*V=(inv(lambda)+1*t(1)*(t00-meantime))*V
+	      double **buffer2=Make_matrix(num_states,num_states);
+	      unsigned int ii,jj,kk;
+			  
+	      // buffer=inv(lambda)+1*t(1)*(t00-meantime)
+	      for(ii=0;ii<num_states;ii++)
+	      {
+	      if(lambda_r[ii]!=0.0)
+	      buffer[ii][ii]+=1.0/lambda_r[ii];
+	      for(jj=0;jj<num_states;jj++)
+	      buffer[ii][jj]+=t00-meantime;
+	      }
+
+	      // buffer2=buffer*V
+	      for(ii=0;ii<num_states;ii++)
+	      for(jj=0;jj<num_states;jj++)
+	      for(kk=0;kk<num_states;kk++)
+	      buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
+			  
+	      if(detailed_loglik)
+	      {
+	      show_mat("buffer",buffer,num_states,num_states);
+	      show_mat("buffer2",buffer2,num_states,num_states);
+	      }
+			  
+	      for(ii=0;ii<num_states;ii++)
+	      W_r[i] -= 1.0/lambda_r[i]*
+	      (1.0/lambda_r[i]+t00-meantime)*V_r[i][ii]*B[ii];
+	      //  W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
+			  
+	      doubledelete(buffer,num_states);
+	      doubledelete(buffer2,num_states);
+	      }
+	      }
+	      }
+	    */
+	  }
+	else
+	  {
+	    if(is_complex)
+	      W[i]=0.0; // Assume fixed initial value
+	    else
+	      W_r[i]=0.0; // Assume fixed initial value
+	  }
+      }
     }
 
 #ifndef MAIN
@@ -12730,81 +12847,81 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    }
 
 		  /*
-		  if(ser[s].linear_time_dep)
+		    if(ser[s].linear_time_dep)
 		    {
-		      b=series_state_start[s]+numsites*(nl-1)+i%numsites;
+		    b=series_state_start[s]+numsites*(nl-1)+i%numsites;
 		      
-		      if(is_complex)
-			{
-			  Complex ee=lambda[i]*dt;
-			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
-			  //    (t_k[k-1]-meantime)*exp(ee))
-			  Complex **buffer=
-			    Make_Complex_matrix(num_states,num_states);
-			  // buffer2=buffer*V
-			  Complex **buffer2=
-			    Make_Complex_matrix(num_states,num_states);
-			  unsigned int ii,jj,kk;
+		    if(is_complex)
+		    {
+		    Complex ee=lambda[i]*dt;
+		    // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+		    //    (t_k[k-1]-meantime)*exp(ee))
+		    Complex **buffer=
+		    Make_Complex_matrix(num_states,num_states);
+		    // buffer2=buffer*V
+		    Complex **buffer2=
+		    Make_Complex_matrix(num_states,num_states);
+		    unsigned int ii,jj,kk;
 			  
-			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
-			  //    (t_k[k-1]-meantime)*exp(ee))
-			  for(ii=0;ii<num_states;ii++)
-			    {
-			      if(lambda[ii]!=0.0)
-				buffer[ii][ii]+=1.0/lambda[ii];
-			      for(jj=0;jj<num_states;jj++)
-				buffer[ii][jj]+=t_k[k]-meantime+
-				  (t_k[k-1]-meantime)*complex_exp(ee);
-			    }
+		    // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+		    //    (t_k[k-1]-meantime)*exp(ee))
+		    for(ii=0;ii<num_states;ii++)
+		    {
+		    if(lambda[ii]!=0.0)
+		    buffer[ii][ii]+=1.0/lambda[ii];
+		    for(jj=0;jj<num_states;jj++)
+		    buffer[ii][jj]+=t_k[k]-meantime+
+		    (t_k[k-1]-meantime)*complex_exp(ee);
+		    }
 			  
-			  // buffer2=buffer*V
-			  for(ii=0;ii<num_states;ii++)
-			    for(jj=0;jj<num_states;jj++)
-			      for(kk=0;kk<num_states;kk++)
-				buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
+		    // buffer2=buffer*V
+		    for(ii=0;ii<num_states;ii++)
+		    for(jj=0;jj<num_states;jj++)
+		    for(kk=0;kk<num_states;kk++)
+		    buffer2[ii][jj]+=buffer[ii][kk]*V[kk][jj];
 			  
-			  for(ii=0;ii<num_states;ii++)
-			    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
+		    for(ii=0;ii<num_states;ii++)
+		    W[i] -= 1.0/lambda[i]*buffer2[i][ii]*B[ii];
 			  
-			  doubledelete(buffer,num_states);
-			  doubledelete(buffer2,num_states);
-			}
-		      else
-			{
-			  double ee=lambda_r[i]*dt;
-			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
-			  //    (t_k[k-1]-meantime)*exp(ee))
-			  double **buffer=Make_matrix(num_states,num_states);
-			  // buffer2=buffer*V
-			  double **buffer2=Make_matrix(num_states,num_states);
-			  unsigned int ii,jj,kk;
+		    doubledelete(buffer,num_states);
+		    doubledelete(buffer2,num_states);
+		    }
+		    else
+		    {
+		    double ee=lambda_r[i]*dt;
+		    // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+		    //    (t_k[k-1]-meantime)*exp(ee))
+		    double **buffer=Make_matrix(num_states,num_states);
+		    // buffer2=buffer*V
+		    double **buffer2=Make_matrix(num_states,num_states);
+		    unsigned int ii,jj,kk;
 			  
-			  // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
-			  //    (t_k[k-1]-meantime)*exp(ee))
-			  for(ii=0;ii<num_states;ii++)
-			    {
-			      if(lambda_r[ii]!=0.0)
-				buffer[ii][ii]+=1.0/lambda_r[ii];
-			      for(jj=0;jj<num_states;jj++)
-				buffer[ii][jj]+=t_k[k]-meantime+
-				  (t_k[k-1]-meantime)*exp(ee);
-			    }
+		    // buffer=inv(lambda)+1*t(1)*((t_k[k]-meantime)-
+		    //    (t_k[k-1]-meantime)*exp(ee))
+		    for(ii=0;ii<num_states;ii++)
+		    {
+		    if(lambda_r[ii]!=0.0)
+		    buffer[ii][ii]+=1.0/lambda_r[ii];
+		    for(jj=0;jj<num_states;jj++)
+		    buffer[ii][jj]+=t_k[k]-meantime+
+		    (t_k[k-1]-meantime)*exp(ee);
+		    }
 			  
-			  // buffer2=buffer*V
-			  for(ii=0;ii<num_states;ii++)
-			    for(jj=0;jj<num_states;jj++)
-			      for(kk=0;kk<num_states;kk++)
-				buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
+		    // buffer2=buffer*V
+		    for(ii=0;ii<num_states;ii++)
+		    for(jj=0;jj<num_states;jj++)
+		    for(kk=0;kk<num_states;kk++)
+		    buffer2[ii][jj]+=buffer[ii][kk]*V_r[kk][jj];
 			  
-			  for(ii=0;ii<num_states;ii++)
-			    W_r[i] -= 1.0/lambda_r[i]*
-			      (1.0/lambda_r[i]+t_k[k]-meantime-(t_k[k-1]-meantime)*(1.0-exp(ee)))*V_r[i][ii]*B[ii];
-			    //W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
+		    for(ii=0;ii<num_states;ii++)
+		    W_r[i] -= 1.0/lambda_r[i]*
+		    (1.0/lambda_r[i]+t_k[k]-meantime-(t_k[k-1]-meantime)*(1.0-exp(ee)))*V_r[i][ii]*B[ii];
+		    //W_r[i] -= 1.0/lambda_r[i]*buffer2[i][ii]*B[ii];
 
-			  doubledelete(buffer,num_states);
-			  doubledelete(buffer2,num_states);
-			}
-		     }
+		    doubledelete(buffer,num_states);
+		    doubledelete(buffer2,num_states);
+		    }
+		    }
 		  */
 		}
 	      
@@ -13172,10 +13289,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		     num_states,num_states);
 	}
 
+      
       // Sanity check of Q_k
-      if(!sanity_check_variance("Q_k",k,Q_k[k],num_states))
+      if(!sanity_check_variance("Q_k",k,Q_k[k],stddevs,num_states,
+				laxness_level))
 	return -1e+200;
-	
+      
 
       // Calculate P_k_(k-1) = Q_k + F_k * P_(k-1),(k-1) * F_k' :
       for(i=0;i<num_states;i++)
@@ -13195,10 +13314,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      P_k_prev[k][i][j]+=P_k_buffer[i][l]*F_k[k][j][l];
 	  }    				 
 
+      
       // Sanity check of P_k_prev
-      if(!sanity_check_variance("P_k_prev",k,P_k_prev[k],num_states))
+      if(!sanity_check_variance("P_k_prev",k,P_k_prev[k],stddevs,
+				num_states, laxness_level))
 	return -1e+200;
-	
 
       // Initial value treatment:
       for(s=0;s<num_series;s++)
@@ -13335,11 +13455,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      P_k_now[k][j1][j2] = P_k_prev[k][j1][j2] -
 		K_k[j1]*P_k_prev[k][me[k].index[0]][j2];
 
+
 	  
 	  // Sanity check of P_k_now
-	  if(!sanity_check_variance("P_k_now",k,P_k_now[k],num_states))
-	    return -1e+200;
-	
+	  if(laxness_level!=COMPLETELY_LAX)
+	    if(!sanity_check_variance("P_k_now",k,P_k_now[k],
+				      stddevs, num_states,
+				      LOGLIK_LAXNESS(int(laxness_level)+1)))
+	      return -1e+200;
+	  
 	
 	  
 	  //bool isok=(ret>-1e+200 && ret<1e+200) ? true : false;
@@ -13537,11 +13661,15 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		for(i=0;i<n;i++)
 		  P_k_now[k][j1][j2] -= K_k[j1][i]*P_k_prev[k][me[k].index[i]][j2];
 	      }
+
 	  
 	  // Sanity check of P_k_now
-	  if(!sanity_check_variance("P_k_now",k,P_k_now[k],num_states))
+	  if(laxness_level!=COMPLETELY_LAX)
+	    if(!sanity_check_variance("P_k_now",k,P_k_now[k],
+				      stddevs,num_states,
+				      LOGLIK_LAXNESS(int(laxness_level)+1)))
 	    return -1e+200;
-	
+	  
 	  
 	  /* DEBUG stuff
 	     Rcout << "loglik mainloop " << k << std::endl;
@@ -14164,6 +14292,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   delete [] t_k;
   doubledelete(var,num_states);
+  if(stddevs)
+    delete [] stddevs;
   doubledelete(A,num_states);
   doubledelete(P_k_buffer,num_states);
 
@@ -15871,6 +16001,10 @@ const double loglikwrapper(const NumericVector &vals)
     }
    
   double ret=-minusloglik(val2);
+  
+  //show_vec("val2",val2,len);
+  //Rcout << "l=" << ret << std::endl;
+  
   delete [] val2;
 
   if(!(ret> -1e+200 && ret < 1e+200))
@@ -15878,7 +16012,7 @@ const double loglikwrapper(const NumericVector &vals)
 
   //if(!silent)
   //printf("ret=%f\n",ret);
-  
+
   return -ret;
 }
 
@@ -15912,6 +16046,12 @@ const double partial_loglikwrapper(const NumericVector &vals)
 }
 
 
+enum LAYERANALYZER_MODE {LAYERANALYZER_BAYESIAN=0,
+  LAYERANALYZER_ML_FROM_MCMC=1, LAYERANALYZER_ML_FROM_INPARS=2,
+  LAYERANALYZER_ML_FROM_HYBRID=3, LAYERANALYZER_LOGLIK_FOR_INPARS=4,
+  LAYERANALYZER_SMOOTH_FROM_INPARS=5, LAYERANALYZER_NUMPAR=6,
+  LAYERANALYZER_UNKNOWN=7};
+
 RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP Spacing,SEXP NumTemp,
 			      SEXP do_model_likelihood,
@@ -15925,6 +16065,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
                               SEXP causal, SEXP causal_symmetric, SEXP corr,
 			      SEXP smooth_specs, SEXP realization_specs,
 			      SEXP ReturnResiduals,
+			      SEXP mode,
+			      SEXP loglik_laxness,
 			      SEXP input_param_values)
 {  
   reset_global_variables();
@@ -15955,16 +16097,71 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   int use_half_times=as<int>(UseHalfLives);
   int return_mcmc=as<int>(ReturnMCMC);
   int return_residuals=as<int>(ReturnResiduals);
+
   
+  int intmode=as<int>(mode);
+  if(intmode<0 || intmode>=((int)LAYERANALYZER_UNKNOWN))
+    {
+      Rcout << "mode=" << intmode << " is not valid!" << std::endl;
+      return NULL;
+    }
+  LAYERANALYZER_MODE lmode=(LAYERANALYZER_MODE) intmode;
+
+  
+  int intlaxness=as<int>(loglik_laxness);
+  if(intlaxness<0 || intlaxness>=((int)COMPLETELY_LAX))
+    {
+      Rcout << "loglik_laxness=" << intlaxness << " is not valid!" << std::endl;
+      return NULL;
+    }
+  laxness_level=(LOGLIK_LAXNESS)intlaxness;
+  
+  
+  //if(!silent)
+  //Rcout << "Reading Inparameters" << std::endl;
+     
   NumericMatrix in_pars=as<NumericMatrix>(input_param_values); 
   int inpars_numsets=in_pars.nrow();
   int inpars_numpars=in_pars.ncol();
   bool no_inpars = (inpars_numsets==1 && inpars_numpars==1) ? true : false;
+
+  //if(!silent)
+  //Rcout << "Inparameters read" << std::endl;
+     
+  if(!do_ml && (lmode==LAYERANALYZER_ML_FROM_MCMC ||
+		lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		lmode==LAYERANALYZER_ML_FROM_HYBRID))
+    {
+      Rcout << "mode=" << intmode << " needs ML treatment!" << std::endl;
+      return NULL;
+    }
+	
+  if(do_ml && !(lmode==LAYERANALYZER_ML_FROM_MCMC || 
+		lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		lmode==LAYERANALYZER_ML_FROM_HYBRID))
+    {
+      Rcout << "mode=" << intmode << "cannot have treatment!" << std::endl;
+      return NULL;
+    }
+	
+  if(no_inpars && (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		   lmode==LAYERANALYZER_ML_FROM_HYBRID ||
+		   lmode==LAYERANALYZER_LOGLIK_FOR_INPARS ||
+		   lmode==LAYERANALYZER_SMOOTH_FROM_INPARS))
+    {
+      Rcout << "mode=" << intmode << " requires input parameters!" << std::endl;
+      return NULL;
+    }
   
+  //if(!silent)
+  //Rcout << "Checked mode" << std::endl;
+     
   double **resids=NULL, *resids_time, **prior_expected_values=NULL;
   int resid_numcol=0, resid_len=0;
   
-  // DEBUG: Rcout << "return_residuals=" << return_residuals << std::endl;
+  // DEBUG:
+  //if(!silent)
+  //Rcout << "return_residuals=" << return_residuals << std::endl;
   
   List smoothspecs=as<List>(smooth_specs);
   int dosmooth=as<int>(smoothspecs["do.smoothing"]);
@@ -16004,6 +16201,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       dosmooth=1;
     }
   
+  if(dosmooth && (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		  lmode==LAYERANALYZER_ML_FROM_HYBRID ||
+		  lmode==LAYERANALYZER_LOGLIK_FOR_INPARS))
+    {
+      Rcout << "mode=" << intmode << " does not allow for smoothing!" <<
+	std::endl;
+      return NULL;
+    }
+
+  //if(!silent)
+  //Rcout << "Smooth specs read" << std::endl;
+     
   List realizespecs=as<List>(realization_specs);
   int do_realizations=as<int>(realizespecs["do.realizations"]);
   int do_realize_start_end=0; // , do_realize_start_end_dt=0; 
@@ -16047,13 +16256,26 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	}
       
     }
-
+  
+  if(do_realizations && (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+			lmode==LAYERANALYZER_ML_FROM_HYBRID ||
+			lmode==LAYERANALYZER_LOGLIK_FOR_INPARS ||
+			lmode==LAYERANALYZER_SMOOTH_FROM_INPARS))
+    {
+      Rcout << "mode=" << intmode << " does not allow for realizations!" <<
+	std::endl;
+      return NULL;
+    }
+  
+  //if(!silent)
+  //Rcout << "Realization specs read" << std::endl;
+     
   
   List inall(input);
   num_series=inall.size();
   
-  if(!silent)
-    Rcout << inall.size() << std::endl;
+  //if(!silent)
+  //Rcout << inall.size() << std::endl;
   
   unsigned int s,i,l;
   int j;
@@ -16442,6 +16664,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   meas_tot_len=j+1;
   
   
+  //if(!silent)
+  //Rcout << "Measurements read" << std::endl;
+     
   
   // Make measurment clusters for smoothed/realized time series:
   if(dosmooth || do_realizations)
@@ -16536,6 +16761,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
     
+  //if(!silent)
+  //Rcout << "Measurement cluster made" << std::endl;
+     
+  
 
   /* DEBUG
      if(return_residuals)
@@ -16632,6 +16861,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       feed_symmetric[i]=0;
     }
   
+  if(!silent)
+    Rcout << "Sympairs check" << std::endl;
+    
   IntegerVector causal_sym_pairs=as<IntegerVector>(causal_symmetric);
   int numsym=causal_sym_pairs.size()/4;
   for(i=num_series_feed;i<num_series_feed+numsym;i++)
@@ -16702,6 +16934,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   num_series_feed+=numsym;
   
+  if(!silent)
+    Rcout << "Corrpairs check" << std::endl;
+    
   
   IntegerVector corr_pairs=as<IntegerVector>(corr);
   num_series_corr=corr_pairs.size()/4;
@@ -16811,6 +17046,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
     
   
+  if(!silent)
+    Rcout << "Connections made" << std::endl;
+     
   
   double ***x=NULL; // smoothing results from the latent processes
   double ***P_k_smooth=NULL, **x_k_smooth=NULL;
@@ -16823,17 +17061,54 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   double *lliks=NULL, *lpriors=NULL;
   int num_lliks=0, num_lpriors=0;
   
-  if(inpars_numpars>0)
+  if(inpars_numpars>0 || lmode==LAYERANALYZER_NUMPAR)
     loglik(NULL); // gives us the global 'numpar', 
 
-  // DEBUG 
-  //Rcout << "inpars_numpars=" << inpars_numpars << " numpar=" << numpar << 
-  //" inpars_numsets=" << inpars_numsets << " no_inpars=" << no_inpars <<
-  //std::endl;
-  
-  if(no_inpars)
+  if(lmode==LAYERANALYZER_NUMPAR)
     {
-      // DEBUG Rcout << "Doing MCMC" << std::endl;
+      if(!silent)
+	Rcout << "Numpar!" << std::endl;
+      List out=List::create(Named("numpar",numpar));
+      StringVector parnames(numpar);
+      for(j=0;j<(int)numpar;j++)
+	{
+	  std::string pname(par_name[j]);
+	  parnames(j)=pname;
+	}
+      out["parameter.names"]=parnames;
+      reset_global_variables();
+      return(out);
+    }
+  
+  if(int(inpars_numpars)!=int(numpar) &&
+     (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+      lmode==LAYERANALYZER_ML_FROM_HYBRID ||
+      lmode==LAYERANALYZER_LOGLIK_FOR_INPARS ||
+      lmode==LAYERANALYZER_SMOOTH_FROM_INPARS))
+    {
+      Rcout << "Input parameter set's length=" << inpars_numpars <<
+	" does not match the length of the model parameter set=" <<
+	numpar << "!" << std::endl;
+      return NULL;
+    }
+  
+  // DEBUG 
+  if(!silent)
+    Rcout << "inpars_numpars=" << inpars_numpars << " numpar=" << numpar << 
+      " inpars_numsets=" << inpars_numsets << " no_inpars=" << no_inpars <<
+      std::endl;
+  if(!silent)
+    Rcout << "ready for mode-based analyses" << std::endl;
+     
+  
+  if(!silent)
+    Rcout << "lmode=" << int(lmode) << std::endl;
+  
+  if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
+    {
+      if(!silent)
+	 Rcout << "Doing MCMC" << std::endl; // debug
       pars=layer_mcmc(num_mcmc, burnin, spacing, numtemp, 
 		      do_importance ? true : false, 
 		      dosmooth | do_realizations, do_realizations,
@@ -16854,21 +17129,23 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    }
 	}
     }
-  else if(inpars_numsets>=1 && !dosmooth && !do_realizations)
+  else if(lmode==LAYERANALYZER_LOGLIK_FOR_INPARS)
     {
       params *help_params=NULL;
       
-      Rcout << "*********************************" << std::endl;
-      Rcout << "*********************************" << std::endl;
-      Rcout << " Starting loglik treatment" << std::endl;
-      Rcout << "*********************************" << std::endl;
-      Rcout << "*********************************" << std::endl;
+      if(!silent)
+	{
+	  Rcout << "*********************************" << std::endl;
+	  Rcout << " Starting loglik treatment" << std::endl;
+	  Rcout << "*********************************" << std::endl;
+	}
       
       if(num_mcmc>0 && burnin>0 && spacing>=0 && numtemp>=0)
 	{
-	  Rcout << "Fetching " << num_mcmc << " samples, burnin=" <<
-	    burnin << " spacing=" << spacing << " numtemp=" << numtemp <<
-	    std::endl;
+	  if(!silent) 
+	    Rcout << "Fetching " << num_mcmc << " samples, burnin=" <<
+	      burnin << " spacing=" << spacing << " numtemp=" << numtemp <<
+	      std::endl;
 	  help_params=layer_mcmc(num_mcmc, burnin, spacing, numtemp, 
 				 false, false, false,
 				 NULL, NULL, NULL, T_ground);
@@ -16885,7 +17162,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       for(int k=0;k<inpars_numsets;k++)
 	{
-	  Rcout << "k=" << k << std::endl;
+	  if(!silent) 
+	    Rcout << "k=" << k << std::endl;
 	  
 	  int num_missing=0;
 	  for(j=0;(int)j<inpars_numpars;j++)
@@ -16899,11 +17177,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(j=0;(int)j<inpars_numpars;j++)
 	    currparam.param[j]=in_pars(k,j);
 	  
-	  show_vec("currparams",currparam.param,inpars_numpars);
+	  if(!silent) 
+	    show_vec("currparams",currparam.param,inpars_numpars);
 	  
 	  if(num_missing>0)
 	    {
-	      Rcout << "optim started" << std::endl;
+	      if(!silent) 
+		Rcout << "optim started" << std::endl;
 
 	      bool detailed_loglik_buffer=detailed_loglik;
 	      double lbest=-1e+200;
@@ -16914,12 +17194,15 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      // causes crash. Seems to stem from using find_closest_param
 	      if(help_params)
 	      {
-		Rcout << "currparam.numparam=" << currparam.numparam << " help_params[last].numparam=" << help_params[num_mcmc-1].numparam << " inpars_numpars=" << inpars_numpars << " numpar=" << numpar << std::endl;
+		if(!silent) 
+		  Rcout << "currparam.numparam=" << currparam.numparam << " help_params[last].numparam=" << help_params[num_mcmc-1].numparam << " inpars_numpars=" << inpars_numpars << " numpar=" << numpar << std::endl;
 		closest=get_closest_param(currparam, help_params, num_mcmc);
-		Rcout << "closest1:" << closest << std::endl;
+		if(!silent) 
+		  Rcout << "closest1:" << closest << std::endl;
 	      }
 	      
-	      Rcout << "closest2:" << closest << std::endl;
+	      if(!silent) 
+		Rcout << "closest2:" << closest << std::endl;
 	      
 	      detailed_loglik=false;
 	      for(i=0;(int)i<num_optim;i++)
@@ -16944,10 +17227,11 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		    partial_par[j]=transform_parameter(in_pars(k,j),
 						       par_trans_type[j]);
 		  List optres=optim(Rcpp::_["par"]= initpars,
-				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
+				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper)
+				    Rcpp::_["method"]="Nelder-Mead" /*
 				    Rcpp::_["method"]="L-BFGS-B",
 				    Rcpp::_["lower"]=-1e+20,
-				    Rcpp::_["upper"]=+1e+20  );
+				    Rcpp::_["upper"]=+1e+20  */ );
 		  NumericVector outpars2=as<NumericVector>(optres["par"]);
 		  NumericVector outval=as<NumericVector>(optres["value"]);
 
@@ -16976,7 +17260,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		}
 	      
 	      detailed_loglik=detailed_loglik_buffer;
-	      Rcout << "optim loop done" << std::endl;
+	      if(!silent) 
+		Rcout << "optim loop done" << std::endl;
 
 	      for(j=0;(int)j<inpars_numpars;j++)
 		{
@@ -16991,33 +17276,43 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		    }
 		}
 
-	      Rcout << "lbest=" << lbest  << std::endl;
-	      Rcout << "fill out done" << std::endl;
+	      if(!silent)
+		{
+		  Rcout << "lbest=" << lbest  << std::endl;
+		  Rcout << "fill out done" << std::endl;
+		}
 	    }
 	  else
 	    {
-	      Rcout << "fill out started" << std::endl;
+	      if(!silent) 
+		Rcout << "fill out started" << std::endl;
 	      for(j=0;(int)j<inpars_numpars;j++)
 		pars[k].param[j]=transform_parameter(in_pars(k,j),
 						     par_trans_type[j]);
-	      Rcout << "fill out done" << std::endl;
+	      if(!silent) 
+		Rcout << "fill out done" << std::endl;
 	    }
 
-	  show_vec("params",pars[k].param,inpars_numpars);
-	  Rcout << "Fill in loglik and logprior" << std::endl;
 	  lliks[k]=loglik(pars[k].param, 0, 0);
-	  Rcout << "Filled in loglik=" << lliks[k] << std::endl;
 	  lpriors[k]=logprob(pars[k],0.0)-lliks[k];
-	  Rcout << "Filled in logprior=" << lpriors[k] << std::endl;
+	  if(!silent)
+	    {
+	      show_vec("params",pars[k].param,inpars_numpars);
+	      Rcout << "Fill in loglik and logprior" << std::endl;
+	      Rcout << "Filled in loglik=" << lliks[k] << std::endl;
+	      Rcout << "Filled in logprior=" << lpriors[k] << std::endl;
+	    }
 	}
 
       if(help_params)
 	delete [] help_params;
       help_params=NULL;
       
-      Rcout << " Ending loglik treatment" << std::endl;
+      if(!silent) 
+	Rcout << " Ending loglik treatment" << std::endl;
     }
-  else if(inpars_numsets==1 && dosmooth && num_smooth==1) 
+  else if(lmode==LAYERANALYZER_SMOOTH_FROM_INPARS &&
+	  inpars_numsets==1 && dosmooth && num_smooth==1) 
     // parameter-estimate-based smoothing
     {
       // PS: Should *not* have any missing values!
@@ -17049,7 +17344,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       cleanup_x_and_P(meas_smooth_len);
     }
-  else if(inpars_numsets>=1 && dosmooth)
+  else if(lmode==LAYERANALYZER_SMOOTH_FROM_INPARS &&
+	  inpars_numsets>=1 && dosmooth)
     {
       num_mcmc=inpars_numsets;
       pars=new params[num_mcmc];
@@ -17143,13 +17439,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   unsigned int numsamples=(unsigned int) num_mcmc;
   // DEBUG:
-  //Rcout << "numsamples=" << numsamples << std::endl;
+  if(!silent)
+    Rcout << "numsamples=" << numsamples << std::endl;
 
 
-  // Something goes wrong here, for loglik mode!
   double **parsample=NULL;
   double **parsample_repar=NULL; 
-  if(!no_inpars && inpars_numsets>=1 && !dosmooth && !do_realizations)
+  if(lmode==LAYERANALYZER_LOGLIK_FOR_INPARS)
     {
       if(int(inpars_numpars)!=int(numpar))
 	{
@@ -17161,9 +17457,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(i=0;i<numpar;i++)
 	    Rcout << "i=" << i << " name=" << par_name[i] << std::endl;
 	}
-      
-      Rcout << no_inpars << " " << inpars_numsets << " " << inpars_numpars <<
-	" " << numpar << " " << dosmooth << " " << do_realizations << std::endl;
+
+      if(silent)
+	Rcout << no_inpars << " " << inpars_numsets << " " << inpars_numpars <<
+	  " " << numpar << " " << dosmooth << " " << do_realizations << std::endl;
       
       parsample=Make_matrix(numpar,inpars_numsets);
       parsample_repar=Make_matrix(numpar,inpars_numsets);
@@ -17171,14 +17468,19 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(i=0;int(i)<MINIM(int(inpars_numpars),int(numpar));i++)
 	for(j=0;j<(int)inpars_numsets;j++)
 	  {
-	    Rcout << i << " " << j << std::endl;
+	    if(!silent)
+	      Rcout << i << " " << j << std::endl;
 	    
 	    parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
 	    parsample_repar[i][j]=pars[j].param[i];
 	  }
     }
-  else if(no_inpars || dosmooth || do_realizations)
+  else if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
+	  lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
+      if(!silent)
+	Rcout << "Starting ML" << std::endl;
+  
       parsample=Make_matrix(numpar,numsamples);
       parsample_repar=Make_matrix(numpar,numsamples);
       for(i=0;i<numpar;i++)
@@ -17190,7 +17492,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  //Rcout << " parameter samples fetched" << std::endl;
+  if(!silent)
+    Rcout << " parameter samples fetched" << std::endl;
 
   char **par_name_orig=new char*[numpar];
   char **par_name_new=new char*[numpar];
@@ -17201,7 +17504,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  //Rcout << " parameter names fetched" << std::endl;
+  if(!silent)
+    Rcout << " parameter names fetched" << std::endl;
 
   // transform the expectancies from logarithmic size to
   // original size:
@@ -17215,14 +17519,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  if(par_type[i]==MU)
 	    {
 	      snprintf(par_name_new[i],99,"exp(%s)",par_name_orig[i]);
-	      if(no_inpars || dosmooth || do_realizations)
+	      if(lmode==LAYERANALYZER_BAYESIAN ||
+		 lmode==LAYERANALYZER_ML_FROM_MCMC ||
+		 lmode==LAYERANALYZER_ML_FROM_HYBRID)
 		for(j=0;j<(int)numsamples;j++)
 		  parsample[i][j]=exp(parsample[i][j]);
 	    }
 	  if(par_type[i]==OBS_SD)
 	    {
 	      snprintf(par_name_new[i],99,"%s_origscale",par_name_orig[i]);
-	      if(no_inpars || dosmooth || do_realizations)
+	      if(lmode==LAYERANALYZER_BAYESIAN ||
+		 lmode==LAYERANALYZER_ML_FROM_MCMC ||
+		 lmode==LAYERANALYZER_ML_FROM_HYBRID)
 		for(j=0;j<(int)numsamples;j++)
 		  parsample[i][j]=(ser[s].pr->is_log==2 ? 
 				   exp(ser[s].mean_val) : ser[s].mean_val)*
@@ -17233,15 +17541,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
 
   // DEBUG
-  //for(i=0;i<numpar;i++)
-  //Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] << std::endl;
+  if(!silent) 
+    for(i=0;i<numpar;i++)
+      Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] << std::endl;
   
   
   // DEBUG:
-  //Rcout << "Stationary stdev?" << std::endl;
+  if(!silent)
+    Rcout << "Stationary stdev?" << std::endl;
 
   if(use_stationary_sdev)
-  if(no_inpars || dosmooth || do_realizations)
+    if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
+       lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       for(s=0;s<num_series;s++)
 	{
@@ -17314,7 +17625,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  // Rcout << "Add extra cycle info" << std::endl;
+  if(!silent)
+    Rcout << "Add extra cycle info" << std::endl;
 
   int numpar2=numpar;
   bool has_cycles[10];
@@ -17339,10 +17651,12 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   StringVector parnames(numpar2);
   
   // DEBUG:
-  // Rcout << "best pars repar" << std::endl;
+  if(!silent)
+    Rcout << "best pars repar" << std::endl;
 
   double *best_pars_repar=new double[numpar];
-  if(no_inpars || dosmooth || do_realizations)
+  if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       if(!do_ml)
 	for(j=0;j<(int)numpar;j++)
@@ -17351,12 +17665,14 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  // Rcout << "ML, do_ml=" << do_ml << std::endl;
+  if(!silent)
+    Rcout << "ML, do_ml=" << do_ml << std::endl;
 
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
   double best_loglik=MISSING_VALUE;
-  if(no_inpars || dosmooth || do_realizations)
+  if(lmode==LAYERANALYZER_ML_FROM_MCMC || lmode==LAYERANALYZER_ML_FROM_INPARS
+     || lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       if(do_ml)
 	{
@@ -17368,23 +17684,46 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  for(i=0;(int)i<num_optim;i++)
 	    {
-	      if(!silent)
-		Rcout << "Optimization nr. " << i << std::endl;
-	      
+	      //if(!silent)
+	      //Rcout << "Optimization nr. " << i << std::endl;
 	      
 	      double *curr_par=new double[numpar];
-	      
+
 	      for(j=0;j<(int)numpar;j++)
 		{
-		  if(i==0)
-		    curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEDIAN);
+		  //if(!silent)
+		  //Rcout << i << "'th fetching transformed parameter " << j << std::endl;
+	      
+		  if(lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		     (lmode==LAYERANALYZER_ML_FROM_HYBRID))
+		    {
+		      /* DEBUG if(!silent)
+			Rcout << i << "'th fetching of parameter " << j <<
+			  " fetching inpars " <<
+			  (i*(inpars_numsets-1)/num_optim) <<
+			  " i=" << i << "  inpars_numsets-1=" <<
+			  inpars_numsets << " num_optim=" <<
+			  num_optim << std::endl; */
+
+		      curr_par[j]=
+			transform_parameter(in_pars(i*(inpars_numsets-1)/
+						    (num_optim-1),j),
+					    par_trans_type[j]);
+		    }
+		  else if(i==0)
+		    curr_par[j]=find_statistics(parsample_repar[j],
+						numsamples,MEDIAN);
 		  else if(i==1)
-		    curr_par[j]=find_statistics(parsample_repar[j],numsamples,MEAN);
-		  else if(num_optim==3)
-		    curr_par[j]=parsample_repar[j][numsamples/2];
-		  else
-		    curr_par[j]=parsample_repar[j][(i-2)*(numsamples-1)/(num_optim-3)];
+		    curr_par[j]=find_statistics(parsample_repar[j],
+						numsamples,MEAN);
+		  else if(lmode==LAYERANALYZER_ML_FROM_MCMC ||
+			  lmode==LAYERANALYZER_ML_FROM_HYBRID)
+		    curr_par[j]=parsample_repar[j][(i-1)*(numsamples-1)/
+						   (num_optim-1)];
 		}
+	      
+	      //if(!silent)
+	      //Rcout << "Fetched transformed parameters " << i << std::endl;
 	      
 	      
 	      
@@ -17410,15 +17749,29 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		initpars[j]=curr_par[j];
 	      Environment stats("package:stats");
 	      Function optim=stats["optim"];
+	      /*
+	      List optres=optim(Rcpp::_["par"]= initpars,
+				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
+				    Rcpp::_["method"]="L-BFGS-B",
+				    Rcpp::_["lower"]=-1e+20,
+				    Rcpp::_["upper"]=+1e+20  ); */
 	      List optres=optim(Rcpp::_["par"]= initpars,
 				Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
-				Rcpp::_["method"]="L-BFGS-B",
+				Rcpp::_["method"]="Nelder-Mead" 
+				/* Rcpp::_["method"]="L-BFGS-B" ,
 				Rcpp::_["lower"]=-1e+20,
-				Rcpp::_["upper"]=+1e+20  );
+				Rcpp::_["upper"]=+1e+20 */  ); 
 	      NumericVector outpars=as<NumericVector>(optres["par"]);
 	      double *pars2=new double[numpar];
 	      for(j=0;j<(int)numpar;j++)
 		pars2[j]=outpars[j];
+	      
+	      
+	      //if(!silent)
+	      //show_vec("optim repar",pars2,numpar);
+	      
+	      //if(!silent)
+	      //Rcout << "Optim done " << i << std::endl;
 	      
 	      
 	      /* RInside R;
@@ -17446,11 +17799,15 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		  for(j=0;j<(int)numpar;j++)
 		    best_pars_repar[j]=pars2[j];
 		  best_loglik=curr_loglik;
+		  //if(!silent) 
+		  //Rcout << "ll=" << best_loglik << std::endl;
 		}
 	      
 	      delete [] pars2;
 	      delete [] curr_par;
 	    }
+	  if(!silent) 
+	  Rcout << "ll=" << best_loglik << std::endl;
 	  
 	  // transform the expectancies from logarithmic size to
 	  // original size:
@@ -17470,6 +17827,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      exp(ml_pars[j]*ml_pars[j]/2.0);
 		}
 	    }
+	  if(!silent)
+	    show_vec("ML_pars",ml_pars,numpar);
 	  
 	  if(return_residuals==1)
 	    {
@@ -17524,7 +17883,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG
-  //Rcout << "ML done" << std::endl;
+  if(!silent)
+    Rcout << "ML done" << std::endl;
   
 #ifdef DETAILED_TIMERS
   List alltimers=List::create(
@@ -17605,14 +17965,17 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     Rcout << "numpar=" << numpar << std::endl;
 
   double *est_pars=new double[numpar];
-  if(no_inpars || dosmooth || do_realizations)
+  
+  if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_INPARS || 
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       for(j=0;j<(int)numpar;j++)
 	{
-	  double mean= find_statistics(parsample[j], numsamples, MEAN);
-	  double med=  find_statistics(parsample[j], numsamples, MEDIAN);
-	  double lower=find_statistics(parsample[j], numsamples, PERCENTILE_2_5);
-	  double upper=find_statistics(parsample[j], numsamples, PERCENTILE_97_5);
+	  double mean= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, MEAN) : MISSING_VALUE;
+	  double med= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, MEDIAN) : MISSING_VALUE;
+	  double lower= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, PERCENTILE_2_5) : MISSING_VALUE;
+	  double upper= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, PERCENTILE_97_5) : MISSING_VALUE;
 	  
 	  if(use_half_times && !strncmp(par_name[j],"dt_",3))
 	    {
@@ -17636,30 +17999,29 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  else
 	    {
 	      est_pars[j]=ml_pars[j];
+	      if(use_half_times && !strncmp(par_name[j],"dt_",3))
+		est_pars[j]*=log(2.0);
 	      parlist=List::create(Named("ML",ml_pars[j]),
 				   Named("mean",mean),
 				   Named("median", med),
 				   Named("lower02_5",lower),
 				   Named("upper97_5",upper) );
+	      
 	    }
 	  out[par_name_new[j]]=parlist;
 	  
-	  if(!silent)
-	    {
-	      Rcout << "j=" << j << std::endl;
-	      Rcout << par_name_new[j] << std::endl;
-	      Rcout << "mean=" << mean << " median=" << med << 
-	    " lower=" << lower << " upper=" << upper << std::endl;
-	    }
-	  
 	  std::string pname(par_name_new[j]);
 	  parnames(j)=pname;
+	  
 	}
     }
   if(ml_pars)
     delete [] ml_pars;
 
-  if(no_inpars || dosmooth || do_realizations)
+  if(lmode==LAYERANALYZER_BAYESIAN ||
+     lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID ||
+     lmode==LAYERANALYZER_ML_FROM_INPARS)
     {
       NumericVector est_paramset(numpar);
       for(i=0;i<numpar;i++)
@@ -17668,9 +18030,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       delete [] est_pars;
     }
   
-
   
-  if(no_inpars || dosmooth || do_realizations)
+  if(lmode==LAYERANALYZER_BAYESIAN ||
+     lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
   if(num_series_feed>0)
     {
@@ -17729,7 +18092,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   out["parameter.names"]=parnames;
 
-  if(no_inpars || dosmooth || do_realizations)
+  if(lmode==LAYERANALYZER_BAYESIAN ||
+     lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
   if(return_residuals==1)
     {
       if(resids && resid_len>0)
@@ -17948,7 +18313,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       doubledelete(procname,num_states);
     }
   
-  if(no_inpars || dosmooth || do_realizations)
+  if(lmode==LAYERANALYZER_BAYESIAN ||
+     lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_INPARS ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       NumericVector est_origpar(numpar);
       for(i=0;i<numpar;i++)
@@ -17957,6 +18325,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       delete [] best_pars_repar;
     }
   
+  if(lmode==LAYERANALYZER_BAYESIAN ||
+     lmode==LAYERANALYZER_ML_FROM_MCMC ||
+     lmode==LAYERANALYZER_ML_FROM_HYBRID)
   if(return_mcmc)
     {
       NumericMatrix mcmcsamples(numpar,numsamples);
@@ -17970,8 +18341,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	for(j=0;j<(int)numsamples;j++)
 	  mcmcsamples2(i,j)=parsample_repar[i][j];
       out["mcmc.origpar"]=mcmcsamples2;
-    }  
-  else if(!no_inpars && inpars_numsets>=1 && !dosmooth && !do_realizations)
+    }
+  
+  if(lmode==LAYERANALYZER_LOGLIK_FOR_INPARS)
     {
       NumericMatrix mcmcsamples(numpar,inpars_numsets);
       for(i=0;i<numpar;i++)
@@ -17984,7 +18356,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	for(j=0;j<(int)inpars_numsets;j++)
 	  mcmcsamples2(i,j)=parsample_repar[i][j];
       out["mcmc.origpar"]=mcmcsamples2;
-    } 
+    }
+  
 
   if(lliks)
     {

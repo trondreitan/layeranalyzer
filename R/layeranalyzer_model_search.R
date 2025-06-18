@@ -736,18 +736,23 @@ traverse.connections.layered=function(... ,
        print.srcref(corr)
      }
      
+     mode="Bayes"
+     if(do.maximum.likelihood)
+       mode="ML-from-MCMC"
+
      if(!test.mode)
      {
        res=layer.analyzer.timeseries.list(data.structure,
              num.MCMC=num.MCMC, spacing=spacing, 
 	     burnin=burnin, num.temp=num.temp,
-             do.model.likelihood=TRUE, do.maximum.likelihood=do.maximum.likelihood, 
+             do.model.likelihood=TRUE,
+	     do.maximum.likelihood=do.maximum.likelihood, 
 	     maximum.likelihood.numstart=maximum.likelihood.numstart,
              silent.mode=silent.mode,talkative.burnin=talkative.burnin,
              talkative.likelihood=talkative.likelihood,
              id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
              T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=causal,corr=corr)
+             causal=causal,corr=corr, layer.analyzer.mode=mode)
          
        ll=res$model.log.lik
        if(do.maximum.likelihood)
@@ -755,6 +760,7 @@ traverse.connections.layered=function(... ,
        if(length(ll)==0)
          ll=NA
        iter=0
+       
        while(iter<5 & (is.na(ll) | !(ll > -1e+199 & ll < 1e+199)))
 	 {
            res=layer.analyzer.timeseries.list(data.structure,
@@ -766,7 +772,7 @@ traverse.connections.layered=function(... ,
              talkative.likelihood=talkative.likelihood,
              id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
              T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=causal,corr=corr)
+             causal=causal,corr=corr,layer.analyzer.mode=mode)
          
             ll=res$model.log.lik
 	    if(do.maximum.likelihood)
@@ -971,6 +977,10 @@ stepwise.connections.layered=function(... ,
    types=c("none","F12","F21","C12")
  numtypes=length(types) 
 
+ mode="Bayes"
+ if(do.maximum.likelihood)
+   mode="ML-from-MCMC"
+
  nullmodel.conn=rep("none",np) 
  nullmodel=layer.analyzer.timeseries.list(data.structure,
 	        num.MCMC=num.MCMC, spacing=spacing, 
@@ -981,7 +991,8 @@ stepwise.connections.layered=function(... ,
                 silent.mode=silent.mode,talkative.burnin=talkative.burnin,
                 talkative.likelihood=talkative.likelihood,
                 id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
-                T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc)
+                T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
+		layer.analyzer.mode=mode)
  null.prob=0  
  best.prob=1 
 
@@ -1052,6 +1063,10 @@ stepwise.connections.layered=function(... ,
            print.srcref(corr)
          }
 
+         mode="Bayes"
+         if(do.maximum.likelihood)
+           mode="ML-from-MCMC"
+
          nummodel=nummodel+1
          res=layer.analyzer.timeseries.list(data.structure,
              num.MCMC=num.MCMC, spacing=spacing, 
@@ -1062,7 +1077,7 @@ stepwise.connections.layered=function(... ,
              talkative.likelihood=talkative.likelihood,
              id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
              T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=causal,corr=corr)
+             causal=causal,corr=corr, layer.analyzer.mode=mode)
 	              
          ll=res$model.log.lik
 	 if(do.maximum.likelihood)
@@ -1081,7 +1096,7 @@ stepwise.connections.layered=function(... ,
              talkative.likelihood=talkative.likelihood,
              id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
              T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=causal,corr=corr)
+             causal=causal,corr=corr, layer.analyzer.mode=mode)
          
            ll=res$model.log.lik
 	   if(do.maximum.likelihood)

@@ -16,6 +16,7 @@ layer.analyzer(... ,
   num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
   do.model.likelihood=TRUE,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
+  maximum.likelihood.strategy="MCMC-from-model",
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
   id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE,causal=NULL,causal.symmetric=NULL,corr=NULL,
@@ -26,7 +27,8 @@ layer.analyzer(... ,
   realization.specs=
      list(do.realizations=FALSE,num.realizations=1000,strategy="N",
           realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE)
+  return.residuals=FALSE,
+  loglik.laxness="high")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -98,6 +100,22 @@ layer.analyzer(... ,
  The number of ML optimizations performed, it applicable. (If 'do.maximum.likelihood'
  is set to 'TRUE'.) Default:10. 
  }
+ \item{maximum.likelihood.strategy}{
+ In layeranalyzer, ML optimizations are per default
+ (maximum.likelihood.strategy="MCMC-from-model") started from
+ MCMC samples,a s it was found that completely randomly drawn starting
+ points worked poorly for large models. However, MCMC convergence
+ is no guarantee either, especially for models with multiple datasets and
+ connections between them. 'maximum.likelihood.strategy' allows
+ for using alternative startegies for optimization in connection
+ models by MCMC sampling from a model that is the same in structure
+ but without connections and using these samples as starting points
+ for the optimization instead, which is specified by setting
+ maximum.likelihood.strategy="MCMC-from-nonconnected". The third
+ possibility is to set maximum.likelihood.strategy="MCMC-from-hybrid",
+ which alternates betwen using MCMC samples from the connection model
+ and from MCMC samples for the non-connected model.
+ } 
  \item{silent.mode}{
  If set to 'FALSE', the routine will show a lot debug information while running.
  This can be useful for tempering purposes, since the number of tempering
@@ -302,6 +320,17 @@ layer.analyzer(... ,
  is used for process inference), as it is the deviations in the
  Kalman filter that are assumed to be independent from measurement
  to measurement.
+ }
+ \item{loglik.laxness}{
+ There are sanity checks for each measurement point handled during the
+ log-likelihood calculation, in order to avoid errors in the calculation
+ due to nuemrical errors. However, some nuemrical inaccuracies will
+ always exist, so some laxness in these checks must be allowed.
+ Too much laxness and erroneous log-likelihoods may be used.
+ Too much rigidity, i.e. too little laxness and parameter values
+ may needlessly be excluded and the optimal estiamtion is not
+ achieved. Default laxness is "high", but options are also "low"
+ (very rigid), "moderate" and "complete" (sanity checks are not performed).
  }
 }
 \details{

@@ -15,6 +15,7 @@
 #
 #####################################################
 
+library(coda)
 
 #####################################################
 # 'layer.analyzer' allows the user to input a set of
@@ -29,6 +30,7 @@ layer.analyzer=function(... ,
   num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
   do.model.likelihood=TRUE,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
+  maximum.likelihood.strategy="MCMC-from-model",
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
   id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE,causal=NULL,causal.symmetric=NULL,corr=NULL,
@@ -39,9 +41,90 @@ layer.analyzer=function(... ,
   realization.specs=
     list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE)
+  return.residuals=FALSE,
+  loglik.laxness="high"
+  )
 {
   data.structure=list(...)
+
+  layer.analyzer.ml.strategies=c("MCMC-from-model","MCMC-from-nonconnected",
+    "MCMC-from-model-and-nonconnected")
+
+  # Check maximum.likelihood.strategy
+  if(do.maximum.likelihood)
+   if(sum(maximum.likelihood.strategy==layer.analyzer.ml.strategies)!=1)
+     stop(sprintf("Unknown maximum.likelihood.strategy. Options are \"%s\".",
+         paste(layer.analyzer.ml.strategies,collapse="\",\"")))
+  if(!do.maximum.likelihood)
+    maximum.likelihood.strategy="MCMC-from-model"
+
+  mode="Bayes"
+  if(do.maximum.likelihood)
+    mode="ML-from-MCMC"
+
+  nonconn=NULL
+  if(do.maximum.likelihood &&
+     (maximum.likelihood.strategy=="MCMC-from-nonconnected" | 
+     maximum.likelihood.strategy=="MCMC-from-model-and-nonconnected"))
+  {
+      model=layer.analyzer.timeseries.list(data.structure,
+        num.MCMC=num.MCMC, spacing=spacing,burnin=burnin,num.temp=num.temp,
+        do.model.likelihood=FALSE,
+        do.maximum.likelihood=FALSE,
+        maximum.likelihood.numstart=0,
+        silent.mode=TRUE,talkative.burnin=FALSE,
+        talkative.likelihood=FALSE,
+        id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
+        T.ground=T.ground, # start.parameters=0,
+        use.half.lives=use.half.lives, mcmc=FALSE,
+        causal=causal,causal.symmetric=causal.symmetric,corr=corr,
+        smoothing.specs=smoothing.specs, realization.specs=realization.specs,
+        return.residuals=return.residuals, smooth.previous.run=FALSE,
+        previous.run=NULL,layer.analyzer.mode="Numpar")
+      numpar=model$numpar
+      #print.srcref(sprintf("numpar=%d",numpar))
+
+     nonconn=layer.analyzer.timeseries.list(data.structure,
+      num.MCMC=num.MCMC, spacing=spacing,burnin=burnin,num.temp=num.temp,
+      do.model.likelihood=FALSE,
+      do.maximum.likelihood=TRUE,
+      maximum.likelihood.numstart=maximum.likelihood.numstart,
+      silent.mode=TRUE,talkative.burnin=FALSE,
+      talkative.likelihood=FALSE,
+      id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
+      T.ground=T.ground, # start.parameters=0,
+      use.half.lives=use.half.lives, mcmc=TRUE,
+        causal=NULL,causal.symmetric=NULL,corr=NULL,
+      smoothing.specs=
+         list(do.smoothing=FALSE,smoothing.time.diff=0,
+         smoothing.start=NULL,smoothing.end=NULL,
+         num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE),
+      realization.specs=
+         list(do.realizations=FALSE,num.realizations=1000,strategy="N",
+         realization.time.diff=0,realization.start=NULL,realization.end=NULL),
+      return.residuals=FALSE, smooth.previous.run=FALSE,
+      previous.run=NULL,layer.analyzer.mode="ML-from-MCMC")
+
+      #print.srcref(sprintf("numpar.conn=%d",numpar))
+      #print.srcref(sprintf("old nonconn size=%d",dim(nonconn$mcmc)[2]))
+
+      # Assume structural elements comes first and connection
+      # parameters at the end:
+      new.mcmc=array(0,c(dim(nonconn$mcmc)[1]+1,numpar))
+      new.mcmc[1,1:dim(nonconn$mcmc)[2]]=nonconn$est.par
+      new.mcmc[1+1:dim(nonconn$mcmc)[1],1:dim(nonconn$mcmc)[2]]=nonconn$mcmc
+      
+      nonconn$mcmc=coda::mcmc(new.mcmc)
+      
+      #print.srcref(sprintf("new mcmc size=%d",dim(nonconn$mcmc)[2])) 
+
+   if(maximum.likelihood.strategy=="MCMC-from-nonconnected")
+     mode="ML-from-input"
+     
+   if(maximum.likelihood.strategy=="MCMC-from-model-and-nonconnected")
+     mode="ML-from-hybrid"
+  }
+
   ret=layer.analyzer.timeseries.list(data.structure,
       num.MCMC=num.MCMC, spacing=spacing,burnin=burnin,num.temp=num.temp,
       do.model.likelihood=do.model.likelihood,
@@ -55,7 +138,8 @@ layer.analyzer=function(... ,
       causal=causal,causal.symmetric=causal.symmetric,corr=corr,
       smoothing.specs=smoothing.specs, realization.specs=realization.specs,
       return.residuals=return.residuals, smooth.previous.run=FALSE,
-      previous.run=NULL)
+      previous.run=nonconn, layer.analyzer.mode=mode, loglik.laxness)
+      
   return(ret)
 }
 
@@ -83,9 +167,16 @@ layer.analyzer.timeseries.list=function(data.structure ,
   realization.specs=
     list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL
+  return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL,
+  layer.analyzer.mode="Bayes",
+  loglik.laxness="high"
   )
 {
+ layer.analyzer.modes=c("Bayes","ML-from-MCMC","ML-from-input",
+	"ML-from-hybrid","Loglik-from-input","Smooth-from-input",
+	"Numpar")
+ layer.analyzer.laxnesses=c("low","moderate","high","complete")
+
  # Number of time series/structures:
  n.ser=n=length(data.structure)
 
@@ -97,15 +188,15 @@ layer.analyzer.timeseries.list=function(data.structure ,
  if(!is.null(previous.run))
     if(!is.null(previous.run$mcmc) & smooth.previous.run==FALSE)
    {
-     show("likelihood calculation mode!")
+     print.srcref("likelihood calculation mode!")
      likelihood.mode=TRUE
    }
-
 
 
  ######################
  # User input checks:
  ######################
+
 
  for(i in 1:n)
  {
@@ -889,8 +980,9 @@ layer.analyzer.timeseries.list=function(data.structure ,
    typeof(maximum.likelihood.numstart)!="double" )
    stop("Option 'maximum.likelihood.numstart' must be an integer!") 
  maximum.likelihood.numstart=as.integer(maximum.likelihood.numstart)
- 
- if(maximum.likelihood.numstart<1)
+
+ print.srcref(sprintf("%d",maximum.likelihood.numstart))
+ if(maximum.likelihood.numstart<1 & do.maximum.likelihood==TRUE)
   stop("Option 'maximum.likelihood.numstart' must be 1 or larger!")
  
  if(is.null(smoothing.specs))
@@ -1195,7 +1287,95 @@ layer.analyzer.timeseries.list=function(data.structure ,
 
    input.mcmc=previous.run$mcmc
  }
+
+ # Check laxness:
+ if(sum(loglik.laxness==layer.analyzer.laxnesses)!=1)
+   stop(sprintf("Illegal loglik.laxness. Options are \"%s\".",
+   			 paste(layer.analyzer.laxnesses,collapse="\",\"")))
  
+ # Check mode:
+ if(sum(layer.analyzer.mode==layer.analyzer.modes)!=1)
+   stop(sprintf("Illegal layer.analyzer.mode. Options are \"%s\".",
+   			 paste(layer.analyzer.modes,collapse="\",\"")))
+ if(layer.analyzer.mode=="Bayes")
+ {
+   if(!is.null(previous.run))
+     stop("Input structure do not make sense for mode=\"Bayes\"")
+
+   if(do.maximum.likelihood)
+     stop("mode=\"Bayes\" and do.maximum.likelihood=TRUE cannot both be true!")
+     
+   if(smooth.previous.run)
+     stop("mode=\"Bayes\" and smooth.previous.run=TRUE cannot both be true!")
+ }
+
+ if(layer.analyzer.mode=="ML-from-MCMC")
+ {
+   if(!is.null(previous.run))
+     stop("Input structure do not make sense for mode=\"ML-from-MCMC\"")
+
+   if(!do.maximum.likelihood)
+     stop("mode=\"ML-from-MCMC\" and do.maximum.likelihood=FALSE cannot both be true!")
+     
+   if(smooth.previous.run)
+     stop("mode=\"ML-from-MCMC\" and smooth.previous.run=TRUE cannot both be true!")
+
+ }
+ 
+ if(layer.analyzer.mode=="ML-from-input")
+ {
+   if(is.null(previous.run))
+     stop("Input structure must be provided for when mode=\"ML-from-input\"")
+
+   if(dim(input.mcmc)[1]==1 & dim(input.mcmc)[2]==1)
+     stop("Input parameters must be provided for when mode=\"ML-from-input\"")
+
+   if(!do.maximum.likelihood)
+     stop("mode=\"ML-from-input\" and do.maximum.likelihood=FALSE cannot both be true!")
+
+   if(smooth.previous.run)
+     stop("mode=\"ML-from-input\" and smooth.previous.run=TRUE cannot both be true!")
+
+   if(smoothing.specs$do.smoothing)
+     stop("Smoothing is not available for mode=\"ML-from-input\"")
+     
+   if(realization.specs$do.realizations)
+     stop("Realizations are not available for mode=\"ML-from-input\"")
+ }
+ 
+ if(layer.analyzer.mode=="Loglik-from-input")
+ {
+   if(is.null(previous.run))
+     stop("Input structure must be provided for when mode=\"Loglik-from-input\"")
+ 
+   if(dim(input.mcmc)[1]==1 & dim(input.mcmc)[2]==1)
+     stop("Input parameters must be provided for when mode=\"Loglik-from-input\"")
+   if(smooth.previous.run)
+     stop("mode=\"Loglik-from-input\" and smooth.previous.run=TRUE cannot both be true!")
+}
+ 
+if(layer.analyzer.mode=="Smooth-from-input")
+{
+   if(is.null(previous.run))
+     stop("Input structure must be provided for when mode=\"Smooth-from-input\"")
+ 
+   if(dim(input.mcmc)[1]==1 & dim(input.mcmc)[2]==1)
+     stop("Input parameters must be provided for when mode=\"Smooth-from-input\"")
+   if(!smooth.previous.run)
+     stop("mode=\"Smooth-from-input\" and smooth.previous.run=FALSE cannot both be true!")
+}
+ 
+if(layer.analyzer.mode=="Numpar")
+{
+  if(!is.null(previous.run))
+     stop("Input structure do not make sense for mode=\"Numpar\"")
+   if(smooth.previous.run)
+     stop("mode=\"Numpar\" and smooth.previous.run=TRUE cannot both be true!")
+}
+
+layeranalyzer.mode=which(layer.analyzer.mode==layer.analyzer.modes)-1
+
+layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
 
  out=.Call('layeranalyzer',data.structure,num.MCMC,burnin,spacing,num.temp,
       as.integer(do.model.likelihood),
@@ -1208,9 +1388,16 @@ layer.analyzer.timeseries.list=function(data.structure ,
       as.integer(mcmc), as.integer(causal), 
       as.integer(causal.symmetric),as.integer(corr), smoothing.specs, 
       realization.specs, ReturnResiduals,
+      layeranalyzer.mode,layeranalyzer.laxness,	
       input.mcmc 
      )
 
+ if(is.null(out))
+   return(NULL)
+   
+ if(layer.analyzer.mode=="Numpar")
+   return(out)
+   
  # Store the list of input time series/structures, in addition
  # to what the analysis returned:
  out$data.structure=out.data.structure
@@ -1235,6 +1422,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
       realization.specs=realization.specs, 
       ReturnResiduals=ReturnResiduals
       )
+
 
  # If MCMC samples were asked for, also return that:
  if(!is.null(out$mcmc))
@@ -1412,7 +1600,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
 # in the form of MCMC samples.
 ########################################################
 
-layer.predict.mcmc=function(... , analysis=NULL, 
+layer.predict.mcmc=function(... , analysis, 
    smoothing.time.diff=0,
    smoothing.start=NULL,smoothing.end=NULL,
    num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE)
@@ -1430,7 +1618,7 @@ layer.predict.mcmc=function(... , analysis=NULL,
 # layer.predict.mcmc.list - Predict (smooth) according
 # to new data but already existing parameter inference
 # in the form of MCMC samples. In this case, the
-# data come sin the form a list of layer.data.series
+# data comes in the form a list of layer.data.series
 # objects, rather than a set of such series, like in
 # 'layer.predict.mcmc'. This is what does the heavy
 # lifting of checking user input and then calling
@@ -1478,6 +1666,8 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
     stop("MCMC sample structure 'mcmc.origpar' is not an MCMC object!")
   }
 
+  
+
   ##### Todo: More checks may be needed!
 
   new.data.structure=analysis$data.structure
@@ -1524,7 +1714,8 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
          list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
 	 return.residuals=return.residuals,
- 	 smooth.previous.run=TRUE, previous.run=analysis)
+ 	 smooth.previous.run=TRUE, previous.run=analysis,
+	 layer.analyzer.mode="Smooth-from-input")
   
   return(ret)
 }
@@ -1539,7 +1730,7 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
 # ML inference). 
 ########################################################
 
-layer.predict.estimate=function(... , analysis=NULL, 
+layer.predict.estimate=function(... , analysis, 
    smoothing.time.diff=0,
    smoothing.start=NULL,smoothing.end=NULL,
   return.residuals=FALSE)
@@ -1552,6 +1743,11 @@ layer.predict.estimate=function(... , analysis=NULL,
     {
       stop("Estimate: List of inputs not is not layer.data.series objects!")
     }
+  }
+
+  if(is.null(analysis))
+  {
+    stop("Analysis must be given!")
   }
 
   analysis2=analysis

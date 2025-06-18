@@ -13,7 +13,7 @@
 }
 \usage{
 layer.predict.mcmc(... ,
-   analysis=NULL, 
+   analysis, 
    smoothing.time.diff=0,
    smoothing.start=NULL,smoothing.end=NULL,
    num.smooth.per.mcmc=10, do.return.smoothing.samples=FALSE)

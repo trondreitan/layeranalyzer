@@ -48,14 +48,16 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
       causal=analysis$causal,corr=analysis$corr,
       causal.symmetric=analysis$causal.symmetric,
      maximum.likelihood.numstart=num.optim,
-     num.MCMC=0,spacing=0,burnin=0,num.temp=0)
+     num.MCMC=0,spacing=0,burnin=0,num.temp=0,
+     layer.analyzer.mode="Loglik-from-input")
  if(do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
      previous.run=analysis2,silent.mode=silent.mode,
       causal=analysis$causal,corr=analysis$corr,
       causal.symmetric=analysis$causal.symmetric,
      maximum.likelihood.numstart=num.optim,
-     num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp)
+     num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp,
+     layer.analyzer.mode="Loglik-from-input")
      
  return(res$loglik)
 }
@@ -104,14 +106,16 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
       causal=analysis$causal,corr=analysis$corr,
       causal.symmetric=analysis$causal.symmetric,
       maximum.likelihood.numstart=num.optim,
-      num.MCMC=0,spacing=0,burnin=0,num.temp=0)
+      num.MCMC=0,spacing=0,burnin=0,num.temp=0,
+      layer.analyzer.mode="Loglik-from-input")
  if(do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
       previous.run=analysis2,silent.mode=silent.mode,
       causal=analysis$causal,corr=analysis$corr,
       causal.symmetric=analysis$causal.symmetric,
       maximum.likelihood.numstart=num.optim,
-      num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp)
+      num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp,
+      layer.analyzer.mode="Loglik-from-input")
      
  return(res$loglik)
 }

@@ -10,7 +10,9 @@
   surface, post-analysis.
 }
 \usage{
-layer.param.loglik(analysis, new.param.values=NULL, silent.mode=TRUE, num.optim=100)
+layer.param.loglik(analysis, new.param.values=NULL, silent.mode=TRUE, num.optim=100,
+           do.preanalysis.mcmc=FALSE,
+	   num.MCMC=1000,spacing=10,burnin=10000,num.temp=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -44,6 +46,37 @@ layer.param.loglik(analysis, new.param.values=NULL, silent.mode=TRUE, num.optim=
   performed on each such parameter (since optimization is performed
   by hill-climbing and can thus converge to different optima from
   different starting positions).
+ }
+ \item{do.preanalysis.mcmc}{
+  Specifies that an MCMC analysis should take palce before
+  doing the log-likleihood calculation(s). Only a point if some
+  of the parameters are unspecified. If so, and do.preanalysis.mcmc
+  is set to TRUE, then the first optimization will use the
+  parameter values from closest MCMC samples closest to the
+  specified parts of the parameter set.
+  }
+ \item{num.MCMC}{
+ num.MCMC is an integer specifying the number of Markov chain Monte Carlo 
+ (MCMC) samples that the pre-analysis (see do.preanalysis.mcmc) will
+ rest on. Default 1000. More MCMC samples are run internally,
+ depending on the spacing (default 10) and burnin (default 1000).
+ }
+ \item{spacing}{
+ Specifies the number of MCMC iteration (see do.preanalysis.mcmc)
+ between each sample that is used
+ (default 10). A higher number means the samples will be less correlated
+ but requires proptionally more computer time.
+ }
+ \item{burnin}{
+ Markov chain Monte Carlo sampling (see do.preanalysis.mcmc)
+ takes some iterations to converge to 
+ the posterior parameter distribution. 
+ }
+ \item{num.temp}{
+ The number of tempering chains (default 1, meaning it is just the MCMC
+ chain (see do.preanalysis.mcmc)itself that is beeing run).
+ Parallel tempering (Geyer 1991) is a method for overcoming local
+ optima and can thus increase the stability of the results.
  }
 }
 \details{

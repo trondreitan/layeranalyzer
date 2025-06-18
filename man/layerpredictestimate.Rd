@@ -14,7 +14,7 @@
 }
 \usage{
 layer.predict.estimate(... ,
-   analysis=NULL, 
+   analysis, 
    smoothing.time.diff=0,
    smoothing.start=NULL,smoothing.end=NULL,
   return.residuals=FALSE)

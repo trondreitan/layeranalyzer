@@ -32,7 +32,9 @@ layer.analyzer.timeseries.list(data.structure ,
   realization.specs=
      list(do.realizations=FALSE,num.realizations=1000,strategy="N",
           realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-  return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL)
+  return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL,
+  layer.analyzer.mode="Bayes",
+  loglik.laxness="high")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -321,6 +323,39 @@ layer.analyzer.timeseries.list(data.structure ,
    A 'layered' object representing a previous run analysis, where MCMC samples
    have been saved (using the 'mcmc=True' option). Only makes sense if the
    'smooth.previous.run' has been set to TRUE, otherwise the object is irrelevant.
+ }
+ \item{layer.analyzer.mode}{
+ Mode literally set the mode for the call to the C++ code.
+ Options are "Bayes","ML-from-MCMC","ML-from-input","ML-from-hybrid",
+ "Loglik-from-input","Smooth-from-input" and "Numpar".
+ "Bayes" is Bayesian analysis, "ML-from-MCMC" runs ML optimizations starting
+ from an MCMC run. "ML-from-input" instead starts the ML optimizations
+ from the MCMC samples in a previous run (this also allows for
+ explicitely stating the starting points, as one can set the "MCMC" samples
+ from the previous run), while "ML-from-hybrid" starts alternating between
+ MCMC samples fromt he current analysis and the previous run.
+ "Loglik-from-input" is used by the layer.param.loglik(s) methods.
+ "Smooth-from-input" is used by the layer.predict.mcmc methods.
+ "Numpar" is used for extracting just the number of parameters
+ (and the parameter names), which is useful if you need to know the number of
+ parameters before running an anlysis (used in 'layer.analyzer' in
+ case the user wants to start ML optimizations from a previous run without
+ connections).
+ Note that mode needs to match input. So for instance, "Bayes" and
+ "ML-from-MCMC" have no need or want for a previous run, while
+ "ML-from-input","ML-from-hybrid","Loglik-from-input" and "Smooth-from-input"
+ do.
+ }
+ \item{loglik.laxness}{
+ There are sanity checks for each measurement point handled during the
+ log-likelihood calculation, in order to avoid errors in the calculation
+ due to nuemrical errors. However, some nuemrical inaccuracies will
+ always exist, so some laxness in these checks must be allowed.
+ Too much laxness and erroneous log-likelihoods may be used.
+ Too much rigidity, i.e. too little laxness and parameter values
+ may needlessly be excluded and the optimal estiamtion is not
+ achieved. Default laxness is "high", but options are also "low"
+ (very rigid), "moderate" and "complete" (sanity checks are not performed).
  }
 }
 \details{
