@@ -890,7 +890,7 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
   return(ret)
 }
 
-print.layer.series.structure=function(x)
+print.layer.series.structure=function(x,...)
   cat(sprintf("Timeseries: %s, structure:\n%s\n",x$timeseries$name, x$description))
   
 
