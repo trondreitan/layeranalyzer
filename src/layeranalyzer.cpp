@@ -7126,7 +7126,8 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 #ifdef __linux__  
-#include <flexiblas/flexiblas_api.h>
+//#include <flexiblas/flexiblas_api.h>
+#include "flexiblas_api.h"
 #endif // __linux__
 
 // *************************************************

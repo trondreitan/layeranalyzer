@@ -477,7 +477,7 @@ Figure 10. Inferred hare-lynx abundance processes with uncertainty, plus measure
 Maybe even more interestingly, it is possible to do realization analysis on hidden layers. This was done for the hidden layer in a macroevolutionary diversification study, see Fig. 11 and Reitan&Liow (2017). We are currently not aware what potential driver this can be. Note that the inference comes with the identifiability issue (see subsection 4.3.5) of not knowing the location or scale of hidden layers. Potentially, the graph should be flipped around a vertical axis.
 
 ```{r  out.width = "100%", echo = FALSE, fig.align="center", fig.cap="test"}
-knitr::include_graphics("brach_ext.jpg") 
+#knitr::include_graphics("brach_ext.jpg") 
 ```
 Figure 11. Inferred hidden layer for brachipod extinction rates (controlling for bivalve extinction rates, which are causally linked to brachipod extinctionr ates), see Reitan&Liow 2017. Note that layer 2 is here called "hidden layer 1".
 
@@ -485,7 +485,7 @@ Fig. 12 illustrates the feasibility of process inferrence on hidden layers, by w
 
 
 ```{r  out.width = "100%", echo = FALSE, fig.align="center", fig.cap="test"}
-knitr::include_graphics("hidden_sim.gif") 
+# knitr::include_graphics("hidden_sim.gif") 
 ```
 Figure 12: Simulated hidden process as a black line, observed layer as a grey line, time series as circles and reconstructed hidden layer in blue.
 
