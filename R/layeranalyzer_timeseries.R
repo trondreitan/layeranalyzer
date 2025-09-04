@@ -247,7 +247,7 @@ read.layer.data.series=function(filename,name,column.type=c("time","value"),
 
 layer.struct.name=function(struct)
 {
- if(class(struct)!="layer.series.structure")
+ if(!inherits(struct,"layer.series.structure"))
    stop("Input must be a 'layer.series.structure' object!")
 
  out=""
