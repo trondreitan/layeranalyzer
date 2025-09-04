@@ -4,7 +4,6 @@ Title: Time series analysis tool using linear layered SDEs
 Version: 0.3.1-1
 Date: 2025-09-22
 Encoding: UTF-8
-Author: Trond Reitan (trond.reitan@ibv.uio.no)
 Authors@R: person("Trond", "Reitan", email="trond.reitan@ibv.uio.no",
  role=c("aut","cre"))
 Maintainer: Trond Reitan <trond.reitan@ibv.uio.no>
