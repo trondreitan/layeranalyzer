@@ -23,7 +23,7 @@ Imports:
     coda (>= 0.19.1)
 LinkingTo:
     Rcpp
-URL: http://folk.uio.no/trondr/R
+URL: https://folk.universitetetioslo.no/trondr/R/
 LazyData: true
 ByteCompile: yes
 Biarch: no
