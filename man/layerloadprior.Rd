@@ -49,7 +49,7 @@ See also layer.prior.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
+pr=layer.load.prior("https://folk.universitetetioslo.no/trondr/R/test_prior.txt")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
