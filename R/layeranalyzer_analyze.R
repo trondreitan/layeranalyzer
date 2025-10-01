@@ -32,7 +32,7 @@ layer.analyzer=function(... ,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   maximum.likelihood.strategy="MCMC-from-model",
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE,causal=NULL,causal.symmetric=NULL,corr=NULL,
   smoothing.specs=
     list(do.smoothing=FALSE,smoothing.time.diff=0,
@@ -158,7 +158,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
   do.model.likelihood=TRUE,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE,causal=NULL,causal.symmetric=NULL,corr=NULL,
   smoothing.specs=
     list(do.smoothing=FALSE,smoothing.time.diff=0,
@@ -712,12 +712,23 @@ layer.analyzer.timeseries.list=function(data.structure ,
     data.structure[[i]]$prior$dt=as.numeric(data.structure[[i]]$prior$dt)
     if(use.half.lives)
       data.structure[[i]]$prior$dt=data.structure[[i]]$prior$dt/log(2.0)
-
-    if(is.null(data.structure[[i]]$prior$s))
-      stop("If prior is given, it must contain the 95% prior credibility for the stochastic contributions, given as element 's'!")
-    if(length(data.structure[[i]]$prior$s)!=2)
-      stop("Prior for 's' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 's'!")
-    data.structure[[i]]$prior$s=as.numeric(data.structure[[i]]$prior$s)
+    
+    if(is.null(data.structure[[i]]$prior$sigma))
+      stop("If prior is given, it must contain the 95% prior credibility for the stochastic contributions, given as element 'sigma'!")
+    if(length(data.structure[[i]]$prior$sigma)!=2)
+      stop("Prior for 'sigma' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'sigma'!")
+    data.structure[[i]]$prior$sigma=as.numeric(data.structure[[i]]$prior$sigma)
+    
+    if(is.null(data.structure[[i]]$prior$stat.sdev))
+    {
+      data.structure[[i]]$prior$stat.sdev=data.structure[[i]]$prior$sigma
+    }
+    else
+    {
+      if(length(data.structure[[i]]$prior$stat.sdev)!=2)
+        stop("Prior for 'stat.sdev' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for thee stationary standard deviation, 'stat.sdev'!")
+      data.structure[[i]]$prior$stat.sdev=as.numeric(data.structure[[i]]$prior$stat.sdev)
+    }
     
     if(is.null(data.structure[[i]]$prior$init))
       data.structure[[i]]$prior$init=data.structure[[i]]$prior$mu
@@ -909,8 +920,8 @@ layer.analyzer.timeseries.list=function(data.structure ,
  if(typeof(use.stationary.stdev)!="logical" & typeof(use.stationary.stdev)!="integer")
    stop("Option 'use.stationary.stdev' must be a logical!") 
  
- if(use.stationary.stdev & do.maximum.likelihood)
-   stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
+ #if(use.stationary.stdev & do.maximum.likelihood)
+ #  stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
   
  if(typeof(use.half.lives)!="logical" & typeof(use.half.lives)!="integer")
    stop("Option 'use.half.lives' must be a logical!") 

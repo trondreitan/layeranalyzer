@@ -51,7 +51,7 @@ traverse.standalone.layered=function(timeseries,
   time.integrals.possible=FALSE, allow.deterministic.layers=TRUE,   
   num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, 
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, 
   use.half.lives=FALSE, mcmc=FALSE,
   prior=layer.standard.prior)
 {
@@ -184,8 +184,8 @@ traverse.standalone.layered=function(timeseries,
  if(typeof(do.maximum.likelihood)!="logical" & typeof(do.maximum.likelihood)!="integer")
    stop("Option 'do.maximum.likelihood' must be a logical!") 
    
- if(use.stationary.stdev & do.maximum.likelihood)
-   stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
+ #if(use.stationary.stdev & do.maximum.likelihood)
+ #  stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
   
  if(typeof(use.half.lives)!="logical" & typeof(use.half.lives)!="integer")
    stop("Option 'use.half.lives' must be a logical!") 
@@ -262,10 +262,20 @@ traverse.standalone.layered=function(timeseries,
     if(length(prior$dt)!=2)
       stop("Prior for 'dt' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'dt'!")
     
-    if(is.null(prior$s))
-      stop("If prior is given, it must contain the 95% prior credibility for the stochastic contributions, given as element 's'!")
-    if(length(prior$s)!=2)
-      stop("Prior for 's' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 's'!")
+    if(is.null(prior$sigma))
+      stop("If prior is given, it must contain the 95% prior credibility for the stochastic contributions, given as element 'sigma'!")
+    if(length(prior$sigma)!=2)
+      stop("Prior for 'sigma' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'sigma'!")
+    
+    if(is.null(prior$stat.sdev))
+    {
+      prior$stat.sdev=prior$sigma
+    }
+    else
+    {
+      if(length(prior$stat.sdev)!=2)
+        stop("Prior for 'stat.sdev' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'stat.sdev'!")
+    }
     
     if(is.null(prior$init))
       prior$init=c(prior$mu[1]-3*(prior$mu[2]-prior$mu[1]),
@@ -496,7 +506,7 @@ traverse.connections.layered=function(... ,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
   talkative.traversal=TRUE, test.mode=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE, 
   allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE)
 {
@@ -549,8 +559,8 @@ traverse.connections.layered=function(... ,
  if(typeof(use.stationary.stdev)!="logical" & typeof(use.stationary.stdev)!="integer")
    stop("Option 'use.stationary.stdev' must be a logical!") 
  
- if(use.stationary.stdev & do.maximum.likelihood)
-   stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
+ #if(use.stationary.stdev & do.maximum.likelihood)
+ # stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
   
  if(typeof(use.half.lives)!="logical" & typeof(use.half.lives)!="integer")
    stop("Option 'use.half.lives' must be a logical!") 
@@ -811,7 +821,7 @@ stepwise.connections.layered=function(... ,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
   talkative.traversal=TRUE, test.mode=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE, 
   allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE,
   first.is.nullhypothesis=FALSE,ML.IC="AIC")
@@ -865,8 +875,8 @@ stepwise.connections.layered=function(... ,
  if(typeof(use.stationary.stdev)!="logical" & typeof(use.stationary.stdev)!="integer")
    stop("Option 'use.stationary.stdev' must be a logical!") 
  
- if(use.stationary.stdev & do.maximum.likelihood)
-   stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
+ # if(use.stationary.stdev & do.maximum.likelihood)
+ #  stop("Options 'use.stationary.stdev' and 'do.maximum.likelihood' in combination is not implemented, unfortunately!")
   
  if(typeof(use.half.lives)!="logical" & typeof(use.half.lives)!="integer")
    stop("Option 'use.half.lives' must be a logical!") 
