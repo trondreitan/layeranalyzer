@@ -7126,7 +7126,8 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 #ifdef __linux__  
-#include <flexiblas/flexiblas_api.h>
+//#include <flexiblas/flexiblas_api.h>
+#include "flexiblas_api.h"
 #endif // __linux__
 
 // *************************************************
@@ -16615,7 +16616,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       if(first_init_time>first_time)
 	{
 	  char errstr[1000];
-	  sprintf(errstr,"Error: First specified initial time, %f > "
+	  snprintf(errstr,1000, "Error: First specified initial time, %f > "
 		  "first measurement time, %f! Setting first initial "
 		  "time to %f.\n", first_init_time,first_time,first_time);
 	  Rcout << errstr << std::endl;

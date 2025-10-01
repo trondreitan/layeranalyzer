@@ -247,7 +247,7 @@ read.layer.data.series=function(filename,name,column.type=c("time","value"),
 
 layer.struct.name=function(struct)
 {
- if(class(struct)!="layer.series.structure")
+ if(!inherits(struct,"layer.series.structure"))
    stop("Input must be a 'layer.series.structure' object!")
 
  out=""
@@ -890,7 +890,7 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
   return(ret)
 }
 
-print.layer.series.structure=function(x)
+print.layer.series.structure=function(x,...)
   cat(sprintf("Timeseries: %s, structure:\n%s\n",x$timeseries$name, x$description))
   
 
