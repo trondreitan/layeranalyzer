@@ -10,7 +10,7 @@ Note: Lapack, the library I use for linear algebra tasks, recently changed their
 
 Code:
 
-* The R package, layeranalyzer_0.3.1.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.3.1.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
+* The R package, layeranalyzer_0.3.3.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.3.3.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
 
 * Note that a new install file for upcoming version has been added. The old one can be installed with install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/layeranalyzer_0.1.1.tar.gz",type="source").
 
@@ -114,8 +114,10 @@ Simulations can be used for testing the behaviour of the analysis.
 
 Updates and older versions
 Update history:
+
+    02/10-2025: Combined new code (for using stationary standard deviation instead of stochastic contribution for stationary processes) with CRAN compliance corrections, to make Version 0.3.3, found in layeranalyzer_0.3.3.tar.gz.
+
     17/06-2025: Big functionality upgrade. Possible to start ML optimization from user-specified parameter values in 'layer.analyzer.timeseries.list' or to simply ask for number of parameters and parameter names. This has to be considered "expert mode" susage. Simpler version avaiable in 'layer.analyzer', where one can start optimization for a connection model using parameter values from a non-connected model (run on the fly). Also added option for consistency checks ("laxness" options). Some general debugging, including changing from one optimization routine ("L-BFGS-B") to another (Nelder-Mead). (May later consider to let choice of optimization strategy to be user-specified.) Version 0.3.1 is now default, found in layeranalyzer_0.3.1.tar.gz.
- 
 
     07/04-2025: Massive debug effort.
  
