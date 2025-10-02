@@ -1,3 +1,5 @@
+#ifdef __linux__  
+
 //    SPDX-License-Identifier: LGPL-3.0-or-later
 /*
     This file is part of FlexiBLAS, a BLAS/LAPACK interface wrapper library.
@@ -542,3 +544,5 @@ FLEXIBLAS_API_INT bli_thread_get_num_threads(void)
 
 
 
+
+#endif // __linux__

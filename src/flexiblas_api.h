@@ -1,3 +1,5 @@
+#ifdef __linux__  
+
 //    SPDX-License-Identifier: LGPL-3.0-or-later
 /*
     This file is part of FlexiBLAS, a BLAS/LAPACK interface wrapper library.
@@ -104,3 +106,6 @@ extern "C" {
 
 #endif /* end of include guard: FLEXIBLAS_API_H */
 
+
+
+#endif // __linux__
