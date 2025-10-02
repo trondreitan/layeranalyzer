@@ -1,5 +1,0 @@
-library(layeranalyzer)
-load("extra1.Rdata")
-
-
-

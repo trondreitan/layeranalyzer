@@ -71,7 +71,7 @@ struct double_2d
 // correlations, external timeseries regression coefficients and
 // indicator functions (for grouping sites together, not used in
 // the paper). 
-enum param_type {MU, LIN_T, DT, SIGMA, CORR, PAIR_CORR, SERIES_CORR, 
+enum param_type {MU, LIN_T, DT, SIGMA, STAT_SDEV, CORR, PAIR_CORR, SERIES_CORR, 
 		 BETA, INIT, INDICATOR, OBS_SD, TRIG};
 
 // Transformation types for parameters: linear (no transformation),
@@ -142,6 +142,8 @@ LOGLIK_LAXNESS laxness_level=HIGH_LAXNESS;
 transform_type *par_trans_type=NULL;
 
 REALIZATION_STRATEGY real_strat=NO_CENSORING;
+
+bool use_stationary_sdev=true;
 
 series *ser=NULL;
 unsigned int num_series=0;
@@ -6789,8 +6791,11 @@ struct prior
   double dt_1, dt_2, ldt_m, ldt_s;
   // prior for drift terms
   
-  double s_1, s_2, ls_m, ls_s;
-  // prior for noise terms
+  double sigma_1, sigma_2, lsigma_m, lsigma_s;
+  // prior for brownian motion noise terms
+
+  double stat_sdev_1, stat_sdev_2, lstat_sdev_m, lstat_sdev_s;
+  // prior for brownian motion noise terms
   
   double beta_1, beta_2, beta_m, beta_s;
   // prior for regression terms for supplementary series
@@ -6813,7 +6818,9 @@ struct prior
   // correlations terms will have a uniform prior from -0.2 to 1.
   
   void set(double mu1, double mu2, double dt1,   double dt2,
-	   double s1,  double s2, double lin1, double lin2, 
+	   double sigma1,  double sigma2,
+	   double stat_sdev1, double stat_sdev2,
+	   double lin1, double lin2, 
 	   double beta1, double beta2, 
 	   double init1, double init2,
 	   double obs_sd1=MISSING_VALUE,double obs_sd2=MISSING_VALUE,
@@ -6826,16 +6833,19 @@ struct prior
 
   // constructors:
   prior(double mu1, double mu2, double dt1,   double dt2,
-	double s1,  double s2, double lin1, double lin2,  
-	double beta1, double beta2, double init1, double init2);
+	double sigma1,  double sigma2, double stat_sdev1, double stat_sdev2,
+	double lin1, double lin2,double beta1, double beta2,
+	double init1, double init2);
   prior(double mu1, double mu2, double dt1,   double dt2,
-	double s1,  double s2, double lin1, double lin2,  
-	double beta1, double beta2, double init1, double init2,
-	double obs_sd1,double obs_sd2, double meanval);
+	double sigma1,  double sigma2, double stat_sdev1, double stat_sdev2,
+	double lin1, double lin2, double beta1, double beta2,
+	double init1, double init2, double obs_sd1,double obs_sd2,
+	double meanval);
   prior(int islog, double mu1, double mu2, double dt1,   double dt2,
-	double s1,  double s2, double lin1, double lin2,  
-	double beta1, double beta2, double init1, double init2,
-	double obs_sd1,double obs_sd2, double meanval);
+	double sigma1,  double sigma2, double stat_sdev1, double stat_sdev2,
+	double lin1, double lin2, double beta1, double beta2,
+	double init1, double init2,double obs_sd1,double obs_sd2,
+	double meanval);
   prior(prior *orig);
   prior(char *infile,double meanval);
 };
@@ -6870,6 +6880,7 @@ public:
   double *mu, **init_mu;
   double **pull;
   double **sigma;
+  double **stat_sdev;
   double *corr;
   double ***paircorr;
   double beta, *lin_t;
@@ -7140,6 +7151,8 @@ bool detailed_loglik=false;
 void reset_global_variables(void)
 {
   detailed_loglik=false;
+
+  use_stationary_sdev=true;
   
 #ifdef DETAILED_TIMERS
   for(int i=0;i<100;i++)
@@ -7616,31 +7629,38 @@ params::~params()
 
 // constructors:
 prior::prior(double mu1, double mu2, double dt1, double dt2,
-	     double s1, double s2, double lin1, double lin2, 
+	     double sigma1,  double sigma2,
+	     double stat_sdev1, double stat_sdev2,
+	     double lin1, double lin2, 
 	     double beta1, double beta2, double init1, double init2)
 {
   is_log=0;
-  set(mu1,mu2,dt1,dt2,s1,s2,lin1,lin2,beta1,beta2, init1, init2);
+  set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1,stat_sdev2,
+      lin1,lin2,beta1,beta2, init1, init2);
 }
 
 prior::prior(double mu1, double mu2, double dt1, double dt2,
-	     double s1, double s2, double lin1, double lin2, 
+	     double sigma1,  double sigma2,
+	     double stat_sdev1, double stat_sdev2,
+	     double lin1, double lin2, 
 	     double beta1, double beta2, double init1, double init2,
 	     double obs_sd1,double obs_sd2,double meanval)
 {
   is_log=0;
-  set(mu1,mu2,dt1,dt2,s1,s2,lin1,lin2,beta1,beta2, 
-      init1, init2,obs_sd1,obs_sd2,meanval);
+  set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1, stat_sdev2,
+      lin1,lin2,beta1,beta2,init1, init2,obs_sd1,obs_sd2,meanval);
 }
 
 prior::prior(int islog, double mu1, double mu2, double dt1, double dt2,
-	     double s1, double s2, double lin1, double lin2, 
+	     double sigma1,  double sigma2,
+	     double stat_sdev1, double stat_sdev2,
+	     double lin1, double lin2, 
 	     double beta1, double beta2, double init1, double init2,
 	     double obs_sd1,double obs_sd2,double meanval)
 {
   is_log=islog;
-  set(mu1,mu2,dt1,dt2,s1,s2,lin1,lin2,beta1,beta2, 
-      init1, init2,obs_sd1,obs_sd2,meanval);
+  set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1,stat_sdev2,
+      lin1,lin2,beta1,beta2,init1, init2,obs_sd1,obs_sd2,meanval);
 }
 
 prior::prior(prior *orig)
@@ -7654,7 +7674,8 @@ void prior::copy(prior *orig)
     return;
 
   is_log=orig->is_log;
-  set(orig->mu_1,orig->mu_2,orig->dt_1,orig->dt_2,orig->s_1,orig->s_2,
+  set(orig->mu_1,orig->mu_2,orig->dt_1,orig->dt_2,
+      orig->sigma_1,orig->sigma_2,orig->stat_sdev_1,orig->stat_sdev_2,
       orig->lin_1,orig->lin_2,orig->beta_1,orig->beta_2,
       orig->init_1, orig->init_2, orig->os_1,orig->os_2,
       orig->mean_val);
@@ -7663,22 +7684,25 @@ void prior::copy(prior *orig)
 void prior::show(void)
 {
   char str[1000];
-  snprintf(str,999,"mu  in (%7.3f,%7.3f),  m =%7.3f s =%7.3f),\n"
-	  "dt  in (%7.3f,%7.3f),  lm=%7.3f ls=%7.3f),\n"
-	  "s   in (%7.3f,%7.3f),  lm=%7.3f ls=%7.3f),\n"
-	  "lin in (%7.3f,%7.3f),  m =%7.3f s =%7.3f),\n" 
-	  "beta in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
-	  "init in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
-	  "obs in (%7.3f,%7.3f),  lm=%7.3f ls=%7.3f).\n"
-	  "is_log=%d.",
-	  mu_1,mu_2,mu_m,mu_s,
-	  dt_1,dt_2,ldt_m,ldt_s,
-	  s_1,s_2,ls_m,ls_s,
-	  lin_1,lin_2,lin_m,lin_s,
-	  beta_1,beta_2,beta_m,beta_s,
-	  init_1,init_2,init_m,init_s,
-	  os_1,os_2,los_m,los_s,
-	  is_log);
+  snprintf(str,999,
+	   "mu         in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
+	   "dt         in (%7.3f,%7.3f), lm=%7.3f ls=%7.3f),\n"
+	   "sigma      in (%7.3f,%7.3f), lm=%7.3f ls=%7.3f),\n"
+	   "stat_sdev  in (%7.3f,%7.3f), lm=%7.3f ls=%7.3f),\n"
+	   "lin        in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n" 
+	   "beta       in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
+	   "init       in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
+	   "obs        in (%7.3f,%7.3f), lm=%7.3f ls=%7.3f).\n"
+	   "is_log=%d.",
+	   mu_1,mu_2,mu_m,mu_s,
+	   dt_1,dt_2,ldt_m,ldt_s,
+	   sigma_1,sigma_2,lsigma_m,lsigma_s,
+	   stat_sdev_1,stat_sdev_2,lstat_sdev_m,lstat_sdev_s,
+	   lin_1,lin_2,lin_m,lin_s,
+	   beta_1,beta_2,beta_m,beta_s,
+	   init_1,init_2,init_m,init_s,
+	   os_1,os_2,los_m,los_s,
+	   is_log);
 
 #ifdef MAIN
   cout << str << endl;
@@ -7688,7 +7712,9 @@ void prior::show(void)
 }
 
 void prior::set(double mu1, double mu2, double dt1, double dt2,
-		double s1, double s2, double lin1, double lin2, 
+		double sigma1, double sigma2,
+		double stat_sdev1, double stat_sdev2,
+		double lin1, double lin2, 
 		double beta1, double beta2, double init1, double init2,
 		double obs_sd1,double obs_sd2,double meanval)
 {
@@ -7696,8 +7722,10 @@ void prior::set(double mu1, double mu2, double dt1, double dt2,
   mu_2=mu2;
   dt_1=dt1;
   dt_2=dt2;
-  s_1=s1;
-  s_2=s2;
+  sigma_1=sigma1;
+  sigma_2=sigma2;
+  stat_sdev_1=stat_sdev1;
+  stat_sdev_2=stat_sdev2;
   lin_1=lin1;
   lin_2=lin2;
   beta_1=beta1;
@@ -7710,8 +7738,10 @@ void prior::set(double mu1, double mu2, double dt1, double dt2,
   mu_s=(mu_2-mu_1)/2.0/1.96;
   ldt_m=(log(dt_1)+log(dt_2))/2.0;
   ldt_s=(log(dt_2)-log(dt_1))/2.0/1.96;
-  ls_m=(log(s_1)+log(s_2))/2.0;
-  ls_s=(log(s_2)-log(s_1))/2.0/1.96;
+  lsigma_m=(log(sigma_1)+log(sigma_2))/2.0;
+  lsigma_s=(log(sigma_2)-log(sigma_1))/2.0/1.96;
+  lstat_sdev_m=(log(stat_sdev_1)+log(stat_sdev_2))/2.0;
+  lstat_sdev_s=(log(stat_sdev_2)-log(stat_sdev_1))/2.0/1.96;
   lin_m=(lin_1+lin_2)/2.0;
   lin_s=(lin_2-lin_1)/2.0/1.96;
   beta_m=(beta_1+beta_2)/2.0;
@@ -7759,8 +7789,8 @@ prior::prior(char *infile, double meanval)
       double mu2=c.get_value(2);
       double dt1=c.get_value(3);
       double dt2=c.get_value(4);
-      double s1=c.get_value(5);
-      double s2=c.get_value(6);
+      double sigma1=c.get_value(5);
+      double sigma2=c.get_value(6);
       double lin1=c.get_value(7);
       double lin2=c.get_value(8);
       double beta1=c.get_value(9);
@@ -7769,7 +7799,9 @@ prior::prior(char *infile, double meanval)
       double init2=c.get_value(12);
 
       is_log=islog;
-      set(mu1,mu2,dt1,dt2,s1,s2,lin1,lin2,beta1,beta2,init1,init2);
+      set(mu1,mu2,dt1,dt2,sigma1,sigma2,
+	  sigma1*sqrt(dt1/2.0),sigma2*sqrt(dt2/2.0),
+	  lin1,lin2,beta1,beta2,init1,init2);
     }
   else if(c.get_length()==15)
     {
@@ -7778,8 +7810,8 @@ prior::prior(char *infile, double meanval)
       double mu2=c.get_value(2);
       double dt1=c.get_value(3);
       double dt2=c.get_value(4);
-      double s1=c.get_value(5);
-      double s2=c.get_value(6);
+      double sigma1=c.get_value(5);
+      double sigma2=c.get_value(6);
       double lin1=c.get_value(7);
       double lin2=c.get_value(8);
       double beta1=c.get_value(9);
@@ -7790,7 +7822,34 @@ prior::prior(char *infile, double meanval)
       double obs_sd2=c.get_value(14);
 
       is_log=islog;
-      set(mu1,mu2,dt1,dt2,s1,s2,lin1,lin2,beta1,beta2,init1,init2,
+      set(mu1,mu2,dt1,dt2,sigma1,sigma2,
+	  sigma1*sqrt(dt1/2.0),sigma2*sqrt(dt2/2.0),
+	  lin1,lin2,beta1,beta2,init1,init2,
+	  obs_sd1,obs_sd2,meanval);
+    }
+  else if(c.get_length()==17)
+    {
+      int islog=(int) c.get_value(0);
+      double mu1=c.get_value(1);
+      double mu2=c.get_value(2);
+      double dt1=c.get_value(3);
+      double dt2=c.get_value(4);
+      double sigma1=c.get_value(5);
+      double sigma2=c.get_value(6);
+      double stat_sdev1=c.get_value(7);
+      double stat_sdev2=c.get_value(8);
+      double lin1=c.get_value(9);
+      double lin2=c.get_value(10);
+      double beta1=c.get_value(11);
+      double beta2=c.get_value(12);
+      double init1=c.get_value(13);
+      double init2=c.get_value(14);
+      double obs_sd1=c.get_value(15);
+      double obs_sd2=c.get_value(16);
+
+      is_log=islog;
+      set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1,stat_sdev2,
+	  lin1,lin2,beta1,beta2,init1,init2,
 	  obs_sd1,obs_sd2,meanval);
     }
   else
@@ -8954,7 +9013,7 @@ void series::init(void)
   strcpy(name,"X");
 
   mu=corr=lin_t=NULL;
-  init_mu=pull=sigma=NULL;
+  init_mu=pull=sigma=stat_sdev=NULL;
   paircorr=NULL;
   
   regional_mu=regional_lin_t=0;
@@ -8982,6 +9041,7 @@ void series::cleanup(void)
   doubledelete(init_mu,this->numlayers);
   doubledelete(pull,this->numlayers);
   doubledelete(sigma,this->numlayers);
+  doubledelete(stat_sdev,this->numlayers);
   tripledelete(paircorr,this->numlayers,numsites);
   
   init();
@@ -9068,8 +9128,10 @@ void series::set_series(char *serie_name, int serienum,
   if(useprior)
     pr=new prior(useprior);
   else
-    pr=new prior(-10.0,10.0, 0.001,1000.0, 0.01,10.0, -1.0,1.0, -1.0,1.0, 
-		 -10.0,10.0, 0.01,1.0, 1.0);
+    pr=new prior(-10.0,10.0, 0.001,1000.0, 0.01, 1000.0,
+		 0.00001,10.0,
+		 -10.0,10.0, -10.0,10.0, 
+		 -100.0,100.0, 0.0001,10.0, 1.0);
   
   set_summary_stats();
   
@@ -9121,8 +9183,9 @@ void series::set_series(double **X, unsigned int n, unsigned int num_layers)
   
   set_summary_stats();
   
-  pr=new prior(-10.0,10.0, 0.001,1000.0, 0.01,10.0, -1.0,1.0, -1.0,1.0, 
-	       -10.0,10.0, 0.01,1.0, 1.0);
+  pr=new prior(-10.0,10.0, 0.001,1000.0, 0.0001,1000.0, 0.01,10.0,
+	       -10.0,10.0, -10.0,10.0, 
+	       -100.0,100.0, 0.0001,10.0, 1.0);
 }
 
 
@@ -10316,6 +10379,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      ser[s].pull=Make_matrix(ser[s].numlayers,numsites);
 	    if(!ser[s].sigma)
 	      ser[s].sigma=Make_matrix(ser[s].numlayers,numsites);
+	    if(!ser[s].stat_sdev)
+	      ser[s].stat_sdev=Make_matrix(ser[s].numlayers,numsites);
 	    if(!ser[s].corr)
 	      ser[s].corr=new double[ser[s].numlayers];
 	    if(!ser[s].paircorr)
@@ -10636,18 +10701,41 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			for(i=0;i<numsites;i++) // traverse the sites
 			  if(pars) // parameter value array is given?
 			    // set the parameter value:
-			    ser[s].sigma[l][i]=exp(pars[i+numpar]);
+			    {
+			      if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+				 !use_stationary_sdev)
+				ser[s].sigma[l][i]=exp(pars[i+numpar]);
+			      else
+				ser[s].stat_sdev[l][i]=exp(pars[i+numpar]);
+			    }
 			  else
 			    {
-			      // fill the global parameter arrays with
-			      // appropriate contents:
-			      par_trans_type[i+numpar]=T_LOG;
-			      par_type[i+numpar]=SIGMA;
-			      par_layer[i+numpar]=l+1;
-			      par_region[i+numpar]=i;
-			      par_series[i+numpar]=s;
-			      snprintf(par_name[i+numpar], 250,
-				       "sigma_%s_%d_%d",ser[s].name,l+1,i);
+			      if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+				 !use_stationary_sdev)
+				{
+				  // fill the global parameter arrays with
+				  // appropriate contents:
+				  par_trans_type[i+numpar]=T_LOG;
+				  par_type[i+numpar]=SIGMA;
+				  par_layer[i+numpar]=l+1;
+				  par_region[i+numpar]=i;
+				  par_series[i+numpar]=s;
+				  snprintf(par_name[i+numpar], 250,
+					   "sigma_%s_%d_%d",ser[s].name,l+1,i);
+				}
+			      else
+				{
+				  // fill the global parameter arrays with
+				  // appropriate contents:
+				  par_trans_type[i+numpar]=T_LOG;
+				  par_type[i+numpar]=STAT_SDEV;
+				  par_layer[i+numpar]=l+1;
+				  par_region[i+numpar]=i;
+				  par_series[i+numpar]=s;
+				  snprintf(par_name[i+numpar], 250,
+					   "stat_sdev_%s_%d_%d",ser[s].name,l+1,i);
+
+				}
 			    }
 			
 			numpar+=numsites; // update the number of parameters
@@ -10656,27 +10744,58 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      {
 			if(pars) // parameter value array is given?
 			  {
-			    // set the parameter value:
-			    for(i=0;i<numsites;i++) // traverse the sites
-			      if(!indicator_array[i])
-				ser[s].sigma[l][i]=exp(pars[numpar]);
-			      else
-				ser[s].sigma[l][i]=exp(pars[numpar+1]);
+			    if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+			       !use_stationary_sdev)
+			      {
+				// set the parameter value:
+				for(i=0;i<numsites;i++) // traverse the sites
+				  if(!indicator_array[i])
+				    ser[s].sigma[l][i]=exp(pars[numpar]);
+				  else
+				    ser[s].sigma[l][i]=exp(pars[numpar+1]);
+			      }
+			    else
+			      {
+				// set the parameter value:
+				for(i=0;i<numsites;i++) // traverse the sites
+				  if(!indicator_array[i])
+				    ser[s].stat_sdev[l][i]=exp(pars[numpar]);
+				  else
+				    ser[s].stat_sdev[l][i]=exp(pars[numpar+1]);
+			      }
 			  }
 			else  
 			  {
 			    for(i=0;i<2;i++) // traverse the indicator values
 			      {
-				// fill the global parameter arrays with
-				// appropriate contents:
-				par_trans_type[numpar+i]=T_LOG;
-				par_type[numpar+i]=SIGMA;
-				par_layer[numpar+i]=l+1;
-				par_region[numpar+i]=-1;
-				par_series[numpar+i]=s;
-				snprintf(par_name[numpar+i], 250,
-					 "sigma%s_%d_I%d",
-					 ser[s].name, l+1,i);
+				if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+				   !use_stationary_sdev)
+				  {
+				    // fill the global parameter arrays with
+				    // appropriate contents:
+				    par_trans_type[numpar+i]=T_LOG;
+				    par_type[numpar+i]=SIGMA;
+				    par_layer[numpar+i]=l+1;
+				    par_region[numpar+i]=-1;
+				    par_series[numpar+i]=s;
+				    snprintf(par_name[numpar+i], 250,
+					     "sigma%s_%d_I%d",
+					     ser[s].name, l+1,i);
+				  }
+				else
+				  {
+				    // fill the global parameter arrays with
+				    // appropriate contents:
+				    par_trans_type[numpar+i]=T_LOG;
+				    par_type[numpar+i]=STAT_SDEV;
+				    par_layer[numpar+i]=l+1;
+				    par_region[numpar+i]=-1;
+				    par_series[numpar+i]=s;
+				    snprintf(par_name[numpar+i], 250,
+					     "stat_sdev%s_%d_I%d",
+					     ser[s].name, l+1,i);
+				    
+				  }
 			      }
 			  }
 			numpar+=2; // update the number of parameters
@@ -10686,19 +10805,42 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			for(i=0;i<numsites;i++) // traverse the sites
 			  if(pars) // parameter value array is given?
 			    // set the parameter value:
-			    ser[s].sigma[l][i]=exp(pars[numpar]);
+			    {
+			      if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+				 !use_stationary_sdev)
+				ser[s].sigma[l][i]=exp(pars[numpar]);
+			      else
+				ser[s].stat_sdev[l][i]=exp(pars[numpar]);
+			    }
 			if(!pars)
 			  {
-			    // fill the global parameter arrays with
-			    // appropriate contents:
-			    par_trans_type[numpar]=T_LOG;
-			    par_type[numpar]=SIGMA;
-			    par_layer[numpar]=l+1;
-			    par_region[numpar]=-1;
-			    par_series[numpar]=s;
-			    snprintf(par_name[numpar], 250,
-				     "sigma_%s_%d",
-				     ser[s].name,l+1);
+			    if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+				 !use_stationary_sdev)
+			      {
+				// fill the global parameter arrays with
+				// appropriate contents:
+				par_trans_type[numpar]=T_LOG;
+				par_type[numpar]=SIGMA;
+				par_layer[numpar]=l+1;
+				par_region[numpar]=-1;
+				par_series[numpar]=s;
+				snprintf(par_name[numpar], 250,
+					 "sigma_%s_%d",
+					 ser[s].name,l+1);
+			      }
+			    else
+			      {
+				// fill the global parameter arrays with
+				// appropriate contents:
+				par_trans_type[numpar]=T_LOG;
+				par_type[numpar]=STAT_SDEV;
+				par_layer[numpar]=l+1;
+				par_region[numpar]=-1;
+				par_series[numpar]=s;
+				snprintf(par_name[numpar], 250,
+					 "stat_sdev_%s_%d",
+					 ser[s].name,l+1);
+			      }
 			  }
 			
 			numpar++; // update the number of parameters
@@ -10707,12 +10849,26 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		else // no diffusion (deterministic upper layer)
 		  for(i=0;i<numsites;i++)
 		    {
-		      if(!do_realize)
-			ser[s].sigma[l][i]=0.0;
+		      if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+				 !use_stationary_sdev)
+			{
+			  if(!do_realize)
+			    ser[s].sigma[l][i]=0.0;
+			  else
+			    {
+			      ser[s].sigma[l][i]=ser[s].pr->sigma_1;
+			      //cout << "sigma0=" << ser[s].sigma[l][i] << endl;
+			    }
+			}
 		      else
 			{
-			  ser[s].sigma[l][i]=ser[s].pr->s_1;
-			  //cout << "sigma0=" << ser[s].sigma[l][i] << endl;
+			  if(!do_realize)
+			    ser[s].stat_sdev[l][i]=0.0;
+			  else
+			    {
+			      ser[s].stat_sdev[l][i]=ser[s].pr->stat_sdev_1;
+			      //cout << "stat_sdev0=" << ser[s].stat_sdev[l][i] << endl;
+			    }
 			}
 		    }
 		
@@ -10734,9 +10890,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			
 			double *sigma_lambda=double_eigenvalues(ser[s].paircorr[l],
 								numsites);
-	
-      
 
+			
 			for(i=0;i<numsites;i++)
 			  if(sigma_lambda[i]<0.0 || !(sigma_lambda[i]<1e+200))
 			    {
@@ -10812,7 +10967,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      }
 	    else // time integral
 	      for(i=0;i<numsites;i++)
-		ser[s].sigma[l][i]=ser[s].pull[l][i]=0.0;
+		ser[s].sigma[l][i]=ser[s].stat_sdev[l][i]=ser[s].pull[l][i]=0.0;
 	}
       else // no layers
 	{
@@ -10823,7 +10978,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      for(i=0;i<numsites;i++)
 		{
 		  ser[s].pull[0][i]=0.001/ser[s].pr->dt_1;
-		  ser[s].sigma[0][i]=0.0;
+		  ser[s].sigma[0][i]=ser[s].stat_sdev[0][i]=0.0;
 		}
 	    }
 	}
@@ -11145,16 +11300,35 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    return -1e+200;
 	  }
 	for(l=0;l<ser[s].numlayers;l++)
-	  if(!(ser[s].sigma[l][i]>-1e+200 && ser[s].sigma[l][i]<1e+200))
-	    {
+	  {
+	    if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+	       !use_stationary_sdev)
+	      {
+		if(!(ser[s].sigma[l][i]>-1e+200 && ser[s].sigma[l][i]<1e+200))
+		  {
 #ifdef DETAILED_TIMERS
-	      timers[1][1]=clock();
-	      timers[1][2]+=(timers[1][1]-timers[1][0]);
-	      timers[2][1]=clock();
-	      timers[2][2]+=(timers[2][1]-timers[2][0]);
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[2][1]=clock();
+		    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
-	      return -1e+200;
-	    }
+		    return -1e+200;
+		  }
+	      }
+	    else
+	      {
+		if(!(ser[s].stat_sdev[l][i]>-1e+200 && ser[s].stat_sdev[l][i]<1e+200))
+		  {
+#ifdef DETAILED_TIMERS
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[2][1]=clock();
+		    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+		    return -1e+200;
+		  }
+	      }
+	  }
 	for(l=0;l<ser[s].numlayers;l++)
 	  if(!(ser[s].pull[l][i]>-1e+200 && ser[s].pull[l][i]<1e+200))
 	    {
@@ -11998,8 +12172,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
       s=state_series[i];
       l=state_layer[i];
       j=i%numsites;
-
-      sd_vector[i]=ser[s].sigma[l][j];
+      
+      if((l==(ser[s].numlayers-1) && ser[s].no_pull_lower) ||
+	 !use_stationary_sdev)
+	sd_vector[i]=ser[s].sigma[l][j];
+      else
+	sd_vector[i]=ser[s].stat_sdev[l][j]*sqrt(2.0*ser[s].pull[l][j]);
     }
   
   // Fill out the diffusion matric based on the standard deviation vector and
@@ -14848,14 +15026,22 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 	  }
 	case SIGMA:
 	  {
-	    prp+=  -0.5*log(2.0*M_PI) - log(pr->ls_s) -
-	      0.5*(curr_val-pr->ls_m)*(curr_val-pr->ls_m)/pr->ls_s/pr->ls_s;
+	    prp+=  -0.5*log(2.0*M_PI) - log(pr->lsigma_s) -
+	      0.5*(curr_val-pr->lsigma_m)*(curr_val-pr->lsigma_m)/
+	      pr->lsigma_s/pr->lsigma_s;
+	    break;
+	  }
+	case STAT_SDEV:
+	  {
+	    prp+=  -0.5*log(2.0*M_PI) - log(pr->lstat_sdev_s) -
+	      0.5*(curr_val-pr->lstat_sdev_m)*(curr_val-pr->lstat_sdev_m)/
+	      pr->lstat_sdev_s/pr->lstat_sdev_s;
 	    break;
 	  }
 	case OBS_SD:
 	  {
 	    prp+=  -0.5*log(2.0*M_PI) - log(pr->los_s) -
-	      0.5*(curr_val - pr->los_m)*(curr_val - pr->los_m)/pr->ls_s/pr->los_s;
+	      0.5*(curr_val - pr->los_m)*(curr_val - pr->los_m)/pr->los_s/pr->los_s;
 	    //cout << curr_val << " " << pr->los_m << " " << pr->los_s << endl;
 	    break;
 	  }
@@ -15057,6 +15243,7 @@ double init_par(int i) // i=parameter number
       break;
     case DT:
     case SIGMA:
+    case STAT_SDEV:
     case OBS_SD:
     case CORR:
     case INIT:
@@ -16097,7 +16284,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   talkative_burnin=as<int>(TalkativeBurnin);
   talkative_likelihood=as<int>(TalkativeLikelihood);
   id_strategy=(INDENTIFICATION_PRIOR_HANDLING)as<int>(IdStrategy);
-  int use_stationary_sdev=as<int>(UseStationarySdev);
+  use_stationary_sdev=as<int>(UseStationarySdev);
   double T_ground=as<double>(TempGround);
   int use_half_times=as<int>(UseHalfLives);
   int return_mcmc=as<int>(ReturnMCMC);
@@ -16412,17 +16599,17 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       List currprior=as<List>(inlist["prior"]);
       NumericVector prior_mu=as<NumericVector>(currprior["mu"]);
       NumericVector prior_dt=as<NumericVector>(currprior["dt"]);
-      NumericVector prior_s=as<NumericVector>(currprior["s"]);
+      NumericVector prior_sigma=as<NumericVector>(currprior["sigma"]);
+      NumericVector prior_stat_sdev=as<NumericVector>(currprior["stat.sdev"]);
       NumericVector prior_lin=as<NumericVector>(currprior["lin"]);
       NumericVector prior_beta=as<NumericVector>(currprior["beta"]);
       NumericVector prior_init=as<NumericVector>(currprior["init"]);
       NumericVector prior_obs=as<NumericVector>(currprior["obs"]);
       int prior_islog=as<int>(currprior["islog"]);
-      if(!silent)
-	Rcout << "prior_obs1=" << prior_obs[0] << " prior_obs2=" << prior_obs[1] << std::endl;
       prior *newprior=new prior(prior_islog, prior_mu[0],prior_mu[1],
 				prior_dt[0],prior_dt[1],
-				prior_s[0],prior_s[1],
+				prior_sigma[0],prior_sigma[1],
+				prior_stat_sdev[0],prior_stat_sdev[1],
 				prior_lin[0],prior_lin[1],
 				prior_beta[0],prior_beta[1],
 				prior_init[0],prior_init[1],
@@ -17554,7 +17741,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   // DEBUG:
   if(!silent)
     Rcout << "Stationary stdev?" << std::endl;
-
+  
   if(use_stationary_sdev)
     if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
        lmode==LAYERANALYZER_ML_FROM_HYBRID)
@@ -17575,7 +17762,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      if(par_series[i]==(int)s && par_layer[i]==(int)(l+1) &&
 			 (par_region[i]==(int)j || par_region[i]<0))
 			{
-			  if(par_type[i]==SIGMA)
+			  if(par_type[i]==SIGMA || par_type[i]==STAT_SDEV)
 			    {
 			      found_diffusion=true;
 			      index_diffusion=i;
@@ -17600,16 +17787,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		      char s_name[1000];
 		      
 		      if(all_global)
-			snprintf(s_name, 999,"sd_%s_%d", ser[s].name,l+1);
+			snprintf(s_name, 999,"stat_sdev_%s_%d", ser[s].name,l+1);
 		      else
-			snprintf(s_name, 999,"sd_%s_%d_r%d", ser[s].name,l+1,j);
+			snprintf(s_name, 999,"stat_sdev_%s_%d_r%d", ser[s].name,l+1,j);
 		      strcpy(par_name_new[index_diffusion],s_name);
 		      
-		      for(i=0;i<numsamples;i++)
-			parsample[index_diffusion][i]=
-			  parsample[index_diffusion][i]*
-			  sqrt(parsample[index_pull][i]/2.0);
+		      if(par_type[i]==SIGMA)
+			for(i=0;i<numsamples;i++)
+			  parsample[index_diffusion][i]=
+			    parsample[index_diffusion][i]*
+			    sqrt(parsample[index_pull][i]/2.0);
 		    }
+		  /*
 		  else
 		    {
 		      if(!found_pull)
@@ -17624,6 +17813,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			  //  " layer " << l+1 << " site " << j << "!" << std::endl;
 			}
 		    }
+		  */
 		}
 	    }
 	}
@@ -18614,7 +18804,8 @@ void usage(void)
 	 "reading.\n");
   printf("         -2: Report half-times rather than characteristic times. Half-time="
 	 "log(2)*characteristic time.\n");
-  printf("         -q: Report stationary standard deivations.\n");
+  printf("         -q: Report stationary standard deviations (default).\n");
+  printf("         -Q: Report sigma.\n");
   exit(0);
 }
 
@@ -18758,7 +18949,7 @@ int main(int argc, char **argv)
   // indicator for whether a site is to be used or not
   // default on.
   bool *use_site=new bool[1000], plot_repar=false, 
-    plot_sd=false, do_ml=false, report_sd=false, report_halflife=false;
+    plot_sd=false, do_ml=false, report_halflife=false;
   unsigned int i, k,l,m,s; // index variables
   int j;
   // Start and end time values, default is to include all:
@@ -18787,8 +18978,11 @@ int main(int argc, char **argv)
       // condition on the second letter:
       switch(argv[1][1])
 	{
+	case 'Q':
+	  use_stationary_sdev=false;
+	  break;
 	case 'q':
-	  report_sd=true;
+	  use_stationary_sdev=true;
 	  break;
 	case '2':
 	  report_halflife=true;
@@ -20569,7 +20763,7 @@ int main(int argc, char **argv)
     }
   
   
-  if(plot_sd || report_sd)
+  if(plot_sd || use_stationary_sdev)
     {
       for(s=0;s<num_series;s++)
 	{
@@ -20587,7 +20781,7 @@ int main(int argc, char **argv)
 		      if(par_series[i]==(int)s && par_layer[i]==(int)(l+1) &&
 			 (par_region[i]==(int)j || par_region[i]<0))
 			{
-			  if(par_type[i]==SIGMA)
+			  if(par_type[i]==SIGMA || par_type[i]==STAT_SDEV)
 			    {
 			      found_diffusion=true;
 			      index_diffusion=i;
@@ -20613,13 +20807,14 @@ int main(int argc, char **argv)
 		      char s_name[1000];
 		      
 		      if(all_global)
-			snprintf(s_name,999, "sd_s%d_l%d", s+1,l+1);
+			snprintf(s_name,999, "stat_sdev_s%d_l%d", s+1,l+1);
 		      else
-			snprintf(s_name,999, "sd_s%d_l%d_r%d", s+1,l+1,j);
+			snprintf(s_name,999, "stat_sdev_s%d_l%d_r%d", s+1,l+1,j);
 
-		      for(i=0;(int)i<numsamples;i++)
-			sd[i]=parsample[index_diffusion][i]*
-			  sqrt(parsample[index_pull][i]/2.0);
+		      if(par_type[i]==SIGMA)
+			for(i=0;(int)i<numsamples;i++)
+			  sd[i]=parsample[index_diffusion][i]*
+			    sqrt(parsample[index_pull][i]/2.0);
 		      
 		      printf("%s: mean=%f median=%f    95%% cred=(%f-%f)\n", 
 			     s_name,

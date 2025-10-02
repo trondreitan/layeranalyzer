@@ -848,11 +848,23 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     if(length(prior$dt)!=2)
       stop("Prior for 'dt' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'dt'!")
 
-    if(is.null(prior$s))
-      stop("If prior is given, it must contain the 95% prior credibility for the stochastic contributions, given as element 's'!")
-    if(length(prior$s)!=2)
-      stop("Prior for 's' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 's'!")
+    if(is.null(prior$sigma))
+      stop("If prior is given, it must contain the 95% prior credibility for the stochastic contributions, given as element 'sigma'!")
+    if(length(prior$sigma)!=2)
+      stop("Prior for 'sigma' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 's'!")
+
     
+    if(is.null(prior$stat.sdev))
+    {
+      prior$stat.sdev=prior$sigma
+    }
+    else
+    {
+      if(length(prior$sigma)!=2)
+        stop("Prior for 'stat.sdev' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'stat.sdev'!")
+    }
+    
+
     if(is.null(prior$init))
       prior$init=c(prior$mu[1]-3*(prior$mu[2]-prior$mu[1]),
                    prior$mu[2]+3*(prior$mu[2]-prior$mu[1]))
