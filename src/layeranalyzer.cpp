@@ -46,12 +46,16 @@ using namespace Rcpp;
 // *******************
 // *******************
 
+#ifndef singledelete
+#define singledelete(array) {if(array) delete [] array; array=NULL;}
+#endif // delete
+
 #ifndef doubledelete
 #define doubledelete(array,len) {if(array) { for(unsigned int count=0;count<(unsigned int)len;count++) if(array[count]) delete [] array[count]; delete [] array; array=NULL;}}
 #endif // doubledelete
 
 #ifndef tripledelete
-#define tripledelete(array,len,len2) {if(array) { for(unsigned int count=0;count<(unsigned int)len;count++){ if(array[count]){ for(unsigned int count2=0;count2<(unsigned int)len2;count2++) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
+#define tripledelete(array,len,len2) {if(array) { for(unsigned int count=0;count<(unsigned int)len;count++){ if(array[count]){ for(unsigned int count2=0;count2<(unsigned int)len2;count2++) if(array[count][count2]) delete [] array[count][count2]; delete [] array[count];}} delete [] array; array=NULL;}}
 #endif // tripledelete
 
 #define MAXIM(a, b)  ((a) > (b) ? (a) : (b))
@@ -7166,101 +7170,35 @@ void reset_global_variables(void)
 #endif // __linux__
   
   
-  if(par_name)
-    doubledelete(par_name,LARGE_ENOUGH_ARRAY);
-  par_name=NULL;
+  doubledelete(par_name,LARGE_ENOUGH_ARRAY);
   
-  if(par_type)
-    delete [] par_type;
-  par_type=NULL;
+  singledelete(obs_corr);
+  singledelete(obs_corr_t);
+  singledelete(meas_smooth);
+  singledelete(meas_tot);
+  singledelete(indicator_array);
+  singledelete(series_corr);
+  singledelete(corr_to_index);
+  singledelete(corr_from_index);
+  singledelete(corr_to_layer);
+  singledelete(corr_from_layer);
+  singledelete(corr_to_series);
+  singledelete(corr_from_series);
+  singledelete(ser);
+  singledelete(par_trans_type);
+  singledelete(par_series);
+  singledelete(par_layer);
+  singledelete(par_region);
+  singledelete(par_type);
+
+  singledelete(obs_corr_site);
+
+  doubledelete(x_k_s_kept, len_x_k_s_kept);
   
-  if(par_region)
-    delete [] par_region;
-  par_region=NULL;
-  
-  if(par_layer)
-    delete [] par_layer;
-  par_layer=NULL;
-  
-  if(par_series)
-    delete [] par_series;
-  par_series=NULL;
+  tripledelete(P_k_s_kept,len_x_k_s_kept,size_x_k_s_kept);
 
-  if(par_trans_type)
-    delete [] par_trans_type;
-  par_trans_type=NULL;
-
-  if(ser)
-    delete [] ser;
-  ser=NULL;
-
-  if(corr_from_series)
-    delete [] corr_from_series;
-  corr_from_series=NULL;
-
-  if(corr_to_series)
-    delete [] corr_to_series;
-  corr_to_series=NULL;
-
-  if(corr_from_layer)
-    delete [] corr_from_layer;
-  corr_from_layer=NULL;
-
-  if(corr_to_layer)
-    delete [] corr_to_layer;
-  corr_to_layer=NULL;
-
-  if(corr_from_index)
-    delete [] corr_from_index;
-  corr_from_index=NULL;
-
-  if(corr_to_index)
-    delete [] corr_to_index;
-  corr_to_index=NULL;
-
-  if(series_corr)
-    delete series_corr;
-  series_corr=NULL;
-
-  if(indicator_array)
-    delete [] indicator_array;
-  indicator_array=NULL;
-
-  if(meas_tot)
-    delete [] meas_tot;
-  meas_tot=NULL;
-
-  if(meas_smooth)
-    delete [] meas_smooth;
-  meas_smooth=NULL;
-  
-  if(obs_corr_t)
-    delete [] obs_corr_t;
-  obs_corr_t=NULL;
-  
-  if(obs_corr)
-    doubledelete(obs_corr, obs_corr_len);
-  obs_corr=NULL;
-  
-  if(obs_corr_site)
-    delete [] obs_corr_site;
-  obs_corr_site=NULL;
-
-  if(x_k_s_kept)
-    doubledelete(x_k_s_kept, len_x_k_s_kept);
-  x_k_s_kept=NULL;
-  
-  if(P_k_s_kept)
-    tripledelete(P_k_s_kept,len_x_k_s_kept,size_x_k_s_kept);
-  P_k_s_kept=NULL;
-
-  if(t_k_smooth)
-    delete [] t_k_smooth;
-  t_k_smooth=NULL;
-
-  if(dt_k_smooth)
-    delete [] dt_k_smooth;
-  dt_k_smooth=NULL;
+  singledelete(t_k_smooth);
+  singledelete(dt_k_smooth);
 
   if(x_k_realized)
     doubledelete(x_k_realized,meas_smooth_len);
@@ -10164,12 +10102,7 @@ void keep_x_and_P(double *t_k,double **x_k_s, double ***P_k_s, unsigned int len)
   len_x_k_s_kept=len;
   size_x_k_s_kept=num_states;
 
-  if(P_k_s_kept)
-    {
-      for(k=0;k<len;k++)
-	doubledelete(P_k_s_kept[k],num_states);
-      delete [] P_k_s_kept;
-    }
+  tripledelete(P_k_s_kept,len,num_states);
   P_k_s_kept=new double**[len];
   
 
@@ -10197,9 +10130,7 @@ void cleanup_x_and_P(int len)
     doubledelete(x_k_s_kept,len_x_k_s_kept);
   x_k_s_kept=NULL;
   
-  if(P_k_s_kept)
-    tripledelete(P_k_s_kept,len_x_k_s_kept,size_x_k_s_kept);
-  P_k_s_kept=NULL;
+  tripledelete(P_k_s_kept,len_x_k_s_kept,size_x_k_s_kept);
   
   len_x_k_s_kept=0;
   size_x_k_s_kept=0;
@@ -10255,11 +10186,11 @@ bool sanity_check_variance(const char *name,int iteration,
       for(j=0;j<size;j++)
 	if(j!=i)
 	  {
-	    if(!almost_equal_lax(var[i][j]/stddevs[i]/stddevs[j],var[j][i]/stddevs[i]/stddevs[j],laxness) &&
+	    if(!almost_equal_lax(var[i][j]/stddevs[i]/stddevs[j],
+				 var[j][i]/stddevs[i]/stddevs[j],laxness) &&
 	       (fabs(var[i][j])>tolerance_nondiag ||
 		fabs(var[j][i])>tolerance_nondiag) &&
-	       var[i][j]*var[i][j]>
-	       tolerance_nondiag*var[i][i]*var[j][j])
+	       var[i][j]*var[i][j]>tolerance_nondiag*var[i][i]*var[j][j])
 	      {
 		if(!silent)
 		  {
@@ -10291,8 +10222,7 @@ bool sanity_check_variance(const char *name,int iteration,
 		return(false);
 	      }
 	  }
-      
-	  } 
+    } 
   
   return(true);
 }
@@ -11414,7 +11344,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
       
       double *sigma_lambda=double_eigenvalues(sigma_series,num_tot_layers);
-  		
+      doubledelete(sigma_series,num_tot_layers);
+      
       bool series_wrong=false;
       for(i=0;i<num_tot_layers;i++)
 	if(sigma_lambda[i]<0.0 || !(sigma_lambda[i]<1e+200))
@@ -11470,9 +11401,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(detailed_loglik)
     Rcout << "filling in matrices" << std::endl;
 #endif // MAIN
-  
-  double **var=Make_matrix(num_states,num_states); // diffusion matrix
 
+  double **var=Make_matrix(num_states,num_states); // diffusion matrix
+  
   double *stddevs=new double[num_states];
   for(i=0;i<num_states;i++)
     {
@@ -11481,6 +11412,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
     }
   
   double **A=Make_matrix(num_states,num_states);
+  
   for(i=0;i<num_states;i++)
     {
       s=state_series[i];
@@ -11539,11 +11471,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
   Complex *lambda=NULL, **V=NULL, **Vinv=NULL, **VinvLambdaV_A=NULL;
   double *lambda_r=NULL, **V_r=NULL, **Vinv_r=NULL;
   int numsites2=numsites; // for traversal of matrixes
-
+  
   int allow_positive_pulls=ser[0].allow_positive_pulls;
   for(s=1;s<num_series;s++)
     allow_positive_pulls=allow_positive_pulls && ser[s].allow_positive_pulls;
-  
+  	
   //Rcout << "loglik init" << std::endl;
   if(num_series_feed>0)
     {
@@ -11558,6 +11490,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  timers[2][1]=clock();
 	  timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	  doubledelete(var, num_states);
+	  singledelete(stddevs);
+	  singledelete(lambda);
+	  singledelete(lambda_r);
+	  doubledelete(A, num_states);
+	  doubledelete(V,num_states);
+	  doubledelete(Vinv,num_states);
+	  doubledelete(VinvLambdaV_A,num_states);
+	  doubledelete(V_r,num_states);
+	  doubledelete(Vinv_r,num_states);
+
 	  return -1e+200;
 	}
       Vinv=matrix_eigenvectors(A,num_states,&lambda,&V);
@@ -11586,15 +11529,23 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	if(lambda[i].Re()>0.0 && !allow_positive_pulls)
 	  {
 	    //cout << "Positive pull:" << lambda[i].Re() << endl;
-	    doubledelete(V,num_states);
-	    doubledelete(Vinv,num_states);
-	    delete [] lambda;
 #ifdef DETAILED_TIMERS
 	    timers[1][1]=clock();
 	    timers[1][2]+=(timers[1][1]-timers[1][0]);
 	    timers[2][1]=clock();
 	    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	    doubledelete(var, num_states);
+	    singledelete(stddevs);
+	    singledelete(lambda);
+	    singledelete(lambda_r);
+	    doubledelete(A, num_states);
+	    doubledelete(V,num_states);
+	    doubledelete(Vinv,num_states);
+	    doubledelete(VinvLambdaV_A,num_states);
+	    doubledelete(V_r,num_states);
+	    doubledelete(Vinv_r,num_states);
+	    
 	    return(-1e+200);
 	  }
       
@@ -11624,6 +11575,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		timers[2][1]=clock();
 		timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+		doubledelete(var, num_states);
+		singledelete(stddevs);
+		singledelete(lambda);
+		singledelete(lambda_r);
+		doubledelete(A, num_states);
+		doubledelete(V,num_states);
+		doubledelete(Vinv,num_states);
+		doubledelete(VinvLambdaV_A,num_states);
+		doubledelete(V_r,num_states);
+		doubledelete(Vinv_r,num_states);
+		
 		return(-1e+200);
 	      }
 	  }
@@ -11656,7 +11618,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    }
 		}
 	      
-	      delete [] lambda;
+	      if(lambda)
+		delete [] lambda;
 	      lambda=NULL;
 	      doubledelete(Vinv,num_states);
 	      doubledelete(V,num_states);
@@ -11664,7 +11627,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    }
 	}
     }
-  else
+    else
     {
       //V=get_complex_eigenvector_matrix(A,num_states,&lambda,0,1000000);
       //Vinv=inverse_complex_matrix(V,num_states);
@@ -11677,6 +11640,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  timers[2][1]=clock();
 	  timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	  doubledelete(var, num_states);
+	  singledelete(stddevs);
+	  singledelete(lambda);
+	  singledelete(lambda_r);
+	  doubledelete(A, num_states);
+	  doubledelete(V,num_states);
+	  doubledelete(Vinv,num_states);
+	  doubledelete(VinvLambdaV_A,num_states);
+	  doubledelete(V_r,num_states);
+	  doubledelete(Vinv_r,num_states);
+	  
 	  return -1e+200;
 	}
       
@@ -11696,7 +11670,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	}
       doubledelete(Vinv,num_states);
       doubledelete(V,num_states);
-      delete [] lambda;
+      if(lambda)
+	delete [] lambda;
       lambda=NULL;
 
       for(i=0;i<num_states;i++)
@@ -11707,9 +11682,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #else
 	    Rcout << "Positive pull:" << lambda_r[i] << std::endl;
 #endif // MAIN
-	    doubledelete(V_r,num_states);
-	    doubledelete(Vinv_r,num_states);
-	    delete [] lambda_r;
 #ifdef DETAILED_TIMERS
 	    timers[1][1]=clock();
 	    timers[1][2]+=(timers[1][1]-timers[1][0]);
@@ -11717,10 +11689,20 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
   
+	    doubledelete(var, num_states);
+	    singledelete(stddevs);
+	    singledelete(lambda);
+	    singledelete(lambda_r);
+	    doubledelete(A, num_states);
+	    doubledelete(V,num_states);
+	    doubledelete(Vinv,num_states);
+	    doubledelete(VinvLambdaV_A,num_states);
+	    doubledelete(V_r,num_states);
+	    doubledelete(Vinv_r,num_states);
+	  
 	    return(-1e+200);
-	  } 
+	  }
     }
-
 #ifndef MAIN
   if(detailed_loglik)
     Rcout << "m vector stuff" << std::endl;
@@ -11815,6 +11797,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   double **Omega_r=NULL,**Vvar_r=NULL,**Qbuffer_r=NULL; 
   double **Lambda_k_r=NULL,*eLambda_k_r=NULL;  
+
+  
   
   if(is_complex)
     {
@@ -11860,7 +11844,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(ser[0].meas[0].dt!=NoHydDateTime)
     dt_k=new HydDateTime[len];
 
-  
 #ifndef MAIN
   if(detailed_loglik)
     Rcout << "Making residual and prior expectancy matrices" << std::endl;
@@ -11910,7 +11893,17 @@ double loglik(double *pars, int dosmooth, int do_realize,
   double **x_k_s=NULL;
   double **C_k=NULL, **PAbuffer=NULL;
 
+  for(k=0;k<(int)len;k++)
+    {
+      x_k_now[k]=NULL;
+      u_k[k]=NULL;
+      F_k[k]=NULL;
+      P_k_now[k]=NULL;
+      P_k_prev[k]=NULL;
+    }
 
+  singledelete(t_k_smooth);
+  singledelete(dt_k_smooth);
   if(dosmooth)
     {
       P_k_s=new double**[meas_smooth_len];
@@ -12027,6 +12020,50 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    timers[2][1]=clock();
 		    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+		    doubledelete(var, num_states);
+		    singledelete(stddevs);
+		    singledelete(lambda);
+		    singledelete(lambda_r);
+		    doubledelete(A, num_states);
+		    doubledelete(V,num_states);
+		    doubledelete(Vinv,num_states);
+		    doubledelete(VinvLambdaV_A,num_states);
+		    doubledelete(V_r,num_states);
+		    doubledelete(Vinv_r,num_states);
+		    doubledelete(Omega,num_states);
+		    doubledelete(Vvar,num_states);
+		    doubledelete(Qbuffer,num_states);
+		    doubledelete(Lambda_k,num_states);
+		    singledelete(eLambda_k);
+		    singledelete(eLambda_k_r);
+		    singledelete(x_k_prev);
+		    singledelete(m);
+		    singledelete(B);
+		    singledelete(t_k);
+		    singledelete(dt_k);
+		    singledelete(resids_time);
+		    doubledelete(Q_k_buff,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(Omega_r,num_states);
+		    doubledelete(Vvar_r,num_states);
+		    doubledelete(Qbuffer_r,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(P_k_buffer,num_states);
+		    tripledelete(Q_k,len,num_states);
+		    doubledelete(x_k_now,len);
+		    tripledelete(F_k,len,num_states);
+		    doubledelete(u_k,len);
+		    tripledelete(P_k_now,len,num_states);
+		    tripledelete(P_k_prev,len,num_states);
+		    tripledelete(P_k_s,meas_smooth_len,num_states);
+		    doubledelete(x_k_s,meas_smooth_len);
+		    singledelete(t_k_smooth);
+		    singledelete(dt_k_smooth);
+		    doubledelete(C_k,num_states);
+		    doubledelete(PAbuffer,num_states);
+		    doubledelete(resids,numobs);
+		    doubledelete(prior_expectancy,numobs);
+		    
 		    return -1e+200;
 		  }
 		
@@ -12101,6 +12138,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  for(k=0;k<(int)numsites;k++)
 	    corr[i*numsites+j][i*numsites+k]=corr_layer[i][j][k];
       }
+
+	  
   //Rcout << "loglik init3" << std::endl;
   if(num_series_corr>0)
     {
@@ -12133,8 +12172,53 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  timers[2][1]=clock();
 	  timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
-	  return -1+200;
+	  doubledelete(var, num_states);
+	  singledelete(stddevs);
+	  singledelete(lambda);
+	  singledelete(lambda_r);
+	  doubledelete(A, num_states);
+	  doubledelete(V,num_states);
+	  doubledelete(Vinv,num_states);
+	  doubledelete(VinvLambdaV_A,num_states);
+	  doubledelete(V_r,num_states);
+	  doubledelete(Vinv_r,num_states);
+	  doubledelete(Omega,num_states);
+	  doubledelete(Vvar,num_states);
+	  doubledelete(Qbuffer,num_states);
+	  doubledelete(Lambda_k,num_states);
+	  singledelete(eLambda_k);
+	  singledelete(eLambda_k_r);
+	  singledelete(x_k_prev);
+	  singledelete(m);
+	  singledelete(B);
+	  singledelete(t_k);
+	  singledelete(dt_k);
+	  singledelete(resids_time);
+	  doubledelete(Q_k_buff,num_states);
+	  doubledelete(Lambda_k_r,num_states);
+	  doubledelete(Omega_r,num_states);
+	  doubledelete(Vvar_r,num_states);
+	  doubledelete(Qbuffer_r,num_states);
+	  doubledelete(Lambda_k_r,num_states);
+	  doubledelete(P_k_buffer,num_states);
+	  tripledelete(Q_k,len,num_states);
+	  doubledelete(resids,numobs);
+	  doubledelete(prior_expectancy,numobs);
+	  doubledelete(x_k_now,len);
+	  tripledelete(F_k,len,num_states);
+	  doubledelete(u_k,len);
+	  tripledelete(P_k_now,len,num_states);
+	  tripledelete(P_k_prev,len,num_states);
+	  tripledelete(P_k_s,meas_smooth_len,num_states);
+	  doubledelete(x_k_s,meas_smooth_len);
+	  singledelete(t_k_smooth);
+	  singledelete(dt_k_smooth);
+	  doubledelete(C_k,num_states);
+	  doubledelete(PAbuffer,num_states);
+	  
+	  return -1e+200;
 	}
+      
       Complex *sigma_lambda=Complex_eigenvalues(corr, num_states);
 			
       bool corr_wrong=false;
@@ -12269,7 +12353,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   t_k[0]=me[0].tm;
   Complex *W=NULL,*u_k_buff=NULL;
   double *W_r=NULL,*u_k_buff_r=NULL;
-  
+
   if(is_complex)
     {
       W=new Complex[num_states];
@@ -12686,15 +12770,60 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      
 #endif // MAIN	      
 
-	      doubledelete(prior_expectancy, numobs);
-	      doubledelete(resids, numobs);
-	      delete [] resids_time;
 #ifdef DETAILED_TIMERS
 	      timers[1][1]=clock();
 	      timers[1][2]+=(timers[1][1]-timers[1][0]);
 	      timers[2][1]=clock();
 	      timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	      doubledelete(prior_expectancy, numobs);
+	      doubledelete(resids, numobs);
+	      doubledelete(var, num_states);
+	      singledelete(stddevs);
+	      singledelete(lambda);
+	      singledelete(lambda_r);
+	      doubledelete(A, num_states);
+	      doubledelete(V,num_states);
+	      doubledelete(Vinv,num_states);
+	      doubledelete(VinvLambdaV_A,num_states);
+	      doubledelete(V_r,num_states);
+	      doubledelete(Vinv_r,num_states);
+	      doubledelete(Omega,num_states);
+	      doubledelete(Vvar,num_states);
+	      doubledelete(Qbuffer,num_states);
+	      doubledelete(Lambda_k,num_states);
+	      singledelete(eLambda_k);
+	      singledelete(eLambda_k_r);
+	      singledelete(x_k_prev);
+	      singledelete(m);
+	      singledelete(B);
+	      singledelete(t_k);
+	      singledelete(dt_k);
+	      singledelete(resids_time);
+	      doubledelete(Q_k_buff,num_states);
+	      doubledelete(Lambda_k_r,num_states);
+	      doubledelete(Omega_r,num_states);
+	      doubledelete(Vvar_r,num_states);
+	      doubledelete(Qbuffer_r,num_states);
+	      doubledelete(Lambda_k_r,num_states);
+	      doubledelete(P_k_buffer,num_states);
+	      tripledelete(Q_k,len,num_states);
+	      singledelete(W);
+	      singledelete(W_r);
+	      singledelete(u_k_buff);
+	      singledelete(u_k_buff_r);
+	      doubledelete(x_k_now,len);
+	      tripledelete(F_k,len,num_states);
+	      doubledelete(u_k,len);
+	      tripledelete(P_k_now,len,num_states);
+	      tripledelete(P_k_prev,len,num_states);
+	      tripledelete(P_k_s,meas_smooth_len,num_states);
+	      doubledelete(x_k_s,meas_smooth_len);
+	      singledelete(t_k_smooth);
+	      singledelete(dt_k_smooth);
+	      doubledelete(C_k,num_states);
+	      doubledelete(PAbuffer,num_states);
+  
 	      return(-1e+200);
 	      //exit(0);
 	    }
@@ -12749,6 +12878,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   //double t0=useext ? extdata[0].x : 0.0; // starting time 
   // of the external timeseries
   double t1; //time closest to the first measurement:
+
   if(useext)
     {
       // find the external timeseries time closest to the first
@@ -12830,15 +12960,61 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  i << "]=" << u_k_buff[i].Re() << "+" <<
 		  u_k_buff[i].Im() << "i" << std::endl;
 #endif // MAIN
-		doubledelete(prior_expectancy, numobs);
-		doubledelete(resids, numobs);
-		delete [] resids_time;
 #ifdef DETAILED_TIMERS
 		timers[1][1]=clock();
 		timers[1][2]+=(timers[1][1]-timers[1][0]);
 		timers[2][1]=clock();
 		timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+		
+		doubledelete(prior_expectancy, numobs);
+		doubledelete(resids, numobs);
+		doubledelete(var, num_states);
+		singledelete(stddevs);
+		singledelete(lambda);
+		singledelete(lambda_r);
+		doubledelete(A, num_states);
+		doubledelete(V,num_states);
+		doubledelete(Vinv,num_states);
+		doubledelete(VinvLambdaV_A,num_states);
+		doubledelete(V_r,num_states);
+		doubledelete(Vinv_r,num_states);
+		doubledelete(Omega,num_states);
+		doubledelete(Vvar,num_states);
+		doubledelete(Qbuffer,num_states);
+		doubledelete(Lambda_k,num_states);
+		singledelete(eLambda_k);
+		singledelete(eLambda_k_r);
+		singledelete(x_k_prev);
+		singledelete(m);
+		singledelete(B);
+		singledelete(t_k);
+		singledelete(dt_k);
+		singledelete(resids_time);
+		doubledelete(Q_k_buff,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(Omega_r,num_states);
+		doubledelete(Vvar_r,num_states);
+		doubledelete(Qbuffer_r,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(P_k_buffer,num_states);
+		tripledelete(Q_k,len,num_states);
+		singledelete(W);
+		singledelete(W_r);
+		singledelete(u_k_buff);
+		singledelete(u_k_buff_r);
+		doubledelete(x_k_now,len);
+		tripledelete(F_k,len,num_states);
+		doubledelete(u_k,len);
+		tripledelete(P_k_now,len,num_states);
+		tripledelete(P_k_prev,len,num_states);
+		tripledelete(P_k_s,meas_smooth_len,num_states);
+		doubledelete(x_k_s,meas_smooth_len);
+		singledelete(t_k_smooth);
+		singledelete(dt_k_smooth);
+		doubledelete(C_k,num_states);
+		doubledelete(PAbuffer,num_states);
+		
 		return(-1e+200);
 	      }
 	    
@@ -13169,15 +13345,61 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      i << "]=" << u_k_buff[i].Re() << "+" <<
 		      u_k_buff[i].Im() << "i" << std::endl;
 #endif // MAIN
-		    doubledelete(prior_expectancy, numobs);
-		    doubledelete(resids, numobs);
-		    delete [] resids_time;
 #ifdef DETAILED_TIMERS
 		    timers[1][1]=clock();
 		    timers[1][2]+=(timers[1][1]-timers[1][0]);
 		    timers[3][1]=clock();
 		    timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+		    doubledelete(prior_expectancy, numobs);
+		    doubledelete(resids, numobs);
+		    singledelete(resids_time);
+		    doubledelete(var, num_states);
+		    singledelete(stddevs);
+		    singledelete(lambda);
+		    singledelete(lambda_r);
+		    doubledelete(A, num_states);
+		    doubledelete(V,num_states);
+		    doubledelete(Vinv,num_states);
+		    doubledelete(VinvLambdaV_A,num_states);
+		    doubledelete(V_r,num_states);
+		    doubledelete(Vinv_r,num_states);
+		    doubledelete(Omega,num_states);
+		    doubledelete(Vvar,num_states);
+		    doubledelete(Qbuffer,num_states);
+		    doubledelete(Lambda_k,num_states);
+		    singledelete(eLambda_k);
+		    singledelete(eLambda_k_r);
+		    singledelete(x_k_prev);
+		    singledelete(m);
+		    singledelete(B);
+		    singledelete(t_k);
+		    singledelete(dt_k);
+		    singledelete(resids_time);
+		    doubledelete(Q_k_buff,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(Omega_r,num_states);
+		    doubledelete(Vvar_r,num_states);
+		    doubledelete(Qbuffer_r,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(P_k_buffer,num_states);
+		    tripledelete(Q_k,len,num_states);
+		    singledelete(W);
+		    singledelete(W_r);
+		    singledelete(u_k_buff);
+		    singledelete(u_k_buff_r);
+		    doubledelete(x_k_now,len);
+		    tripledelete(F_k,len,num_states);
+		    doubledelete(u_k,len);
+		    tripledelete(P_k_now,len,num_states);
+		    tripledelete(P_k_prev,len,num_states);
+		    tripledelete(P_k_s,meas_smooth_len,num_states);
+		    doubledelete(x_k_s,meas_smooth_len);
+		    singledelete(t_k_smooth);
+		    singledelete(dt_k_smooth);
+		    doubledelete(C_k,num_states);
+		    doubledelete(PAbuffer,num_states);
+  
 		    return(-1e+200);
 		  }
 		
@@ -13203,7 +13425,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      }
 	    else
 	      eLambda_k_r[i]=exp(lambda_r[i]*dt);
-	  
+	
 	  // calculate the Lambda_k matrix
 	  for(i=0;i<num_states;i++)
 	    for(j=0;j<num_states;j++)
@@ -13229,7 +13451,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			Lambda_k_r[i][j]=Omega_r[i][j]*dt;
 		    }
 		}
-	  
+	
+			
 	  if(is_complex)
 	    {
 	      Complex **F_k_buff=Make_Complex_matrix(num_states,num_states);
@@ -13260,15 +13483,60 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  F_k_buff[i][j].Re() << "+" << 
 			  F_k_buff[i][j].Im() << "i" << std::endl;
 #endif // MAIN
-			doubledelete(prior_expectancy, numobs);
-			doubledelete(resids, numobs);
-			delete [] resids_time;
 #ifdef DETAILED_TIMERS
 			timers[1][1]=clock();
 			timers[1][2]+=(timers[1][1]-timers[1][0]);
 			timers[3][1]=clock();
 			timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+			doubledelete(prior_expectancy, numobs);
+			doubledelete(resids, numobs);
+			doubledelete(var, num_states);
+			singledelete(stddevs);
+			singledelete(lambda);
+			singledelete(lambda_r);
+			doubledelete(A, num_states);
+			doubledelete(V,num_states);
+			doubledelete(Vinv,num_states);
+			doubledelete(VinvLambdaV_A,num_states);
+			doubledelete(V_r,num_states);
+			doubledelete(Vinv_r,num_states);
+			doubledelete(Omega,num_states);
+			doubledelete(Vvar,num_states);
+			doubledelete(Qbuffer,num_states);
+			doubledelete(Lambda_k,num_states);
+			singledelete(eLambda_k);
+			singledelete(eLambda_k_r);
+			singledelete(x_k_prev);
+			singledelete(m);
+			singledelete(B);
+			singledelete(t_k);
+			singledelete(dt_k);
+			singledelete(resids_time);
+			doubledelete(Q_k_buff,num_states);
+			doubledelete(Lambda_k_r,num_states);
+			doubledelete(Omega_r,num_states);
+			doubledelete(Vvar_r,num_states);
+			doubledelete(Qbuffer_r,num_states);
+			doubledelete(Lambda_k_r,num_states);
+			doubledelete(P_k_buffer,num_states);
+			tripledelete(Q_k,len,num_states);
+			singledelete(W);
+			singledelete(W_r);
+			singledelete(u_k_buff);
+			singledelete(u_k_buff_r);
+			doubledelete(x_k_now,len);
+			tripledelete(F_k,len,num_states);
+			doubledelete(u_k,len);
+			tripledelete(P_k_now,len,num_states);
+			tripledelete(P_k_prev,len,num_states);
+			tripledelete(P_k_s,meas_smooth_len,num_states);
+			doubledelete(x_k_s,meas_smooth_len);
+			singledelete(t_k_smooth);
+			singledelete(dt_k_smooth);
+			doubledelete(C_k,num_states);
+			doubledelete(PAbuffer,num_states);
+  
 			return(-1e+200);
 			//exit(0);
 		      }
@@ -13297,7 +13565,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  }
 	    }
 	}  // end if(!first)
-
+      
       if(detailed_loglik)
 	{
 	  show_vec("u_k",u_k[k],num_states);
@@ -13311,7 +13579,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  for(l=start_i;l<num_states;l+=numsites2)
 	    x_k_prev[i]+=F_k[k][i][l]*x_k_now[(k>0 ? k-1 : 0)][l];
 	}
-      
       
       // Calculate Q_k = Vinv * Lambda_k * Vinv' :
       if(is_complex)
@@ -13419,15 +13686,61 @@ double loglik(double *pars, int dosmooth, int do_realize,
 
 		    first_cvar=0;
 #endif // MAIN		
-		    doubledelete(prior_expectancy, numobs);
-		    doubledelete(resids, numobs);
-		    delete [] resids_time;
 #ifdef DETAILED_TIMERS
 		    timers[1][1]=clock();
 		    timers[1][2]+=(timers[1][1]-timers[1][0]);
 		    timers[3][1]=clock();
 		    timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+		    doubledelete(prior_expectancy, numobs);
+		    doubledelete(resids, numobs);
+		    singledelete(resids_time);
+		    doubledelete(var, num_states);
+		    singledelete(stddevs);
+		    singledelete(lambda);
+		    singledelete(lambda_r);
+		    doubledelete(A, num_states);
+		    doubledelete(V,num_states);
+		    doubledelete(Vinv,num_states);
+		    doubledelete(VinvLambdaV_A,num_states);
+		    doubledelete(V_r,num_states);
+		    doubledelete(Vinv_r,num_states);
+		    doubledelete(Omega,num_states);
+		    doubledelete(Vvar,num_states);
+		    doubledelete(Qbuffer,num_states);
+		    doubledelete(Lambda_k,num_states);
+		    singledelete(eLambda_k);
+		    singledelete(eLambda_k_r);
+		    singledelete(x_k_prev);
+		    singledelete(m);
+		    singledelete(B);
+		    singledelete(t_k);
+		    singledelete(dt_k);
+		    singledelete(resids_time);
+		    doubledelete(Q_k_buff,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(Omega_r,num_states);
+		    doubledelete(Vvar_r,num_states);
+		    doubledelete(Qbuffer_r,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(P_k_buffer,num_states);
+		    tripledelete(Q_k,len,num_states);
+		    singledelete(W);
+		    singledelete(W_r);
+		    singledelete(u_k_buff);
+		    singledelete(u_k_buff_r);
+		    doubledelete(x_k_now,len);
+		    tripledelete(F_k,len,num_states);
+		    doubledelete(u_k,len);
+		    tripledelete(P_k_now,len,num_states);
+		    tripledelete(P_k_prev,len,num_states);
+		    tripledelete(P_k_s,meas_smooth_len,num_states);
+		    doubledelete(x_k_s,meas_smooth_len);
+		    singledelete(t_k_smooth);
+		    singledelete(dt_k_smooth);
+		    doubledelete(C_k,num_states);
+		    doubledelete(PAbuffer,num_states);
+  
 		    return (-1e+200);
 		    
 		    //exit(0);
@@ -13472,9 +13785,58 @@ double loglik(double *pars, int dosmooth, int do_realize,
       // Sanity check of Q_k
       if(!sanity_check_variance("Q_k",k,Q_k[k],stddevs,num_states,
 				laxness_level))
-	return -1e+200;
+	{
+	  doubledelete(var, num_states);
+	  singledelete(stddevs);
+	  singledelete(lambda);
+	  singledelete(lambda_r);
+	  doubledelete(A, num_states);
+	  doubledelete(V,num_states);
+	  doubledelete(Vinv,num_states);
+	  doubledelete(VinvLambdaV_A,num_states);
+	  doubledelete(V_r,num_states);
+	  doubledelete(Vinv_r,num_states);
+	  doubledelete(Omega,num_states);
+	  doubledelete(Vvar,num_states);
+	  doubledelete(Qbuffer,num_states);
+	  doubledelete(Lambda_k,num_states);
+	  singledelete(eLambda_k);
+	  singledelete(eLambda_k_r);
+	  singledelete(x_k_prev);
+	  singledelete(m);
+	  singledelete(B);
+	  singledelete(t_k);
+	  singledelete(dt_k);
+	  singledelete(resids_time);
+	  doubledelete(Q_k_buff,num_states);
+	  doubledelete(Lambda_k_r,num_states);
+	  doubledelete(Omega_r,num_states);
+	  doubledelete(Vvar_r,num_states);
+	  doubledelete(Qbuffer_r,num_states);
+	  doubledelete(Lambda_k_r,num_states);
+	  doubledelete(P_k_buffer,num_states);
+	  tripledelete(Q_k,len,num_states);
+	  singledelete(W);
+	  singledelete(W_r);
+	  singledelete(u_k_buff);
+	  singledelete(u_k_buff_r);
+	  doubledelete(resids,numobs);
+	  doubledelete(prior_expectancy,numobs);
+	  doubledelete(x_k_now,len);
+	  tripledelete(F_k,len,num_states);
+	  doubledelete(u_k,len);
+	  tripledelete(P_k_now,len,num_states);
+	  tripledelete(P_k_prev,len,num_states);
+	  tripledelete(P_k_s,meas_smooth_len,num_states);
+	  doubledelete(x_k_s,meas_smooth_len);
+	  singledelete(t_k_smooth);
+	  singledelete(dt_k_smooth);
+	  doubledelete(C_k,num_states);
+	  doubledelete(PAbuffer,num_states);
+  
+	  return -1e+200;
+	}
       
-
       // Calculate P_k_(k-1) = Q_k + F_k * P_(k-1),(k-1) * F_k' :
       for(i=0;i<num_states;i++)
 	for(j=0;j<num_states;j++)
@@ -13497,8 +13859,58 @@ double loglik(double *pars, int dosmooth, int do_realize,
       // Sanity check of P_k_prev
       if(!sanity_check_variance("P_k_prev",k,P_k_prev[k],stddevs,
 				num_states, laxness_level))
-	return -1e+200;
-
+	{
+	  doubledelete(var, num_states);
+	  singledelete(stddevs);
+	  singledelete(lambda);
+	  singledelete(lambda_r);
+	  doubledelete(A, num_states);
+	  doubledelete(V,num_states);
+	  doubledelete(Vinv,num_states);
+	  doubledelete(VinvLambdaV_A,num_states);
+	  doubledelete(V_r,num_states);
+	  doubledelete(Vinv_r,num_states);doubledelete(Omega,num_states);
+	  doubledelete(Vvar,num_states);
+	  doubledelete(Qbuffer,num_states);
+	  doubledelete(Lambda_k,num_states);
+	  singledelete(eLambda_k);
+	  singledelete(eLambda_k_r);
+	  singledelete(x_k_prev);
+	  singledelete(m);
+	  singledelete(B);
+	  singledelete(t_k);
+	  singledelete(dt_k);
+	  singledelete(resids_time);
+	  doubledelete(Q_k_buff,num_states);
+	  doubledelete(Lambda_k_r,num_states);
+	  doubledelete(Omega_r,num_states);
+	  doubledelete(Vvar_r,num_states);
+	  doubledelete(Qbuffer_r,num_states);
+	  doubledelete(Lambda_k_r,num_states);
+	  doubledelete(P_k_buffer,num_states);
+	  tripledelete(Q_k,len,num_states);
+	  singledelete(W);
+	  singledelete(W_r);
+	  singledelete(u_k_buff);
+	  singledelete(u_k_buff_r);
+	  doubledelete(resids,numobs);
+	  doubledelete(prior_expectancy,numobs);
+	  doubledelete(x_k_now,len);
+	  tripledelete(F_k,len,num_states);
+	  doubledelete(u_k,len);
+	  tripledelete(P_k_now,len,num_states);
+	  tripledelete(P_k_prev,len,num_states);
+	  tripledelete(P_k_s,meas_smooth_len,num_states);
+	  doubledelete(x_k_s,meas_smooth_len);
+	  singledelete(t_k_smooth);
+	  singledelete(dt_k_smooth);
+	  doubledelete(C_k,num_states);
+	  doubledelete(PAbuffer,num_states);
+  
+  
+	  return -1e+200;
+	}
+      
       // Initial value treatment:
       for(s=0;s<num_series;s++)
 	if(ser[s].init_treatment)
@@ -13532,15 +13944,61 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	for(j=0;j<num_states;j++)
 	  if(!(P_k_prev[k][i][j]> -1e+200 && P_k_prev[k][i][j]< 1e+200))
 	    {
-	      doubledelete(prior_expectancy, numobs);
-	      doubledelete(resids, numobs);
-	      delete [] resids_time;
 #ifdef DETAILED_TIMERS
 	      timers[1][1]=clock();
 	      timers[1][2]+=(timers[1][1]-timers[1][0]);
 	      timers[3][1]=clock();
 	      timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+	      doubledelete(prior_expectancy, numobs);
+	      doubledelete(resids, numobs);
+	      singledelete(resids_time);
+	      doubledelete(var, num_states);
+	      singledelete(stddevs);
+	      singledelete(lambda);
+	      singledelete(lambda_r);
+	      doubledelete(A, num_states);
+	      doubledelete(V,num_states);
+	      doubledelete(Vinv,num_states);
+	      doubledelete(VinvLambdaV_A,num_states);
+	      doubledelete(V_r,num_states);
+	      doubledelete(Vinv_r,num_states);
+	      doubledelete(Omega,num_states);
+	      doubledelete(Vvar,num_states);
+	      doubledelete(Qbuffer,num_states);
+	      doubledelete(Lambda_k,num_states);
+	      singledelete(eLambda_k);
+	      singledelete(eLambda_k_r);
+	      singledelete(x_k_prev);
+	      singledelete(m);
+	      singledelete(B);
+	      singledelete(t_k);
+	      singledelete(dt_k);
+	      singledelete(resids_time);
+	      doubledelete(Q_k_buff,num_states);
+	      doubledelete(Lambda_k_r,num_states);
+	      doubledelete(Omega_r,num_states);
+	      doubledelete(Vvar_r,num_states);
+	      doubledelete(Qbuffer_r,num_states);
+	      doubledelete(Lambda_k_r,num_states);
+	      doubledelete(P_k_buffer,num_states);
+	      tripledelete(Q_k,len,num_states);
+	      singledelete(W);
+	      singledelete(W_r);
+	      singledelete(u_k_buff);
+	      singledelete(u_k_buff_r);
+	      doubledelete(x_k_now,len);
+	      tripledelete(F_k,len,num_states);
+	      doubledelete(u_k,len);
+	      tripledelete(P_k_now,len,num_states);
+	      tripledelete(P_k_prev,len,num_states);
+	      tripledelete(P_k_s,meas_smooth_len,num_states);
+	      doubledelete(x_k_s,meas_smooth_len);
+	      singledelete(t_k_smooth);
+	      singledelete(dt_k_smooth);
+	      doubledelete(C_k,num_states);
+	      doubledelete(PAbuffer,num_states);
+  
 	      return(-1e+200);
 	    }
 
@@ -13552,7 +14010,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       Rcout << "k=" << k << " me[k].num_measurements=" <<
 	me[k].num_measurements << " ll=" << -ret << std::endl;
 #endif // MAIN
-      
+
       
       if(me[k].num_measurements==1)
 	{
@@ -13641,7 +14099,57 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    if(!sanity_check_variance("P_k_now",k,P_k_now[k],
 				      stddevs, num_states,
 				      LOGLIK_LAXNESS(int(laxness_level)+1)))
-	      return -1e+200;
+	      {
+		doubledelete(var, num_states);
+		singledelete(stddevs);
+		singledelete(lambda);
+		singledelete(lambda_r);
+		doubledelete(A, num_states);
+		doubledelete(V,num_states);
+		doubledelete(Vinv,num_states);
+		doubledelete(VinvLambdaV_A,num_states);
+		doubledelete(V_r,num_states);
+		doubledelete(Vinv_r,num_states);
+		doubledelete(Omega,num_states);
+		doubledelete(Vvar,num_states);
+		doubledelete(Qbuffer,num_states);
+		doubledelete(Lambda_k,num_states);
+		singledelete(eLambda_k);
+		singledelete(eLambda_k_r);
+		singledelete(x_k_prev);
+		singledelete(m);
+		singledelete(B);
+		singledelete(t_k);
+		singledelete(dt_k);
+		singledelete(resids_time);
+		doubledelete(Q_k_buff,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(Omega_r,num_states);
+		doubledelete(Vvar_r,num_states);
+		doubledelete(Qbuffer_r,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(P_k_buffer,num_states);
+		tripledelete(Q_k,len,num_states);
+		singledelete(W);
+		singledelete(W_r);
+		singledelete(u_k_buff);
+		singledelete(u_k_buff_r);
+		doubledelete(resids,numobs);
+		doubledelete(prior_expectancy,numobs);
+		doubledelete(x_k_now,len);
+		tripledelete(F_k,len,num_states);
+		doubledelete(u_k,len);
+		tripledelete(P_k_now,len,num_states);
+		tripledelete(P_k_prev,len,num_states);
+		tripledelete(P_k_s,meas_smooth_len,num_states);
+		doubledelete(x_k_s,meas_smooth_len);
+		singledelete(t_k_smooth);
+		singledelete(dt_k_smooth);
+		doubledelete(C_k,num_states);
+		doubledelete(PAbuffer,num_states);
+  
+		return -1e+200;
+	      }
 	  
 	
 	  
@@ -13799,7 +14307,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      doubledelete(sample,1);
 	    }
 #endif // MAIN
-	  
+	
 	  for(i=0;i<n;i++)
 	    {
 	      s=me[k].serie_num[i];
@@ -13847,7 +14355,58 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    if(!sanity_check_variance("P_k_now",k,P_k_now[k],
 				      stddevs,num_states,
 				      LOGLIK_LAXNESS(int(laxness_level)+1)))
-	    return -1e+200;
+	      {
+		doubledelete(var, num_states);
+		singledelete(stddevs);
+		singledelete(lambda);
+		singledelete(lambda_r);
+		doubledelete(A, num_states);
+		doubledelete(V,num_states);
+		doubledelete(Vinv,num_states);
+		doubledelete(VinvLambdaV_A,num_states);
+		doubledelete(V_r,num_states);
+		doubledelete(Vinv_r,num_states);
+		doubledelete(Omega,num_states);
+		doubledelete(Vvar,num_states);
+		doubledelete(Qbuffer,num_states);
+		doubledelete(Lambda_k,num_states);
+		singledelete(eLambda_k);
+		singledelete(eLambda_k_r);
+		singledelete(x_k_prev);
+		singledelete(m);
+		singledelete(B);
+		singledelete(t_k);
+		singledelete(dt_k);
+		singledelete(resids_time);
+		doubledelete(Q_k_buff,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(Omega_r,num_states);
+		doubledelete(Vvar_r,num_states);
+		doubledelete(Qbuffer_r,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(P_k_buffer,num_states);
+		tripledelete(Q_k,len,num_states);
+		singledelete(W);
+		singledelete(W_r);
+		singledelete(u_k_buff);
+		singledelete(u_k_buff_r);
+		doubledelete(resids,numobs);
+		doubledelete(prior_expectancy,numobs);
+		doubledelete(x_k_now,len);
+		tripledelete(F_k,len,num_states);
+		doubledelete(u_k,len);
+		tripledelete(P_k_now,len,num_states);
+		tripledelete(P_k_prev,len,num_states);
+		tripledelete(P_k_s,meas_smooth_len,num_states);
+		doubledelete(x_k_s,meas_smooth_len);
+		singledelete(t_k_smooth);
+		singledelete(dt_k_smooth);
+		doubledelete(C_k,num_states);
+		doubledelete(PAbuffer,num_states);
+  
+  
+		return -1e+200;
+	      }
 	  
 	  
 	  /* DEBUG stuff
@@ -13871,13 +14430,62 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      timers[3][1]=clock();
 	      timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+	      doubledelete(var, num_states);
+	      singledelete(stddevs);
+	      singledelete(lambda);
+	      singledelete(lambda_r);
+	      doubledelete(A, num_states);
+	      doubledelete(V,num_states);
+	      doubledelete(Vinv,num_states);
+	      doubledelete(VinvLambdaV_A,num_states);
+	      doubledelete(V_r,num_states);
+	      doubledelete(Vinv_r,num_states);
+	      doubledelete(Omega,num_states);
+	      doubledelete(Vvar,num_states);
+	      doubledelete(Qbuffer,num_states);
+	      doubledelete(Lambda_k,num_states);
+	      singledelete(eLambda_k);
+	      singledelete(eLambda_k_r);
+	      singledelete(x_k_prev);
+	      singledelete(m);
+	      singledelete(B);
+	      singledelete(t_k);
+	      singledelete(dt_k);
+	      singledelete(resids_time);
+	      doubledelete(Q_k_buff,num_states);
+	      doubledelete(Lambda_k_r,num_states);
+	      doubledelete(Omega_r,num_states);
+	      doubledelete(Vvar_r,num_states);
+	      doubledelete(Qbuffer_r,num_states);
+	      doubledelete(Lambda_k_r,num_states);
+	      doubledelete(P_k_buffer,num_states);
+	      tripledelete(Q_k,len,num_states);
+	      singledelete(W);
+	      singledelete(W_r);
+	      singledelete(u_k_buff);
+	      singledelete(u_k_buff_r);
+	      doubledelete(resids,numobs);
+	      doubledelete(prior_expectancy,numobs);
+	      doubledelete(x_k_now,len);
+	      tripledelete(F_k,len,num_states);
+	      doubledelete(u_k,len);
+	      tripledelete(P_k_now,len,num_states);
+	      tripledelete(P_k_prev,len,num_states);
+	      tripledelete(P_k_s,meas_smooth_len,num_states);
+	      doubledelete(x_k_s,meas_smooth_len);
+	      singledelete(t_k_smooth);
+	      singledelete(dt_k_smooth);
+	      doubledelete(C_k,num_states);
+	      doubledelete(PAbuffer,num_states);
+  
+  
 	      return -1e+200;
 	    }
 	  
 	  // Calculate log(f(y_k | D-1)), which is
 	  // the likelihood contribution from the current measurement:
 	  ret -= pdf_multinormal(y_k, zeroes_k, S_k, n, true);
-	  
+	
 	  for(i=0;i<n;i++)
 	    {
 	      s=me[k].serie_num[i];
@@ -13980,8 +14588,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    for(j=0;j<num_states;j++)
 	      P_k_now[k][i][j] = P_k_prev[k][i][j];
 	}
-}
-  
+    }
+
 #ifdef DETAILED_TIMERS
   timers[3][1]=clock();
   timers[3][2]+=(timers[3][1]-timers[3][0]);
@@ -14236,6 +14844,54 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  timers[5][1]=clock();
 			  timers[5][2]+=(timers[5][1]-timers[5][0]);
 #endif // DETAILED_TIMERS
+			  doubledelete(var, num_states);
+			  singledelete(stddevs);
+			  singledelete(lambda);
+			  singledelete(lambda_r);
+			  doubledelete(A, num_states);
+			  doubledelete(V,num_states);
+			  doubledelete(Vinv,num_states);
+			  doubledelete(VinvLambdaV_A,num_states);
+			  doubledelete(V_r,num_states);
+			  doubledelete(Vinv_r,num_states);
+			  doubledelete(Omega,num_states);
+			  doubledelete(Vvar,num_states);
+			  doubledelete(Qbuffer,num_states);
+			  doubledelete(Lambda_k,num_states);
+			  singledelete(eLambda_k);
+			  singledelete(eLambda_k_r);
+			  singledelete(x_k_prev);
+			  singledelete(m);
+			  singledelete(B);
+			  singledelete(t_k);
+			  singledelete(dt_k);
+			  singledelete(resids_time);
+			  doubledelete(Q_k_buff,num_states);
+			  doubledelete(Lambda_k_r,num_states);
+			  doubledelete(Omega_r,num_states);
+			  doubledelete(Vvar_r,num_states);
+			  doubledelete(Qbuffer_r,num_states);
+			  doubledelete(Lambda_k_r,num_states);
+			  doubledelete(P_k_buffer,num_states);
+			  tripledelete(Q_k,len,num_states);
+			  singledelete(W);
+			  singledelete(W_r);
+			  singledelete(u_k_buff);
+			  singledelete(u_k_buff_r);
+			  doubledelete(resids,numobs);
+			  doubledelete(prior_expectancy,numobs);
+			  doubledelete(x_k_now,len);
+			  tripledelete(F_k,len,num_states);
+			  doubledelete(u_k,len);
+			  tripledelete(P_k_now,len,num_states);
+			  tripledelete(P_k_prev,len,num_states);
+			  tripledelete(P_k_s,meas_smooth_len,num_states);
+			  doubledelete(x_k_s,meas_smooth_len);
+			  singledelete(t_k_smooth);
+			  singledelete(dt_k_smooth);
+			  doubledelete(C_k,num_states);
+			  doubledelete(PAbuffer,num_states);
+  
 			  return -1e+200;
 			}
 		      
@@ -14287,6 +14943,54 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				  timers[5][1]=clock();
 				  timers[5][2]+=(timers[5][1]-timers[5][0]);
 #endif // DETAILED_TIMERS
+				  doubledelete(var, num_states);
+				  singledelete(stddevs);
+				  singledelete(lambda);
+				  singledelete(lambda_r);
+				  doubledelete(A, num_states);
+				  doubledelete(V,num_states);
+				  doubledelete(Vinv,num_states);
+				  doubledelete(VinvLambdaV_A,num_states);
+				  doubledelete(V_r,num_states);
+				  doubledelete(Vinv_r,num_states);
+				  doubledelete(Omega,num_states);
+				  doubledelete(Vvar,num_states);
+				  doubledelete(Qbuffer,num_states);
+				  doubledelete(Lambda_k,num_states);
+				  singledelete(eLambda_k);
+				  singledelete(eLambda_k_r);
+				  singledelete(x_k_prev);
+				  singledelete(m);
+				  singledelete(B);
+				  singledelete(t_k);
+				  singledelete(dt_k);
+				  singledelete(resids_time);
+				  doubledelete(Q_k_buff,num_states);
+				  doubledelete(Lambda_k_r,num_states);
+				  doubledelete(Omega_r,num_states);
+				  doubledelete(Vvar_r,num_states);
+				  doubledelete(Qbuffer_r,num_states);
+				  doubledelete(Lambda_k_r,num_states);
+				  doubledelete(P_k_buffer,num_states);
+				  tripledelete(Q_k,len,num_states);
+				  singledelete(W);
+				  singledelete(W_r);
+				  singledelete(u_k_buff);
+				  singledelete(u_k_buff_r);
+				  doubledelete(resids,numobs);
+				  doubledelete(prior_expectancy,numobs);
+				  doubledelete(x_k_now,len);
+				  tripledelete(F_k,len,num_states);
+				  doubledelete(u_k,len);
+				  tripledelete(P_k_now,len,num_states);
+				  tripledelete(P_k_prev,len,num_states);
+				  tripledelete(P_k_s,meas_smooth_len,num_states);
+				  doubledelete(x_k_s,meas_smooth_len);
+				  singledelete(t_k_smooth);
+				  singledelete(dt_k_smooth);
+				  doubledelete(C_k,num_states);
+				  doubledelete(PAbuffer,num_states);
+  
 				  return -1e+200;
 				}
 			      
@@ -14421,11 +15125,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
     {
       doubledelete(prior_expectancy, numobs);
       doubledelete(resids, numobs);
-      delete [] resids_time;
+      singledelete(resids_time);
     }
-  
-  if(dt_k)
-    delete [] dt_k;
+
+  singledelete(dt_k);
 
   if(dosmooth)
     {
@@ -14435,8 +15138,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // Cleanup:
   if(is_complex)
     {
-      if(lambda)
-	delete [] lambda;
+      singledelete(lambda);
       doubledelete(V,num_states);
       doubledelete(Vinv,num_states);
       doubledelete(VinvLambdaV_A,num_states);
@@ -14445,64 +15147,50 @@ double loglik(double *pars, int dosmooth, int do_realize,
       doubledelete(Qbuffer,num_states);
       doubledelete(Q_k_buff,num_states);
       doubledelete(Lambda_k,num_states);
-      if(eLambda_k)
-	delete [] eLambda_k;
-      if(W)
-	delete [] W;
-      if(u_k_buff)
-	delete [] u_k_buff;
+      singledelete(u_k_buff);
+      singledelete(W);
+      singledelete(eLambda_k);
     }
   else
     {
-      delete [] lambda_r;
+      singledelete(lambda_r);
       doubledelete(V_r,num_states);
       doubledelete(Vinv_r,num_states);
       doubledelete(Omega_r,num_states);
       doubledelete(Vvar_r,num_states);
       doubledelete(Qbuffer_r,num_states);
       doubledelete(Lambda_k_r,num_states);
-      if(eLambda_k_r)
-	delete [] eLambda_k_r;
-      if(W_r)
-	delete [] W_r;
-      if(u_k_buff_r)
-	delete [] u_k_buff_r;
+      singledelete(u_k_buff_r);
+      singledelete(W_r);
+      singledelete(eLambda_k_r);
     }
-  
-  delete [] t_k;
+
+  singledelete(t_k);
   doubledelete(var,num_states);
-  if(stddevs)
-    delete [] stddevs;
+  singledelete(stddevs);
   doubledelete(A,num_states);
   doubledelete(P_k_buffer,num_states);
-
-  for(k=0;k<(int)len;k++)
-    {
-      doubledelete(P_k_now[k],num_states);
-      doubledelete(P_k_prev[k],num_states);
-      doubledelete(F_k[k],num_states);
-      doubledelete(Q_k[k],num_states);
-      if(dosmooth)
-	doubledelete(P_k_s[k],num_states);
-    }
-  delete [] Q_k;
-  delete [] P_k_now;
-  delete [] P_k_prev;
-  delete [] F_k;
+  
+  tripledelete(P_k_s,meas_smooth_len,num_states);
+  tripledelete(P_k_now,len,num_states);
+  tripledelete(P_k_prev,len,num_states);
+  tripledelete(F_k,len,num_states);
+  tripledelete(Q_k,len,num_states);
+    
   doubledelete(x_k_now,len);
   doubledelete(u_k,len);
+  
   if(dosmooth)
     {
+      tripledelete(P_k_s,len,num_states);
       doubledelete(x_k_s,len);
-      delete [] P_k_s;
       doubledelete(C_k,num_states);
       doubledelete(PAbuffer,num_states);
     }
-  
-  delete [] x_k_prev;
-  delete [] u_k;
-  delete [] m;
-  delete [] B;
+
+  singledelete(x_k_prev);
+  singledelete(m);
+  singledelete(B);
 
 #ifdef MAIN
   if(f)
@@ -16348,7 +17036,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   //if(!silent)
   //Rcout << "Checked mode" << std::endl;
      
-  double **resids=NULL, *resids_time, **prior_expected_values=NULL;
+  double **resids=NULL, *resids_time=NULL, **prior_expected_values=NULL;
   int resid_numcol=0, resid_len=0;
   
   // DEBUG:
@@ -17053,8 +17741,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       feed_symmetric[i]=0;
     }
   
-  if(!silent)
-    Rcout << "Sympairs check" << std::endl;
+  //if(!silent)
+  //Rcout << "Sympairs checked" << std::endl;
     
   IntegerVector causal_sym_pairs=as<IntegerVector>(causal_symmetric);
   int numsym=causal_sym_pairs.size()/4;
@@ -17126,18 +17814,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   num_series_feed+=numsym;
   
-  if(!silent)
-    Rcout << "Corrpairs check" << std::endl;
+  //if(!silent)
+  //Rcout << "Corrpairs checked" << std::endl;
     
   
   IntegerVector corr_pairs=as<IntegerVector>(corr);
   num_series_corr=corr_pairs.size()/4;
-  if(!silent)
+  /* if(!silent)
     {
       Rcout << corr_pairs.size() << std::endl;
       for(i=0;i<corr_pairs.size();i++)
 	Rcout << "i=" << i << " c=" << corr_pairs[i] << std::endl;
-    }
+	} */
   
   corr_from_series=new int[10000];
   corr_to_series=new int[10000];
@@ -17238,8 +17926,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
     
   
-  if(!silent)
-    Rcout << "Connections made" << std::endl;
+  //if(!silent)
+  //Rcout << "Connections made" << std::endl;
      
   
   double ***x=NULL; // smoothing results from the latent processes
@@ -17258,8 +17946,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 
   if(lmode==LAYERANALYZER_NUMPAR)
     {
-      if(!silent)
-	Rcout << "Numpar!" << std::endl;
+      //if(!silent)
+      //Rcout << "Numpar!" << std::endl;
       List out=List::create(Named("numpar",numpar));
       StringVector parnames(numpar);
       for(j=0;j<(int)numpar;j++)
@@ -17284,17 +17972,18 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       return NULL;
     }
   
-  // DEBUG 
+  // DEBUG
+  /*
   if(!silent)
     Rcout << "inpars_numpars=" << inpars_numpars << " numpar=" << numpar << 
       " inpars_numsets=" << inpars_numsets << " no_inpars=" << no_inpars <<
       std::endl;
   if(!silent)
-    Rcout << "ready for mode-based analyses" << std::endl;
+  Rcout << "ready for mode-based analyses" << std::endl; */
      
   
-  if(!silent)
-    Rcout << "lmode=" << int(lmode) << std::endl;
+  //if(!silent)
+  //Rcout << "lmode=" << int(lmode) << std::endl;
   
   if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
      lmode==LAYERANALYZER_ML_FROM_HYBRID)
@@ -17354,8 +18043,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       
       for(int k=0;k<inpars_numsets;k++)
 	{
-	  if(!silent) 
-	    Rcout << "k=" << k << std::endl;
+	  //if(!silent) 
+	  //Rcout << "k=" << k << std::endl;
 	  
 	  int num_missing=0;
 	  for(j=0;(int)j<inpars_numpars;j++)
@@ -17374,8 +18063,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  if(num_missing>0)
 	    {
-	      if(!silent) 
-		Rcout << "optim started" << std::endl;
+	      //if(!silent) 
+	      //Rcout << "optim started" << std::endl;
 
 	      bool detailed_loglik_buffer=detailed_loglik;
 	      double lbest=-1e+200;
@@ -17386,15 +18075,19 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      // causes crash. Seems to stem from using find_closest_param
 	      if(help_params)
 	      {
+		/* 
 		if(!silent) 
-		  Rcout << "currparam.numparam=" << currparam.numparam << " help_params[last].numparam=" << help_params[num_mcmc-1].numparam << " inpars_numpars=" << inpars_numpars << " numpar=" << numpar << std::endl;
+		  Rcout << "currparam.numparam=" << currparam.numparam << "
+		  help_params[last].numparam=" <<
+		  help_params[num_mcmc-1].numparam << " inpars_numpars=" <<
+		  inpars_numpars << " numpar=" << numpar << std::endl; */
 		closest=get_closest_param(currparam, help_params, num_mcmc);
-		if(!silent) 
-		  Rcout << "closest1:" << closest << std::endl;
+		//if(!silent) 
+		//Rcout << "closest1:" << closest << std::endl;
 	      }
 	      
-	      if(!silent) 
-		Rcout << "closest2:" << closest << std::endl;
+	      //if(!silent) 
+	      //Rcout << "closest2:" << closest << std::endl;
 	      
 	      detailed_loglik=false;
 	      for(i=0;(int)i<num_optim;i++)
@@ -17452,8 +18145,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		}
 	      
 	      detailed_loglik=detailed_loglik_buffer;
-	      if(!silent) 
-		Rcout << "optim loop done" << std::endl;
+	      //if(!silent) 
+	      //Rcout << "optim loop done" << std::endl;
 
 	      for(j=0;(int)j<inpars_numpars;j++)
 		{
@@ -17468,40 +18161,40 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 		    }
 		}
 
-	      if(!silent)
+	      /* if(!silent)
 		{
 		  Rcout << "lbest=" << lbest  << std::endl;
 		  Rcout << "fill out done" << std::endl;
-		}
+		  } */
 	    }
 	  else
 	    {
-	      if(!silent) 
-		Rcout << "fill out started" << std::endl;
+	      //if(!silent) 
+	      //Rcout << "fill out started" << std::endl;
 	      for(j=0;(int)j<inpars_numpars;j++)
 		pars[k].param[j]=transform_parameter(in_pars(k,j),
 						     par_trans_type[j]);
-	      if(!silent) 
-		Rcout << "fill out done" << std::endl;
+	      //if(!silent) 
+	      //Rcout << "fill out done" << std::endl;
 	    }
 
 	  lliks[k]=loglik(pars[k].param, 0, 0);
 	  lpriors[k]=logprob(pars[k],0.0)-lliks[k];
-	  if(!silent)
+	  /* if(!silent)
 	    {
 	      show_vec("params",pars[k].param,inpars_numpars);
 	      Rcout << "Fill in loglik and logprior" << std::endl;
 	      Rcout << "Filled in loglik=" << lliks[k] << std::endl;
 	      Rcout << "Filled in logprior=" << lpriors[k] << std::endl;
-	    }
+	      } */
 	}
 
       if(help_params)
 	delete [] help_params;
       help_params=NULL;
       
-      if(!silent) 
-	Rcout << " Ending loglik treatment" << std::endl;
+      //if(!silent) 
+      //Rcout << " Ending loglik treatment" << std::endl;
     }
   else if(lmode==LAYERANALYZER_SMOOTH_FROM_INPARS &&
 	  inpars_numsets==1 && dosmooth && num_smooth==1) 
@@ -17631,8 +18324,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   unsigned int numsamples=(unsigned int) num_mcmc;
   // DEBUG:
-  if(!silent)
-    Rcout << "numsamples=" << numsamples << std::endl;
+  //if(!silent)
+  //Rcout << "numsamples=" << numsamples << std::endl;
 
 
   double **parsample=NULL;
@@ -17647,12 +18340,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    numpar << "!" << std::endl;
 
 	  for(i=0;i<numpar;i++)
-	    Rcout << "i=" << i << " name=" << par_name[i] << std::endl;
+	   Rcout << "i=" << i << " name=" << par_name[i] << std::endl;
 	}
 
-      if(silent)
+      /* if(silent)
 	Rcout << no_inpars << " " << inpars_numsets << " " << inpars_numpars <<
-	  " " << numpar << " " << dosmooth << " " << do_realizations << std::endl;
+	  " " << numpar << " " << dosmooth << " " << do_realizations <<
+	  std::endl; */
       
       parsample=Make_matrix(numpar,inpars_numsets);
       parsample_repar=Make_matrix(numpar,inpars_numsets);
@@ -17660,8 +18354,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(i=0;int(i)<MINIM(int(inpars_numpars),int(numpar));i++)
 	for(j=0;j<(int)inpars_numsets;j++)
 	  {
-	    if(!silent)
-	      Rcout << i << " " << j << std::endl;
+	    //if(!silent)
+	    //Rcout << i << " " << j << std::endl;
 	    
 	    parsample[i][j]=invtransform_parameter(pars[j].param[i], par_trans_type[i]);
 	    parsample_repar[i][j]=pars[j].param[i];
@@ -17670,8 +18364,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   else if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
 	  lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
-      if(!silent)
-	Rcout << "Starting ML" << std::endl;
+      //if(!silent)
+      //Rcout << "Starting ML" << std::endl;
   
       parsample=Make_matrix(numpar,numsamples);
       parsample_repar=Make_matrix(numpar,numsamples);
@@ -17684,8 +18378,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  if(!silent)
-    Rcout << " parameter samples fetched" << std::endl;
+  //if(!silent)
+  //Rcout << " parameter samples fetched" << std::endl;
 
   char **par_name_orig=new char*[numpar];
   char **par_name_new=new char*[numpar];
@@ -17696,8 +18390,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  if(!silent)
-    Rcout << " parameter names fetched" << std::endl;
+  //if(!silent)
+  //Rcout << " parameter names fetched" << std::endl;
 
   // transform the expectancies from logarithmic size to
   // original size:
@@ -17733,14 +18427,15 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
 
   // DEBUG
-  if(!silent) 
+  /* if(!silent) 
     for(i=0;i<numpar;i++)
-      Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] << std::endl;
+      Rcout << i << " " << par_name_orig[i] << " " << par_name_new[i] <<
+      std::endl; */
   
   
   // DEBUG:
-  if(!silent)
-    Rcout << "Stationary stdev?" << std::endl;
+  /* if(!silent)
+     Rcout << "Stationary stdev?" << std::endl; */
   
   if(use_stationary_sdev)
     if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
@@ -17820,8 +18515,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  if(!silent)
-    Rcout << "Add extra cycle info" << std::endl;
+  //if(!silent)
+  //Rcout << "Add extra cycle info" << std::endl;
 
   int numpar2=numpar;
   bool has_cycles[10];
@@ -17834,9 +18529,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(j=0;j<(int)numsamples && !has_cycles[i];j++)
 	    if(pars[j].cycles[i]!=MISSING_VALUE && (ABSVAL((pars[j].cycles[i]))>1e-30))
 	      {
-                if(!silent)
+                /* if(!silent)
 		  Rcout << "j=" << j << " i=" << i << " cycles=" << 
-		    pars[j].cycles[i] << std::endl;
+		  pars[j].cycles[i] << std::endl; */
 		has_cycles[i]=true;
 	      }
 	  if(has_cycles[i])
@@ -17846,8 +18541,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   StringVector parnames(numpar2);
   
   // DEBUG:
-  if(!silent)
-    Rcout << "best pars repar" << std::endl;
+  //if(!silent)
+  //Rcout << "best pars repar" << std::endl;
 
   double *best_pars_repar=new double[numpar];
   if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
@@ -17860,8 +18555,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
     }
   
   // DEBUG:
-  if(!silent)
-    Rcout << "ML, do_ml=" << do_ml << std::endl;
+  //if(!silent)
+  //Rcout << "ML, do_ml=" << do_ml << std::endl;
 
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
@@ -17873,8 +18568,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	{
 	  // traverse the number of wanted hill-climbs:
 	  
-	  if(!silent)
-	    Rcout << "ML started" << std::endl;
+	  //if(!silent)
+	  //Rcout << "ML started" << std::endl;
 	  ml_started=true;
 	  
 	  for(i=0;(int)i<num_optim;i++)
@@ -18001,8 +18696,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      delete [] pars2;
 	      delete [] curr_par;
 	    }
-	  if(!silent) 
-	  Rcout << "ll=" << best_loglik << std::endl;
+	  /* if(!silent) 
+	     Rcout << "ll=" << best_loglik << std::endl; */
 	  
 	  // transform the expectancies from logarithmic size to
 	  // original size:
@@ -18027,8 +18722,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  
 	  if(return_residuals==1)
 	    {
-	      if(!silent)
-		Rcout << "Running loglik to fetch ML residuals..." << std::endl;
+	      //if(!silent)
+	      //Rcout << "Running loglik to fetch ML residuals..." << std::endl;
 	      
 	      double lres=loglik(best_pars_repar, 0, 0, 0, NULL, 0, NULL,
 				 1, &resids_time,
@@ -18038,8 +18733,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	      if(!resids)
 		Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
 		  lres << std::endl;
-	      else if(!silent)
-		Rcout << "lres=" << lres << std::endl;
+	      //else if(!silent)
+	      //Rcout << "lres=" << lres << std::endl;
 	    }
 	  //loglik(best_pars_repar, 0, 0,1,filestart);
 	  
@@ -18060,8 +18755,9 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(j=0;j<(int)numpar;j++)
 	    medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
 	  
-	  if(!silent)
-	    Rcout << "Running loglik to fetch Bayesian median residuals..." << std::endl;
+	  /* if(!silent)
+	    Rcout << "Running loglik to fetch Bayesian median residuals..." <<
+	    std::endl; */
 	  
 	  double lres=loglik(medpar, 0, 0, 0, NULL, 0, NULL,
 			     1, &resids_time, &resids, &prior_expected_values,
@@ -18070,16 +18766,16 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  if(!resids)
 	    Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
 	      lres << std::endl;
-	  else if(!silent)
-	    Rcout << "lres=" << lres << std::endl;
+	  //else if(!silent)
+	  //Rcout << "lres=" << lres << std::endl;
 	  
 	  delete [] medpar;
 	}
     }
   
   // DEBUG
-  if(!silent)
-    Rcout << "ML done" << std::endl;
+  //if(!silent)
+  //Rcout << "ML done" << std::endl;
   
 #ifdef DETAILED_TIMERS
   List alltimers=List::create(
@@ -18156,8 +18852,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 
   // insert mean, median and 95% credibility interval for
   // each parameter into the return list:
-  if(!silent)
-    Rcout << "numpar=" << numpar << std::endl;
+  //if(!silent)
+  //Rcout << "numpar=" << numpar << std::endl;
 
   double *est_pars=new double[numpar];
   
@@ -18312,7 +19008,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(j=0;(int)j<resid_len;j++)
 	    residuals_time(j)=resids_time[j];
 	  out["residuals.time"]=residuals_time;
-	  delete [] resids_time;
+	  if(resids_time)
+	    delete [] resids_time;
 	}
 
       if(prior_expected_values && resid_len>0)
@@ -18478,8 +19175,10 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       for(j=0;j<(int)meas_smooth_len;j++)
 	for(k=0;k<numit_realizations_made;k++)
 	  {
-	    if(!silent)
-	      Rcout << "j=" << j << " k=" << k << " x[k]=" << x_k_realized_all[k] << " x_k_j=" << x_k_realized_all[k][j] << std::endl;
+	    /* if(!silent)
+	      Rcout << "j=" << j << " k=" << k << " x[k]=" <<
+	      x_k_realized_all[k] << " x_k_j=" << x_k_realized_all[k][j] <<
+	      std::endl; */
 	    firstmatrix(j,k)=x_k_realized_all[k][j][0];
 	  }
       List realizations=List::create(Named(procname[0],firstmatrix));
@@ -18491,20 +19190,22 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  for(j=0;j<(int)meas_smooth_len;j++)
 	    for(k=0;k<numit_realizations_made;k++)
 	      {
-		if(!silent)
-		  Rcout << "state=" << i << " j=" << j << " k=" << k << " x[k]=" << x_k_realized_all[k] << " x_k_j=" << x_k_realized_all[k][j] << std::endl;
+		/* if(!silent)
+		  Rcout << "state=" << i << " j=" << j << " k=" << k << "
+		  x[k]=" << x_k_realized_all[k] << " x_k_j=" <<
+		  x_k_realized_all[k][j] << std::endl; */
 		nextmatrix(j,k)=x_k_realized_all[k][j][i];
 	      }
 	  // DEBUG: Rcout << "Set realizations number " << i << std::endl;
 	  realizations[procname[i]]=nextmatrix;
 	}
       
-      if(!silent)
-	Rcout << "Set realizations" << std::endl;
+      //if(!silent)
+      //Rcout << "Set realizations" << std::endl;
       out["realizations"]=realizations;
       
-      if(!silent)
-	Rcout << "Cleanup" << std::endl;
+      //if(!silent)
+      //Rcout << "Cleanup" << std::endl;
       doubledelete(procname,num_states);
     }
   

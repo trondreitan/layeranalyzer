@@ -18,7 +18,7 @@ layer.analyzer(... ,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   maximum.likelihood.strategy="MCMC-from-model",
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE,causal=NULL,causal.symmetric=NULL,corr=NULL,
   smoothing.specs=
      list(do.smoothing=FALSE,smoothing.time.diff=0,
