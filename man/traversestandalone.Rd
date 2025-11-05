@@ -14,7 +14,7 @@ traverse.standalone.layered(timeseries,
   time.integrals.possible=FALSE, allow.deterministic.layers=TRUE,   
   num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, 
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, 
   use.half.lives=FALSE, mcmc=FALSE,
   prior=layer.standard.prior)
 }
