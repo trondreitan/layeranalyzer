@@ -75,7 +75,9 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
     {
       if(ML.IC!="AIC" & ML.IC!="AICc" & ML.IC!="BIC")
        stop("ML information criterion weights, 'ML.IC' should be 'AIC', 'AICc' or 'BIC'")
-      
+
+      # Get the IC values in terms that are comparable to likelihoods
+      # and can be used directly for weights:
       if(ML.IC=="AIC")
         l[i]=-0.5*input[[i]]$AIC
       if(ML.IC=="AICc")
@@ -103,6 +105,13 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
   maxl=max(l)
   p=p0*exp(l-maxl)/sum(p0*exp(l-maxl))*100
   
+  if(all.ml)
+  {
+    # Transform back to IC values:
+    l[l==-1e+200]=NA
+    l=-2*l
+  }
+  
   outmatrix=cbind(l,p)
   if(is.null(names(input)))
   {
@@ -118,18 +127,26 @@ compare.layered=function(...,p0=NULL,first.is.nullhypothesis=FALSE,
     critname="log(lik)"
   if(all.ml)
   {
-    if(ML.IC=="AIC")
-      critname="weight=-0.5*AIC"
-    if(ML.IC=="AICc")
-      critname="weight=-0.5*AICc"
-    if(ML.IC=="BIC")
-      critname="weight=-0.5*BIC"
+    critname=ML.IC
+    #if(ML.IC=="AIC")
+    #  critname="weight=-0.5*AIC"
+    #if(ML.IC=="AICc")
+    #  critname="weight=-0.5*AICc"
+    #if(ML.IC=="BIC")
+    #  critname="weight=-0.5*BIC"
   }
   
   #  show("compare called")
 
-  dimnames(outmatrix)=list(names(input),c(critname,"Post. Prob.(%)"))
-  
+  if(!all.ml)
+  {
+    dimnames(outmatrix)=list(names(input),c(critname,"Post. Prob.(%)"))
+  }
+  else
+  {
+     dimnames(outmatrix)=list(names(input),c(critname,sprintf("%s weight",critname)))
+  }
+
   round(outmatrix,5)
 }
 
