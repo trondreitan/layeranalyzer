@@ -992,7 +992,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
    stop("Option 'maximum.likelihood.numstart' must be an integer!") 
  maximum.likelihood.numstart=as.integer(maximum.likelihood.numstart)
 
- print.srcref(sprintf("%d",maximum.likelihood.numstart))
+ #print.srcref(sprintf("%d",maximum.likelihood.numstart))
  if(maximum.likelihood.numstart<1 & do.maximum.likelihood==TRUE)
   stop("Option 'maximum.likelihood.numstart' must be 1 or larger!")
  
