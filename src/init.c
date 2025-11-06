@@ -1,6 +1,6 @@
-#ifndef WINDOWS
+//#ifdef __linux__
 
-#include <R.h>
+//#include <R.h>
 #include <Rinternals.h>
 #include <stdlib.h> // for NULL
 #include <R_ext/Rdynload.h>
@@ -24,4 +24,4 @@ void R_init_layeranalyzer(DllInfo *dll)
   R_useDynamicSymbols(dll, FALSE);
 }
 
-#endif // WINDOWS
+// #endif // __linux__
