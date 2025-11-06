@@ -1,3 +1,5 @@
+#ifndef WINDOWS
+
 #include <R.h>
 #include <Rinternals.h>
 #include <stdlib.h> // for NULL
@@ -21,3 +23,5 @@ void R_init_layeranalyzer(DllInfo *dll)
   R_registerRoutines(dll, CEntries, CallEntries, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
 }
+
+#endif // WINDOWS
