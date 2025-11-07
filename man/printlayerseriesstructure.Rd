@@ -6,13 +6,14 @@
 This function (which should override 'print') outputs the description of the process structure of a series.
 }
 \usage{
-\method{print}{layer.series.structure}(x)
+\method{print}{layer.series.structure}(x,...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
   A 'layer.series.structure' object for which the description should be printed.
  }
+  \item{...} Not used, only there to keep complicance with print statements.
 }
 \details{
 Shows the assigned description of a 'layer.series.structure' object

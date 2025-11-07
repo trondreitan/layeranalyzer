@@ -14,7 +14,7 @@ traverse.connections.layered(... ,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
   talkative.traversal=TRUE, test.mode=FALSE,
-  id.strategy=2,use.stationary.stdev=FALSE,T.ground=1.5, # start.parameters=0,
+  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE, 
   allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE)
 }

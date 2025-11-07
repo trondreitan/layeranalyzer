@@ -15,7 +15,7 @@ stepwise.connections.layered(..., num.MCMC = 1000, spacing = 10, burnin = 10000,
                  maximum.likelihood.numstart = 10, silent.mode = TRUE,
                  talkative.burnin = FALSE, talkative.likelihood =
                  FALSE, talkative.traversal = TRUE, test.mode = FALSE,
-                 id.strategy = 2, use.stationary.stdev = FALSE,
+                 id.strategy = 2, use.stationary.stdev = TRUE,
                  T.ground = 1.5, use.half.lives = FALSE, mcmc = FALSE,
                  allow.causal = TRUE, allow.correlation = TRUE,
                  allow.direct.feedback = TRUE, first.is.nullhypothesis

@@ -41,13 +41,14 @@ traverse.standalone.layered(timeseries,
  can provide an explanation for quasi-cyclical  behaviour.
  }
  \item{just.stationary}{
- If set to 'TRUE' allows for other models than OU (Ornstein-Uhlenbeck) at 
+ If set to 'FALSE' allows for other models than OU (Ornstein-Uhlenbeck) at 
  the lowest layer, namely also the Wiener process (also called Random Walk) 
- and linear trend plus OU.
+ and linear trend plus OU. If set to 'TRUE*, only OU is allowed at the
+ bottom layer.
  }
  \item{no.rw}{
  Only in use when 'just.stationary=FALSE'. Switches off looking at the
- Wiener process (Random Walk) in the lowest layer.
+ Wiener process (Random Walk) in the lowest layer if set to 'TRUE'.
  }
  \item{regional.options}{
  If set to 'TRUE' switches on traversal of the different regional options.
