@@ -217,8 +217,6 @@ This information is also available as a web page on http://folk.uio.no/trondr/la
 
 Troubleshooting:
 
-* Experiencing trouble with installation of layeranalyzer 0.3.4 on Windows for R version 4.5.1. (Version 0.3.3 also fails, but not version 0.3.2). Please let me know if anyone else experiences the same problem.
-
 * The layeranalyzer package requires the Rcpp, coda, and for installations with vignettes also knitr, rmarkdown and markdown. When you start installing layeranalyzer, these packages should be automatically included. However, there may be contexts where it pays off to install them in advance.
     
 * On Windows computers, you need the "rtools" program in addition to a standard R installation. Rtools can be found here: https://cran.r-project.org/bin/windows/Rtools/ .
