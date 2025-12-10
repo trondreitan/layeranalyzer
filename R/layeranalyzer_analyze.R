@@ -42,7 +42,8 @@ layer.analyzer=function(... ,
     list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE,
-  loglik.laxness="high"
+  loglik.laxness="high",
+  external.series=NULL
   )
 {
   data.structure=list(...)
@@ -138,7 +139,8 @@ layer.analyzer=function(... ,
       causal=causal,causal.symmetric=causal.symmetric,corr=corr,
       smoothing.specs=smoothing.specs, realization.specs=realization.specs,
       return.residuals=return.residuals, smooth.previous.run=FALSE,
-      previous.run=nonconn, layer.analyzer.mode=mode, loglik.laxness)
+      previous.run=nonconn, layer.analyzer.mode=mode, loglik.laxness,
+      external.series)
       
   return(ret)
 }
@@ -169,7 +171,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL,
   layer.analyzer.mode="Bayes",
-  loglik.laxness="high"
+  loglik.laxness="high", external.series=NULL
   )
 {
  layer.analyzer.modes=c("Bayes","ML-from-MCMC","ML-from-input",
@@ -300,7 +302,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
   }
   if(is.null(data.structure[[i]]$timeseries$name))
   {
-    data.structure[[i]]$timeseries$name="data.structure[[i]]"
+    data.structure[[i]]$timeseries$name=sprintf("X%02d",i)
   }
   
   if(!is.null(data.structure[[i]]$numlayers))
@@ -1303,7 +1305,83 @@ layer.analyzer.timeseries.list=function(data.structure ,
  if(sum(loglik.laxness==layer.analyzer.laxnesses)!=1)
    stop(sprintf("Illegal loglik.laxness. Options are \"%s\".",
    			 paste(layer.analyzer.laxnesses,collapse="\",\"")))
- 
+
+  # Check external series
+  if(!is.null(external.series))
+  {
+    if(length(external.series)>1)
+    {
+      stop("So far, there is only support for one external timeseries!")
+    }
+    if(length(external.series)>0)
+    {
+      for(i in 1:length(external.series))
+      {
+        if(is.null(external.series[[i]]$time))
+          stop(sprintf("No 'time' array in the incoming external data list nr %d!",i))
+    
+        if(is.null(external.series[[i]]$value))
+          stop(sprintf("No 'value' array in the incoming external data list nr %d!",i))
+    
+        if(length(external.series[[i]]$time)!=length(external.series[[i]]$value))
+           stop(sprintf("The 'time' and 'value' part of the data list must correspond, so the lengths must be the same! this is not the case for external series nr %d",i))
+    
+        if(length(external.series[[i]]$time)<2)
+           stop(sprintf("There must be at least two data points! This is not the case for external data series nr %d",i))
+     
+        if(typeof(external.series[[i]]$time)!="integer" & 
+           typeof(external.series[[i]]$time)!="numeric" & 
+           typeof(external.series[[i]]$time)!="double" & 
+           typeof(external.series[[i]]$time)!="POSIXct")
+          stop(sprintf("The 'time' array must be numeric or date-time (POSIXct)! This is not the case for external series nr. %d!",i))
+	  
+        external.series[[i]]$is.datetime=0
+        if(typeof(external.series[[i]]$time)=="POSIXct")
+          external.series[[i]]$is.datetime=1
+        external.series[[i]]$time=as.numeric(external.series[[i]]$time)
+  
+        if(typeof(external.series[[i]]$value)!="integer" & 
+           typeof(external.series[[i]]$time)!="numeric" & 
+           typeof(external.series[[i]]$time)!="double")
+          stop(sprintf("The 'value' array must be numeric! This is not the case for external series nr. %d!",i))
+	  
+        if(sum(is.na(external.series[[i]]$value))>0)
+          external.series[[i]]$value[is.na(external.series[[i]]$value)]=-10000000
+	  
+        external.series[[i]]$value=as.numeric(external.series[[i]]$value)
+  
+        if(!is.null(external.series[[i]]$num.meas.per.value))
+        {
+	  warning(sprintf("External series nr %d: 'num.meas.per.value' is set but cannot be used for external series.",i))
+	}  
+
+        if(!is.null(external.series[[i]]$std.dev))
+        {
+	  warning(sprintf("External series nr %d: 'std.dev' is set but cannot be used for external series.",i))
+	}  
+
+        if(!is.null(external.series[[i]]$site))
+        {
+	  warning(sprintf("External series nr %d: 'site' is set but cannot be used for external series.",i))
+	}  
+
+        if(!is.null(external.series[[i]]$name))
+        {
+          if(typeof(external.series[[i]]$name)!="character")
+            stop(sprintf("The name must be string (called 'character' in R)! This is not the case for external series nr. %d!",i))
+        }
+        if(is.null(external.series[[i]]$name))
+        {
+          external.series[[i]]$name=sprintf("extdata%d",i)
+        }
+      }
+    }
+  }
+  else
+  {
+    external.series=list()
+  }
+
  # Check mode:
  if(sum(layer.analyzer.mode==layer.analyzer.modes)!=1)
    stop(sprintf("Illegal layer.analyzer.mode. Options are \"%s\".",
@@ -1388,19 +1466,34 @@ layeranalyzer.mode=which(layer.analyzer.mode==layer.analyzer.modes)-1
 
 layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
 
- out=.Call('layeranalyzer',data.structure,num.MCMC,burnin,spacing,num.temp,
+ out=.Call('layeranalyzer',
+      data.structure,
+      num.MCMC,
+      burnin,
+      spacing,
+      num.temp,
       as.integer(do.model.likelihood),
-      as.integer(do.maximum.likelihood),maximum.likelihood.numstart,
+      as.integer(do.maximum.likelihood),
+      maximum.likelihood.numstart,
       as.integer(silent.mode),
-      as.integer(talkative.burnin),as.integer(talkative.likelihood),
-      id.strategy,as.integer(use.stationary.stdev),as.numeric(T.ground),
+      as.integer(talkative.burnin),
+      as.integer(talkative.likelihood),
+      id.strategy,
+      as.integer(use.stationary.stdev),
+      as.numeric(T.ground),
       #start.parameters=as.numeric(0),
       as.integer(use.half.lives),
-      as.integer(mcmc), as.integer(causal), 
-      as.integer(causal.symmetric),as.integer(corr), smoothing.specs, 
-      realization.specs, ReturnResiduals,
-      layeranalyzer.mode,layeranalyzer.laxness,	
-      input.mcmc 
+      as.integer(mcmc),
+      as.integer(causal), 
+      as.integer(causal.symmetric),
+      as.integer(corr),
+      smoothing.specs, 
+      realization.specs,
+      ReturnResiduals,
+      layeranalyzer.mode,
+      layeranalyzer.laxness,	
+      input.mcmc,
+      external.series 
      )
 
  if(is.null(out))
@@ -1412,6 +1505,8 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
  # Store the list of input time series/structures, in addition
  # to what the analysis returned:
  out$data.structure=out.data.structure
+
+ out$external.series=external.series
 
  # Store input options:
  out$input.options=
@@ -1678,7 +1773,6 @@ layer.predict.mcmc.list=function(new.data.list , analysis=NULL,
   }
 
   
-
   ##### Todo: More checks may be needed!
 
   new.data.structure=analysis$data.structure

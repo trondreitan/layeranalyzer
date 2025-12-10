@@ -173,7 +173,6 @@ double *series_corr=NULL;
 
 int use_indicator=0;
 int *indicator_array=NULL;
-int useext=0; // use external times series in the main series?
 
 measurement_cluster *meas_tot=NULL, *meas_smooth=NULL;
 unsigned int meas_tot_len=0, meas_smooth_len=0;
@@ -212,6 +211,7 @@ double cycle_time[10];
 double first_init_time;
 
 // Measurement data and external data series:
+int useext=0; // use external times series in the main series?
 unsigned int ext_len=0;
 double_2d *extdata=NULL;
 
@@ -9877,10 +9877,10 @@ void runs_test(double *residuals, int len)
   timers[25][0]=clock();
 #endif // DETAILED_TIMERS
   
-  int i,R1=1,R2=1, l1=0,l2=0;
+  int i,R1=1,l1=0; /*, R2=1, l2=0;*/
   double n=double(len);
   double median=find_statistics(residuals, len, MEDIAN);
-  int *run1=new int[len], *run2=new int[len-1];
+  int *run1=new int[len]; // , *run2=new int[len-1];
 
   for(i=0;i<len;i++)
     run1[i]=residuals[i]>median ? 1 : -1;
@@ -9891,8 +9891,8 @@ void runs_test(double *residuals, int len)
   for(i=1;i<len;i++)
     if(run1[i]!=run1[i-1])
       R1++;
-
-  for(i=0;i<(len-1);i++)
+  
+  /* for(i=0;i<(len-1);i++)
     run2[i]=residuals[i+1]>residuals[i] ? 1 : -1;      
   for(i=0;i<(len-1);i++)
     if(run2[i]>0)
@@ -9900,7 +9900,7 @@ void runs_test(double *residuals, int len)
 
   for(i=1;i<(len-1);i++)
     if(run2[i]!=run2[i-1])
-      R2++;
+    R2++;  */
 
   double lambda1=double(l1)/n; // lambda2=double(l2)/(n-1.0);
   double R_stat1=(R1-2.0*n*lambda1*(1.0-lambda1))/(2.0*sqrt(n)*lambda1*(1.0-lambda1));
@@ -10998,7 +10998,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(detailed_loglik)
     Rcout << "start useext" << std::endl;
 #endif //MAIN
-  
+
+  if(!pars)
+    Rcout << "useext=" << useext << std::endl;
   if(useext) // external timeseries 
     {
       if(pars) // parameter value array is given?
@@ -11014,6 +11016,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  par_region[numpar]=-1;
 	  par_series[numpar]=0;
 	  snprintf(par_name[numpar], 99, "beta");
+	  Rcout << par_name[numpar] << std::endl;
 	}
       
       numpar++; // update the number of parameters
@@ -11556,7 +11559,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  for(k=0;k<(int)num_states;k++)
 	    VinvLambdaV_A[i][j]+=Vinv[i][k]*lambda[k]*V[k][j];
       
-      static int numtrav=0;
+      //static int numtrav=0;
       for(i=0;i<num_states;i++)
 	for(j=0;j<num_states;j++)
 	  {
@@ -11589,7 +11592,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		return(-1e+200);
 	      }
 	  }
-      numtrav++;
+      //numtrav++;
       
       for(i=0;i<num_states;i++)
 	if(ABSVAL((lambda[i].Im()))>0.00001)
@@ -12351,8 +12354,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // ********************************************
   // Initialization of x_k_k, u_k, P_k_k and F_k:
   t_k[0]=me[0].tm;
-  Complex *W=NULL,*u_k_buff=NULL;
-  double *W_r=NULL,*u_k_buff_r=NULL;
+  Complex *W=NULL,*u_k_buff=NULL; // u=inv(V)*W, W=exp(Lambda*t)*inv(Lambda)*V*m + linear
+  double *W_r=NULL,*u_k_buff_r=NULL; 
 
   if(is_complex)
     {
@@ -12883,7 +12886,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
     {
       // find the external timeseries time closest to the first
       // measurement:
-      for(t=0;t<ext_len && (extdata[t].x+0.5*step)<(me[0].tm);t++);
+      for(t=0;t<(ext_len-1) && (extdata[t].x+extdata[t+1].x)/2.0<(me[0].tm);t++);	
       t1=extdata[t].x;
 
       // Find the time difference between the starting time of
@@ -13285,11 +13288,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		{
 		  // Update the numerical integral:
 
+		  if(detailed_loglik && !is_complex)
+		    show_vec("W_r before useext", W_r, num_states);
+		  
 		  // find the external timeseries time closest to the 
 		  // current measurement:
 		  for(t=t_0;t<ext_len && (extdata[t].x+0.5*step)<(me[k].tm);t++);
 		  t1=extdata[t].x;
 	      
+		  if(detailed_loglik)
+		    Rcout << "t_0=" << t_0 << " t=" << t <<
+		      " me[k].tm=" << me[k].tm << " t1=" << t1 << std::endl;
+		  
 		  // Traverse the time steps in the external timeseries
 		  // from the previously handled time to the current measurement:
 		  for(t=t_0;t<ext_len && (extdata[t].x+0.5*step)<(me[k].tm);t++)
@@ -13298,6 +13308,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      double u=extdata[t].x;
 		      double dt=extdata[t].x-extdata[t-1].x;
 
+		      if(detailed_loglik)
+			Rcout << "t=" << t << std::endl;
+		      
 		      if(is_complex)
 			{
 			  Complex W_t=0.0;
@@ -13315,12 +13328,28 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  double ee=lambda_r[i]*(t1-u);
 			  
 			  for(j=numsites;j<2*numsites;j++)
-			    if(V_r[i][j]!=0.0)
-			      W_t+=exp(ee)*V_r[i][j]*extdata[t].y;
+			    {
+			      if(detailed_loglik)
+				Rcout << "V_r[" << i << "][" << j << "]=" <<
+				  V_r[i][j] << " num_states=" << num_states <<
+				  std::endl; 
+			      if(V_r[i][j]!=0.0)
+				W_t+=exp(ee)*V_r[i][j]*extdata[t].y;
+			    }
+			  
+			  if(detailed_loglik)
+			    Rcout << "ee=" << ee << " W_t=" << W_t <<
+			      " beta=" << ser[0].beta <<
+			      " numsites=" << numsites << 
+			      " extdata[t].y=" << extdata[t].y << std::endl;
 			  
 			  W_r[i]+=ser[0].beta*W_t*dt;
 			}
 		    }
+		  
+		  if(detailed_loglik && !is_complex)
+		    show_vec("W_r after useext", W_r, num_states);
+		  
 		}
 	    }
 	  if(useext)
@@ -16947,7 +16976,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 			      SEXP ReturnResiduals,
 			      SEXP mode,
 			      SEXP loglik_laxness,
-			      SEXP input_param_values)
+			      SEXP input_param_values,
+			      SEXP external_input)
 {  
   reset_global_variables();
   ser=new series[100];  
@@ -17928,7 +17958,46 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   //if(!silent)
   //Rcout << "Connections made" << std::endl;
-     
+
+  
+  List expseries(external_input);
+  unsigned int num_exp=expseries.size();
+  
+  //if(!silent)
+  Rcout << "expseries.size=" << num_exp << std::endl;
+  if(num_exp>0)
+    for(s=0;s<MINIM(1,num_exp);s++)
+    // Only support for one external series, so far!
+    {
+      List external_data=as<List>(expseries[s]);
+
+      NumericVector ext_time=as<NumericVector>(external_data["time"]);
+      unsigned int len_ext_time=ext_time.size();
+      
+      NumericVector ext_value=as<NumericVector>(external_data["value"]);
+      unsigned int len_ext_value=ext_value.size();
+      
+      if(len_ext_time!=len_ext_value)
+	{
+	  Rcout << "Length of external 'time' array ("<< len_ext_time <<
+	    ")!= length of external 'value' array ("
+		<< len_ext_value << ")!" << std::endl;
+	  PutRNGstate();
+	  return NULL;
+	}
+      ext_len=len_ext_time;
+
+      extdata=new double_2d[ext_len];
+      for(i=0;i<ext_len;i++)
+	{
+	  extdata[i].x=ext_time[i];
+	  extdata[i].y=ext_value[i];
+	}
+      useext=1;
+    }
+  
+
+  
   
   double ***x=NULL; // smoothing results from the latent processes
   double ***P_k_smooth=NULL, **x_k_smooth=NULL;
@@ -17944,6 +18013,13 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(inpars_numpars>0 || lmode==LAYERANALYZER_NUMPAR)
     loglik(NULL); // gives us the global 'numpar', 
 
+  if(!silent)
+    {
+      Rcout << "numpar=" << numpar << std::endl;
+      for(i=0;i<numpar;i++)
+	Rcout << i+1 << " " << par_name[i] << std::endl;
+    }
+  
   if(lmode==LAYERANALYZER_NUMPAR)
     {
       //if(!silent)
@@ -18749,33 +18825,34 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  aicc=-2*best_loglik + 2.0*double(k) + double(k*(k+1))/double(nn-k-1);
 	  bic=-2*best_loglik + log(double(nn))*double(k);
 	}
-      if(!do_ml && return_residuals==1)
-	{
-	  double *medpar=new double[numpar];
-	  for(j=0;j<(int)numpar;j++)
-	    medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
-	  
-	  /* if(!silent)
-	    Rcout << "Running loglik to fetch Bayesian median residuals..." <<
-	    std::endl; */
-	  
-	  double lres=loglik(medpar, 0, 0, 0, NULL, 0, NULL,
-			     1, &resids_time, &resids, &prior_expected_values,
-			     &resid_numcol, &resid_len);
-	  
-	  if(!resids)
-	    Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
-	      lres << std::endl;
-	  //else if(!silent)
-	  //Rcout << "lres=" << lres << std::endl;
-	  
-	  delete [] medpar;
-	}
+      
     }
-  
+  else if(lmode==LAYERANALYZER_BAYESIAN && return_residuals==1)
+    {
+      double *medpar=new double[numpar];
+      for(j=0;j<(int)numpar;j++)
+	medpar[j]=find_statistics(parsample_repar[j], numsamples, MEDIAN);
+      
+      /* if(!silent)
+	 Rcout << "Running loglik to fetch Bayesian median residuals..." <<
+	 std::endl; */
+      
+      double lres=loglik(medpar, 0, 0, 0, NULL, 0, NULL,
+			 1, &resids_time, &resids, &prior_expected_values,
+			 &resid_numcol, &resid_len);
+      
+      if(!resids)
+	Rcout << "Running loglik to fetch ML residuals failed! lres=" <<
+	  lres << std::endl;
+      //else if(!silent)
+      //Rcout << "lres=" << lres << std::endl;
+      
+      delete [] medpar;
+    }
+      
   // DEBUG
   //if(!silent)
-  //Rcout << "ML done" << std::endl;
+  //Rcout << "ML and residuals (if applicable) done" << std::endl;
   
 #ifdef DETAILED_TIMERS
   List alltimers=List::create(
@@ -18986,7 +19063,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   if(lmode==LAYERANALYZER_BAYESIAN ||
      lmode==LAYERANALYZER_ML_FROM_MCMC ||
      lmode==LAYERANALYZER_ML_FROM_HYBRID)
-  if(return_residuals==1)
+    if(return_residuals==1)
     {
       if(resids && resid_len>0)
 	{
@@ -19286,6 +19363,11 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   //Rcout << " deleted parsample" << std::endl;
   doubledelete(parsample_repar,numpar);
   //Rcout << " deleted parsample_repar" << std::endl;
+  
+  if(extdata)
+    delete [] extdata;
+  extdata=NULL;
+  ext_len=0;
   
   delete [] pars;
   //Rcout << " deleted pars" << std::endl;

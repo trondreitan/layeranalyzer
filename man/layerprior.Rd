@@ -6,10 +6,8 @@
 This class function represents a Bayesian prior distribution specified by a couple of hyper-parameters. 
 }
 \usage{
-layer.prior(mu,dt,
-  sigma, init,
-  lin, beta,
-  obs, islog=0)
+layer.prior (mu, dt, sigma, stat.sdev = NULL, init = NULL, lin = NULL, 
+    beta = NULL, obs = NULL, islog = 0)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,6 +23,12 @@ layer.prior(mu,dt,
   \item{sigma}{
  An array with 2 elements that specifies the low and high end of
  the 95\% credibility band of sigma, the stochastic contribution.
+ }
+  \item{stat.sdev}{
+ An array with 2 elements that specifies the low and high end of
+ the 95\% credibility band of the stationary standard deviation.
+ If not specified, the specifications for the prior of sigma is
+ copied.
  }
   \item{init}{
  An array with 2 elements that specifies the low and high end of

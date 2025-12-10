@@ -7,14 +7,14 @@
 
 
 /* .Call calls */
-extern SEXP layeranalyzer(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP layeranalyzer(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 static const R_CMethodDef CEntries[] = {
   {NULL, NULL, 0}
 };
 
 static const R_CallMethodDef CallEntries[] = {
-  {"layeranalyzer",                 (DL_FUNC) &layeranalyzer,                 25},
+  {"layeranalyzer",                 (DL_FUNC) &layeranalyzer,                 26},
   {NULL, NULL, 0}
 };
 

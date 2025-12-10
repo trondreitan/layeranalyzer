@@ -79,7 +79,7 @@ layer.series.structure(timeseries, numlayers=1, lin.time=FALSE,
   \item{init.0}{
  If set to 'TRUE', the model includes a parameter for the initial values of
  each process (one for each combination of site and layer). The initial time
- is that of the first measurement.
+ is that of the first measurement (unless 'init.time' is specified).
  }
   \item{init.time}{
  If set, the model includes a parameter for the initial values of

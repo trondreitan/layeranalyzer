@@ -13,7 +13,7 @@ This function (which should override 'print') outputs the description of the pro
   \item{x}{
   A 'layer.series.structure' object for which the description should be printed.
  }
-  \item{...} Not used, only there to keep complicance with print statements.
+ \item{...}{Not used, only there to keep complicance with print statements.}
 }
 \details{
 Shows the assigned description of a 'layer.series.structure' object

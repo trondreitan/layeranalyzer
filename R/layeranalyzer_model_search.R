@@ -1,5 +1,5 @@
 #####################################################
-#
+# 
 # Functions for traversing a set of models either
 # for a checking multiple single time series model
 # structures (number and nature of layers) or
@@ -8,7 +8,7 @@
 # structure. 
 # 
 # Trond Reitan, 17. Aug. 2018
-#
+# 
 #####################################################
 
 
@@ -53,6 +53,9 @@ traverse.standalone.layered=function(timeseries,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, 
   use.half.lives=FALSE, mcmc=FALSE,
+  init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
+  init.same.layers=FALSE, init.specified=NULL,
+  allow.pos.pull=FALSE, period=NULL,
   prior=layer.standard.prior)
 {
   if(is.null(timeseries$time))
@@ -249,7 +252,9 @@ traverse.standalone.layered=function(timeseries,
  
  if(maximum.likelihood.numstart<1)
    stop("Option 'maximum.likelihood.numstart' must be 1 or larger!")
- 
+
+
+
  if(!is.null(prior))
   {
     if(is.null(prior$mu))
@@ -302,15 +307,79 @@ traverse.standalone.layered=function(timeseries,
   }
  if(is.null(prior))
    prior=layer.standard.prior
- 
- num.lowest=1
- init.0=FALSE
- if(!just.stationary)
-   {
-     init.0=TRUE
-     num.lowest=3
-   }
 
+
+  init.treatment=FALSE
+
+  if(!is.null(init.0))
+  {
+    if(typeof(init.0)!="logical")
+      stop("Initial value treatement indicator, 'init.0', must be a logical")
+    init.treatment=init.0
+  }
+
+  if(!is.null(init.time))
+  {
+    if(typeof(init.time)!="numeric" & typeof(init.time)!="double" & 
+       typeof(init.time)!="POSIXct" )
+      stop("Initial value at given time treatement indicator, 'init.time', must be a numeric or POSIXct")
+    if(length(init.time)>1)
+      stop("Initial value at given time treatement indicator, 'init.time', cannot be a vector")
+    
+    init.treatment=TRUE
+  }
+  
+  if(!is.null(init.specified))
+  {
+    if(typeof(init.specified)!="numeric" & typeof(init.specified)!="double")
+      stop("Specified initial value, 'init.specified', must be a numeric. If time has been specified with POSIXct, cast this as numeric here.")
+    if(length(init.specified)!=2)
+      stop("Specified initial value, 'init.specified', must be a vector with 2 values, 'time' and 'value'. If time has been specified with POSIXct, cast this as numeric")
+    init.treatment=TRUE
+  }
+
+
+  if(!is.null(allow.pos.pull))
+  {
+    if(typeof(allow.pos.pull)!="logical")
+      stop("Indicator for allowing positive (unstable) pulls, 'allow.pos.pull', must be a logical")
+  }
+  
+  if(!is.null(period))
+  {
+    if(typeof(period)!="numeric" & typeof(period)!="double")
+      stop("Periodial trigonometric regressor indicator, 'period', must be a numeric vector")
+  }
+  
+
+ num.lowest=1
+ if(!just.stationary)
+ {
+   if(!init.treatment)
+   {
+     init.0=init.treatment=TRUE
+   }  
+   num.lowest=3
+ }
+ 
+  if(!is.null(init.same.sites))
+  {
+    if(typeof(init.same.sites)!="logical")
+      stop("Initial value same for all sites indicator, 'init.same.sites', must be a logical")
+
+    if(!init.treatment && init.same.sites)
+      print.srcref("Warning: Specifying init.same.sites=TRUE without any initial value treatment makes no sense!")
+  }
+  
+  if(!is.null(init.same.layers))
+  {
+    if(typeof(init.same.layers)!="logical")
+      stop("Initial value same for all sites indicator, 'init.same.layers', must be a logical")
+    
+    if(!init.treatment && init.same.layers)
+      print.srcref("Warning: Specifying init.same.layers=TRUE without any initial value treatment makes no sense!")
+  }
+  
  models=list()
  for(numlayers in 1:max.layers)
  {
@@ -413,26 +482,35 @@ traverse.standalone.layered=function(timeseries,
          
        if(talkative)
        {
-        print.srcref("Showing R calls:")
         print.srcref(sprintf("length(lowest)=%d",length(lowest) ))
         print.srcref(sprintf("lowest=%d",lowest))
+        print.srcref("Showing R calls:")
 
-        print.srcref(sprintf("struct=layer.series.structure(timeseries,  numlayers=%d, lin.time=%s, time.integral=%d, no.pull=%s, no.sigma=%d, init.0=%s,prior=prior)", 
+        print.srcref(sprintf("struct=layer.series.structure(timeseries,  numlayers=%d, lin.time=%s, time.integral=%d, no.pull=%s, no.sigma=%d, init.0=%s, init.time=%s, init.same.sites=%s, init.same.layers=%s, init.specified=c(%s,%s), allow.pos.pull=&s, period=%s, prior=prior)", 
         numlayers,
         as.character(lin.time[lowest]), 
         length(curr.time.integral),  
         as.character(no.pull[lowest]),    
         length(curr.no.sigma),  
-        as.character(init.0)   ))
+        as.character(init.0),
+	as.character(init.time),
+	as.character(init.same.sites),
+	as.character(init.same.layers),
+        as.character(init.specified[1]),
+        as.character(init.specified[2]),
+        as.character(allow.pos.pull),
+        as.character(period)
+        ))
        }
 
-         struct=layer.series.structure(timeseries, 
-            numlayers=numlayers,
-            lin.time=lin.time[lowest], 
-            time.integral=curr.time.integral,
+       struct=layer.series.structure(timeseries, numlayers=numlayers,
+            lin.time=lin.time[lowest], time.integral=curr.time.integral,
             no.pull=no.pull[lowest], no.sigma=curr.no.sigma,
-            init.0=init.0,prior=prior)
-
+            init.0=init.0,init.time=init.time,init.same.sites=init.same.sites,
+	    init.same.layers=init.same.layers,init.specified=init.specified,
+	    allow.pos.pull=allow.pos.pull, period=period, 
+	    prior=prior)
+       
        if(talkative)
        {
         print.srcref(sprintf("res=layer.analyzer(struct, num.MCMC=%d, spacing=%d, burnin=%d, num.temp=%d, do.model.likelihood=TRUE,   do.maximum.likelihood=%s, maximum.likelihood.numstart=%d,    silent.mode=TRUE, talkative.burnin=FALSE,  talkative.likelihood=FALSE  id.strategy=%d,   use.stationary.stdev=%s,   T.ground=%f, use.half.lives=%s, mcmc=%s, causal=%s )",

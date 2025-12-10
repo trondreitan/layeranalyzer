@@ -16,6 +16,9 @@ traverse.standalone.layered(timeseries,
   do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
   id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, 
   use.half.lives=FALSE, mcmc=FALSE,
+  init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
+  init.same.layers=FALSE, init.specified=NULL,
+  allow.pos.pull=FALSE, period=NULL, 
   prior=layer.standard.prior)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -192,6 +195,38 @@ traverse.standalone.layered(timeseries,
  \item{mcmc}{
  If set to 'TRUE', returns the MCMC samples as an 'mcmc' object within the return
  object. The name of the list object will also be 'mcmc'. 
+ }
+ \item{init.0}{
+ If set to 'TRUE', the model includes a parameter for the initial values of
+ each process (one for each combination of site and layer). The initial time
+ is that of the first measurement (if not 'init.time' is specified).
+ }
+ \item{init.time}{
+ If set, the model includes a parameter for the initial values of
+ each process (one for each combination of site and layer). The initial time
+ is that of 'init.time'.
+ }
+ \item{init.same.sites}{
+ Only makes sense for time series with multiple sites. If set, an initial value 
+ treatment will assume the same initial value for all sites (if applicable).
+ }
+ \item{init.same.layers}{
+ If set, an initial value treatment will assume the same initial value for all 
+ layers (if applicable, i.e. if 'numlayers'>1).
+ }
+ \item{init.specified}{
+ If given, should be an array of two elements, initial time and initial value.
+ }
+ \item{allow.pos.pull}{
+ If set to 'TRUE', allows for positive pull parameters in the linear stochastic
+ equations. Positive pulls means the process is prone to "explode", but for
+ a short time (typically not much more than the characteristic time), such a process
+ could none the less make sense.
+ }
+ \item{period}{
+ If given, should specify an array of period lengths, in order to include in the 
+ model periodic sine/cosine fluctuations (such as seasonality). Regression parameters
+ for the sine/cosine terms are estimated.
  }
  \item{prior}{
  An object specifying the prior distribution, in the form of a 'layer.prior' object.
