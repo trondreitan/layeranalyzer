@@ -28,7 +28,7 @@ layer.analyzer(... ,
      list(do.realizations=FALSE,num.realizations=1000,strategy="N",
           realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE,
-  loglik.laxness="high")
+  loglik.laxness="high", external.series=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -332,6 +332,18 @@ layer.analyzer(... ,
  achieved. Default laxness is "high", but options are also "low"
  (very rigid), "moderate" and "complete" (sanity checks are not performed).
  }
+ \item{external.series}{
+ External series are time series that are treated as explanatory variables
+ for the time series that are analyzed. They are not themselves
+ analyzed statistically. Instead they are taken as is, with the
+ assumption that what happenes between time points can be exppromately
+ attained through linear interpolation. Since the stochastic nature of
+ these series are not analyzed, only causal links are possible. So
+ far there is only support for one external series, and it is only
+ allowed to affect the first time series that is specified. Also,
+ it is so far only attached to the bottom layer. Expansions to this
+ may come later.
+ }
 }
 \details{
 
@@ -363,15 +375,15 @@ analysis, MCMC samples, process smoothing samples and process realization sample
 
 An object of the class 'layered' will typically have the following components:
 
-mu_<series name>: A list containing "mean", "median", "lower02_5" (2.5%% quantile) and "upper97_5" (97.5%% quantile) for the expected value parameter of each series. (PS: Not given for Wiener processes or layered processes having the Wiener process as the bottom layer).
+mu_<series name>: A list containing "mean", "median", "lower02_5" (2.5\% quantile) and "upper97_5" (97.5\% quantile) for the expected value parameter of each series. (PS: Not given for Wiener processes or layered processes having the Wiener process as the bottom layer).
 
-dt_<series_name>: A list containing "mean", "median", "lower02_5" (2.5%% quantile) and "upper97_5" (97.5%% quantile) for the expected characteristic of each series. (Alternatively, the half-life will be given if use.half.life=TRUE).
+dt_<series_name>: A list containing "mean", "median", "lower02_5" (2.5\% quantile) and "upper97_5" (97.5\% quantile) for the expected characteristic of each series. (Alternatively, the half-life will be given if use.half.life=TRUE).
 
-sigma_<series_name>: A list containing "mean", "median", "lower02_5" (2.5%% quantile) and "upper97_5" (97.5%% quantile) for the stochastic contribution parameter of each series. (Alternatively the stationary standard deviation will be given, if use.stationary.stdev=TRUE).
+sigma_<series_name>: A list containing "mean", "median", "lower02_5" (2.5\% quantile) and "upper97_5" (97.5\% quantile) for the stochastic contribution parameter of each series. (Alternatively the stationary standard deviation will be given, if use.stationary.stdev=TRUE).
 
 model.log.lik: Bayesian marginal model likelihood (unless do.model.likelihood=FALSE or ML analysis).
 
-obs_sd_<series_name>: A list containing "mean", "median", "lower02_5" (2.5%% quantile) and "upper97_5" (97.5%% quantile) for the observational standard deviation (if not individual standard deviations are given in the data). 
+obs_sd_<series_name>: A list containing "mean", "median", "lower02_5" (2.5\% quantile) and "upper97_5" (97.5\% quantile) for the observational standard deviation (if not all measurements are assigned and observational standard deviation). Thus this parameter describes the uncertainty in the measurements, not the stochastic nature of the process. 
 
 computing.time: Computing time in seconds.
 

@@ -9,7 +9,7 @@
  be the same as for what the parameter estimates in 'layer.analyzer' was
  trained on. It could be a new dataset or the old with some new data added
  or a few data points removed. The predictions are the mean and upper/lower 
- 95% credibility interval for the process state using the Kalman smoother.
+ 95\% credibility interval for the process state using the Kalman smoother.
  The individual covariance matrices for each time point are also returned.
 }
 \usage{

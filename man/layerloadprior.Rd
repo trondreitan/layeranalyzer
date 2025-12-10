@@ -22,8 +22,8 @@ It should have the elements
 "is_log;mu1;mu2;dt1;dt2;s1;s2;lin1;lin2;beta1;beta2;init1;init2", where 
 is_log is an indicator of whether the layer.analyzer should log-transform
 the data or not (0=no, 1=yes, 2=already log-transformed). mu1;mu2 specifies
-a 95% credibility interval for the expected value. Similarly, dt1;dt2, s1;s2,
-lin1;lin2, beta1;beta2, init1;init2 specifies a 95% credbility interval
+a 95\% credibility interval for the expected value. Similarly, dt1;dt2, s1;s2,
+lin1;lin2, beta1;beta2, init1;init2 specifies a 95\% credbility interval
 for the characteristic time, size of stochastic contributions, linear time trend,
 causal connections and initial value, respectively. Only "is_log;mu1;mu2;dt1;dt2;s1;s2"
 is mandatory for the simplest analysis. More options might make the rest necessary

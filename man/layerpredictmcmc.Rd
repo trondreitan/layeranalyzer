@@ -59,7 +59,7 @@ layer.predict.mcmc(... ,
  \item{do.return.smoothing.samples}{
   'do.return.smoothing.sample' determines if the
   raw smoothing samples are to be returned or not, or only the 
-  mean and lower/upper 95% credibility band of the processes. 
+  mean and lower/upper 95\% credibility band of the processes. 
   These represents samples of the individual process states
   given the new data. Note that these are not process realizations,
   as the autocorrelation between one time point and the next is
