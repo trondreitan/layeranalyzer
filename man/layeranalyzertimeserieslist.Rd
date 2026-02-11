@@ -34,7 +34,9 @@ layer.analyzer.timeseries.list(data.structure ,
           realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL,
   layer.analyzer.mode="Bayes",
-  loglik.laxness="high", external.series=NULL)
+  loglik.laxness="high", external.series=NULL,
+  external.series.connection=integer(0),
+  external.layer.connection=integer(0))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -363,11 +365,24 @@ layer.analyzer.timeseries.list(data.structure ,
  analyzed statistically. Instead they are taken as is, with the
  assumption that what happenes between time points can be exppromately
  attained through linear interpolation. Since the stochastic nature of
- these series are not analyzed, only causal links are possible. So
- far there is only support for one external series, and it is only
- allowed to affect the first time series that is specified. Also,
- it is so far only attached to the bottom layer. Expansions to this
- may come later.
+ these series are not analyzed, only causal links are possible.
+ Note that if external time series are given, one must
+ also specify which series and layers they go to (see the next two entries.)
+ Note that external data series are assumed global, and this connect
+ equally to all sites (if that is a thing in your datasets).
+ }
+ \item{external.series.connection}{
+   An vector of integers that should specify which external time series
+   are causally connected to which observed series, numbered from 1 to
+   the number of series. The length of this vector should match the
+   number of external time series.
+ }
+ \item{external.layer.connection}{
+   An vector of integers that should specify which external time series
+   are causally connected to which layers of the observed series,
+   numbered from 1 to the number of layers in the series specified in
+   'external.series.conneciton'. The length of this vector should match the
+   number of external time series.
  }
 }
 \details{

@@ -212,9 +212,10 @@ double first_init_time;
 
 // Measurement data and external data series:
 int useext=0; // use external times series in the main series?
-unsigned int ext_len=0;
-double_2d *extdata=NULL;
-
+unsigned int ext_num=0,*ext_len=NULL;
+double_2d **extdata=NULL;
+char **extname=NULL;
+unsigned int *ext_series_connection=NULL, *ext_layer_connection=NULL;
 
 // Run options:
 int silent=0; // indicates silent modues. Default switched off.
@@ -6887,7 +6888,8 @@ public:
   double **stat_sdev;
   double *corr;
   double ***paircorr;
-  double beta, *lin_t;
+  double *beta_ext, *lin_t;
+  int num_beta_ext;
   double obs_sd;
   
   // Trigonometric functions:
@@ -7232,16 +7234,25 @@ void reset_global_variables(void)
   if(beta_feed)
     delete [] beta_feed;
   beta_feed=NULL;
-  
-  if(extdata)
-    delete [] extdata;
-  extdata=NULL;
 
+  if(ext_num>0)
+    {
+      doubledelete(extdata,ext_num);
+      doubledelete(extname,ext_num);
+      singledelete(ext_series_connection);
+      singledelete(ext_layer_connection);
+      singledelete(ext_len);
+      ext_len=NULL;
+      ext_series_connection=NULL;
+      ext_layer_connection=NULL;
+      extname=NULL;
+      ext_num=0;
+    }
+  
   laxness_level=HIGH_LAXNESS;
   
   len_x_k_s_kept=0;
   size_x_k_s_kept=0;
-  ext_len=0;
   is_complex=false;
   num_series_feed=0;
   nodata=false;
@@ -8924,6 +8935,9 @@ void series::init(void)
   no_layers=false;
   num_per=0;
 
+  num_beta_ext=0;
+  beta_ext=NULL;
+  
   for(int i=0;i<100;i++)
     regional_pull[i]=no_sigma[i]=time_integral[i]=regional_sigma[i]=
       sigma_correlated[i]=sigma_pairwise_correlated[i]=sigma_1dim[i]=
@@ -8957,24 +8971,19 @@ void series::init(void)
   regional_mu=regional_lin_t=0;
   indicator_mu=indicator_lin_t=0;
   allow_positive_pulls=false;
-  beta=0.0;
   obs_sd=1.0;
 }
 
 void series::cleanup(void)
 {
-  if(meas)
-    delete [] meas;
-  if(comp_meas)
-    delete [] comp_meas;
+  singledelete(meas);
+  singledelete(comp_meas);
+  singledelete(mu);
+  singledelete(corr);
+  singledelete(lin_t);
+  singledelete(beta_ext);
   if(pr)
     delete pr;
-  if(mu)
-    delete [] mu;
-  if(corr)
-    delete [] corr;
-  if(lin_t)
-    delete [] lin_t;
   
   doubledelete(init_mu,this->numlayers);
   doubledelete(pull,this->numlayers);
@@ -10236,13 +10245,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      double ***prior_expected_values, 
 	      int *resid_numcolumns, int *resid_len)
 {
-  
 #ifdef DETAILED_TIMERS
   timers[1][0]=clock();
   timers[2][0]=clock();
 #endif // DETAILED_TIMERS
   
-  unsigned int s,i,j,l,t=0, t_0=0;
+  unsigned int s,i,j,l,t=0, *t_0=NULL;
+  if(ext_num>0)
+    {
+      t_0=new unsigned int[ext_num];
+      for(i=0;i<ext_num;i++)
+	t_0[i]=0;
+    }
   int k;
   numpar=0;
   bool pairwise_wrong=false;
@@ -10295,7 +10309,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
       par_series=new int[LARGE_ENOUGH_ARRAY];
       for(i=0;i<LARGE_ENOUGH_ARRAY;i++)
 	par_name[i]=new char[300];
-    
+      singledelete(t_0);
+		   
       for(s=0;s<num_series;s++)
 	if(ser)
 	  {
@@ -11000,29 +11015,48 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif //MAIN
 
   if(!pars)
-    Rcout << "useext=" << useext << std::endl;
+    if(detailed_loglik)
+      Rcout << "useext=" << useext << std::endl;
   if(useext) // external timeseries 
     {
-      if(pars) // parameter value array is given?
-	// set the parameter value:
-	ser[0].beta=pars[numpar];
-      else
+      if(!pars) // Todo: Needs to be handled somewhere else, eventually!
+	// Update: Maybe it can be done here.
 	{
-	  // fill the global parameter arrays with
-	  // appropriate contents:
-	  par_trans_type[numpar]=T_LIN;
-	  par_type[numpar]=BETA;
-	  par_layer[numpar]=2;
-	  par_region[numpar]=-1;
-	  par_series[numpar]=0;
-	  snprintf(par_name[numpar], 99, "beta");
-	  Rcout << par_name[numpar] << std::endl;
+	  for(s=0;s<num_series;s++)
+	    {
+	      ser[s].num_beta_ext=ext_num;
+	      ser[s].beta_ext=new double[ext_num];
+	      for(unsigned int ext=0;ext<ext_num;ext++)
+		ser[s].beta_ext[ext]=0.0;
+	    }
 	}
       
-      numpar++; // update the number of parameters
+      for(unsigned int ext=0;ext<ext_num;ext++)
+	{
+	  s=ext_series_connection[ext];
+	  l=ext_layer_connection[ext];
+	  
+	  if(pars) // parameter value array is given?
+	    // set the parameter value:
+	    ser[s].beta_ext[ext]=pars[numpar];
+	  else
+	    {
+	      // fill the global parameter arrays with
+	      // appropriate contents:
+	      par_trans_type[numpar]=T_LIN;
+	      par_type[numpar]=BETA;
+	      par_layer[numpar]=l+1; // l goes from 0 to #numlayers-1
+	      par_region[numpar]=-1;
+	      par_series[numpar]=s; 
+	      snprintf(par_name[numpar], 199, "beta_%s_%s",
+		       ser[s].name, extname[ext]); 
+	      if(detailed_loglik)
+		Rcout << ext << " " << par_name[numpar] << std::endl;
+	    }
+	  numpar++; // update the number of parameters
+	}
+      
     }
-  else
-    ser[0].beta=0.0; // set the regression coefficient to zero
 
 #ifndef MAIN
   if(detailed_loglik)
@@ -11189,13 +11223,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
   if(detailed_loglik)
     Rcout << "timer stuff starting" << std::endl;
 #endif // MAIN
-  
+
+    
+    
   // If no parameter values were given, the global
   // parameter arrays should now have been filled and
   // it's time to return with the number of parameters 
   // as output:
   if(!pars) 
     {
+      if(detailed_loglik)
+	Rcout << "No parameters, so returning now" << std::endl;
+      
 #ifdef DETAILED_TIMERS
       timers[1][1]=clock();
       timers[1][2]+=(timers[1][1]-timers[1][0]);
@@ -11204,7 +11243,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif // DETAILED_TIMERS
       return (double) numpar; 
     }
-  
   
   
   // Sanity check on the parameters:
@@ -11304,15 +11342,27 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  }
 	    }
       }
-  if(!(ser[0].beta>-1e+200 && ser[0].beta<1e+200))
+  
+  if(detailed_loglik)
+    Rcout << "useext checking starting" << std::endl;
+    
+  if(useext)
     {
+      for(unsigned int ext=0;ext<ext_num;ext++)
+	{
+	  s=ext_series_connection[ext];
+	  if(!(ser[s].beta_ext[ext]>-1e+200 &&
+	       ser[s].beta_ext[ext]<1e+200))
+	    {
 #ifdef DETAILED_TIMERS
-      timers[1][1]=clock();
-      timers[1][2]+=(timers[1][1]-timers[1][0]);
-      timers[2][1]=clock();
-      timers[2][2]+=(timers[2][1]-timers[2][0]);
+	      timers[1][1]=clock();
+	      timers[1][2]+=(timers[1][1]-timers[1][0]);
+	      timers[2][1]=clock();
+	      timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
-      return -1e+200;
+	      return -1e+200;
+	    }
+	}
     }
 
 #ifndef MAIN
@@ -11493,6 +11543,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  timers[2][1]=clock();
 	  timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	  singledelete(t_0);
 	  doubledelete(var, num_states);
 	  singledelete(stddevs);
 	  singledelete(lambda);
@@ -11538,6 +11589,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    timers[2][1]=clock();
 	    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	    singledelete(t_0);
 	    doubledelete(var, num_states);
 	    singledelete(stddevs);
 	    singledelete(lambda);
@@ -11578,6 +11630,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		timers[2][1]=clock();
 		timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+		singledelete(t_0);
 		doubledelete(var, num_states);
 		singledelete(stddevs);
 		singledelete(lambda);
@@ -11643,6 +11696,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  timers[2][1]=clock();
 	  timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	  singledelete(t_0);
 	  doubledelete(var, num_states);
 	  singledelete(stddevs);
 	  singledelete(lambda);
@@ -11692,6 +11746,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
   
+	    singledelete(t_0);
 	    doubledelete(var, num_states);
 	    singledelete(stddevs);
 	    singledelete(lambda);
@@ -11836,8 +11891,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // x_k_prev=expectancy of the state given previous observations:
   double *x_k_prev=new double[num_states];
   
-  double step=useext ? extdata[1].x-extdata[0].x : 0.0;
-  
   
   // -return value, represents minux log-likelihood
   double ret=0.0;
@@ -11963,8 +12016,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
   for(i=0;i<num_tot_layers;i++)
     for(j=0;j<numsites;j++)
       corr_layer[i][j][j]=1.0;
-  
-  //Rcout << "loglik init2" << endl;
+
+  if(detailed_loglik)
+    Rcout << "loglik init2" << endl;
   
   // Fill out the off-diagonal terms of the
   // series+layer-wise correlation matrices:
@@ -12023,6 +12077,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    timers[2][1]=clock();
 		    timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+		    singledelete(t_0);
 		    doubledelete(var, num_states);
 		    singledelete(stddevs);
 		    singledelete(lambda);
@@ -12142,8 +12197,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    corr[i*numsites+j][i*numsites+k]=corr_layer[i][j][k];
       }
 
-	  
-  //Rcout << "loglik init3" << std::endl;
+  if(detailed_loglik)
+    Rcout << "loglik init3" << std::endl;
   if(num_series_corr>0)
     {
       for(i=0;i<num_series_corr;i++)
@@ -12175,6 +12230,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  timers[2][1]=clock();
 	  timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	  singledelete(t_0);
 	  doubledelete(var, num_states);
 	  singledelete(stddevs);
 	  singledelete(lambda);
@@ -12500,7 +12556,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  (1.0-exp(ee))*V_r[i][b]*m[b]-1.0/lambda_r[i]*
 			  (1.0/lambda_r[i]*exp(ee)+t00-meantime-
 			   (first_init_time-meantime)*(1.0-exp(ee)))*
-			  V_r[i][b]*B[b];
+			   V_r[i][b]*B[b]; 
 		      }
 		  }
 		else
@@ -12779,6 +12835,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      timers[2][1]=clock();
 	      timers[2][2]+=(timers[2][1]-timers[2][0]);
 #endif // DETAILED_TIMERS
+	      singledelete(t_0);
 	      doubledelete(prior_expectancy, numobs);
 	      doubledelete(resids, numobs);
 	      doubledelete(var, num_states);
@@ -12877,180 +12934,261 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   // ************************************************************
   // If there is an external timeseries,
-  // do numerical integration up until the first measurement time:
-  //double t0=useext ? extdata[0].x : 0.0; // starting time 
-  // of the external timeseries
-  double t1; //time closest to the first measurement:
+  // do numerical integration from the first external time
+  // series point to the first observational time point, using
+  // the triangle method and linear interpolation for the
+  // external time series value at the first observed
+  // time point.
 
   if(useext)
     {
-      // find the external timeseries time closest to the first
-      // measurement:
-      for(t=0;t<(ext_len-1) && (extdata[t].x+extdata[t+1].x)/2.0<(me[0].tm);t++);	
-      t1=extdata[t].x;
-
-      // Find the time difference between the starting time of
-      // the timeseries and that closest to the first measurement:
-      double dt2=t1;
+      // Expected value from other contributions already calulated
+      // so will null out the W vector:
 
       for(i=0;i<num_states;i++)
 	{
 	  if(is_complex)
-	    W[i]=0.0;
+	    W[i]=0.0; // Assume fixed initial value
 	  else
-	    W_r[i]=0.0;
+	    W_r[i]=0.0; // Assume fixed initial value
 	}
       
-      // Traverse the time steps in the external timeseries
-      // previous to the first measurement:
-      for(t=0;t<ext_len && (extdata[t].x+0.5*step)<(me[0].tm);t++)
+      if(detailed_loglik)
+	Rcout << "W initialized" << std::endl;
+      
+      for(unsigned int ext=0;ext<ext_num;ext++)
 	{
-	  double dt=t>0 ? (extdata[t].x-extdata[t-1].x) : step;
-	  double u=extdata[t].x;
+	  if(detailed_loglik)
+	    Rcout << "ext=" << ext << std::endl;
+      
+	  // Find last index for external series before first measurement
+	  for(t=0;t<ext_len[ext] && extdata[ext][t].x<me[0].tm;t++) ;
+	  unsigned int last_index=t;
+	  
+	  if(detailed_loglik)
+	    Rcout << "t=" << t << " ext_len[ext]=" << ext_len[ext] << std::endl;
+      
+	  // Linearly interpolated value of the external time series
+	  // at the first measurement time point:
+	  double atvalue=t<=(ext_len[ext]-2) ?
+	    linear(extdata[ext][t].x,extdata[ext][t].y,
+		   extdata[ext][t+1].x,extdata[ext][t+1].y,
+		   me[0].tm) : extdata[ext][t].x;
+	  double attime=me[0].tm;
+	  
+	  if(detailed_loglik)
+	    Rcout << "atvalue=" << atvalue << std::endl;
+      
+	  // Traverse the time steps in the external timeseries
+	  // previous to the first measurement:
+	  for(t=0;t<ext_len[ext] && extdata[ext][t].x<me[0].tm;t++)
+	    {
+	      double t1=extdata[ext][t].x, y1=extdata[ext][t].y, t2, y2;
+	      if(t<last_index)
+		{
+		  t2=extdata[ext][t+1].x;
+		  y2=extdata[ext][t+1].y;
+		}
+	      else
+		{
+		  t2=me[0].tm;
+		  y2=atvalue;
+		}
 
-	  for(i=0;i<ser[0].numlayers*numsites;i++)
-	    if(is_complex)
-	      {
-		Complex W_t=0.0;
-		
-		for(j=numsites;j<2*numsites;j++)
-		  if(V[i][j]!=0.0)
+	      if(detailed_loglik)
+		Rcout << " t=" << t << " t1=" << t1 << " y1=" << y1 <<
+		  " t2= " << t2 << " y2=" << y2 << std::endl;
+	      
+	      
+	      double dt2=t2-t1;
+
+	      unsigned int s2=ext_series_connection[ext];
+	      unsigned int l2=ext_layer_connection[ext];
+	      // PS: s2 goes from 0 to number of series,
+	      //     l2 goes from 0 to number of layers
+	      
+	      if(detailed_loglik)
+		Rcout << "s2= " << s2 << " l2=" << l2 << std::endl;
+	      
+	      for(i=0;i<num_states;i++)
+		{
+		  j=series_state_start[s2]+i%numsites+numsites*l2;
+		    
+		  //if(detailed_loglik)
+		  //Rcout << "i=" << i << " j=" << j << std::endl;
+		    
+		  if(is_complex)
 		    {
-		      if(j>=numsites && j<2*numsites)
-			{
-			  Complex ee=lambda[i]*(dt2-u);
-			  W_t+=complex_exp(ee)*V[i][j]*
-			    extdata[t].y*ser[0].beta;
-			}
+		      Complex ee1=lambda[i]*(attime-t1);
+		      Complex ee2=lambda[i]*(attime-t2);
+		      
+		      if(V[i][j]!=0.0)
+			W[i]+=V[i][j]*(0.5*complex_exp(ee1)*y1+
+				       0.5*complex_exp(ee2)*y2)*dt2*
+			  ser[s2].beta_ext[ext]*
+			  ser[s2].pull[l2][j%numsites];
 		    }
+		  else
+		    {
+		      /*
+		      if(detailed_loglik)
+			Rcout << "lambda_r[i]=" << lambda_r[i] <<
+			  " attime-t1=" << attime-t1 <<
+			  " attime-t2=" << attime-t2 <<
+			  " dt2=" << dt2 << std::endl; */
+		      
+		      double ee1=lambda_r[i]*(attime-t1);
+		      double ee2=lambda_r[i]*(attime-t2);
+		      
+		      //if(detailed_loglik)
+		      //Rcout << "V_r[i][j]=" << V_r[i][j] << std::endl;
+		      
+		      if(V_r[i][j]!=0.0)
+			{
+			  /*
+			  if(detailed_loglik)
+			    {
+			      Rcout << "exp(ee1)=" << exp(ee1) << 
+				" exp(ee2)=" << exp(ee2) << std::endl;
+			      Rcout << "ser[s2].beta_ext=" <<
+				ser[s2].beta_ext << std::endl;
+			      Rcout << "ser[s2].beta_ext[ext]=" <<
+				ser[s2].beta_ext[ext] << std::endl;
+			      Rcout << "ser[s2].pull[l2][j%numsites]=" <<
+				ser[s2].pull[l2][j%numsites] << std::endl;
+				} */
+			  
+			  W_r[i]+=V_r[i][j]*
+			    (0.5*exp(ee1)*y1+0.5*exp(ee2)*y2)*dt2*
+			    ser[s2].beta_ext[ext]*
+			    ser[s2].pull[l2][j%numsites];
+			}
+		      
+		      if(detailed_loglik)
+			Rcout << "i=" << i << " t=" << t << " dt2=" << dt2 <<
+			  " t1=" << t1 << " t2=" << t2 << 
+			  " y1=" << y1 << " y2=" << y2 << 
+			  " dt2=" << dt2 << " W_r[i]=" << W_r[i] << std::endl;
+		    }
+		}
+	    }
+	
+	  for(i=0;i<num_states;i++) // traverse the sites
+	    // calculate expected value from W, check for complex value
+	    {
+	      if(is_complex)
+	      {
+		u_k_buff[i]=u_k[0][i];
+		for(j=0;j<num_states;j++)
+		  if(Vinv[i][j]!=0.0)
+		    u_k_buff[i]+=Vinv[i][j]*W[j];
 		
-		W[i]+=W_t*dt;
+		if(ABSVAL((u_k_buff[i].Im()))>0.001)
+		  {
+#ifdef MAIN
+		    cerr << "Complex expectancy! u_k[" << k << "][" << i << "]=" << 
+		      u_k_buff[i].Re() << "+" << u_k_buff[i].Im() << "i" << endl;
+#else
+		    Rcout << "Complex expectancy! u_k[" << k << "][" <<
+		      i << "]=" << u_k_buff[i].Re() << "+" <<
+		      u_k_buff[i].Im() << "i" << std::endl;
+#endif // MAIN
+#ifdef DETAILED_TIMERS
+		    timers[1][1]=clock();
+		    timers[1][2]+=(timers[1][1]-timers[1][0]);
+		    timers[2][1]=clock();
+		    timers[2][2]+=(timers[2][1]-timers[2][0]);
+#endif // DETAILED_TIMERS
+		
+		    singledelete(t_0);
+		    doubledelete(prior_expectancy, numobs);
+		    doubledelete(resids, numobs);
+		    doubledelete(var, num_states);
+		    singledelete(stddevs);
+		    singledelete(lambda);
+		    singledelete(lambda_r);
+		    doubledelete(A, num_states);
+		    doubledelete(V,num_states);
+		    doubledelete(Vinv,num_states);
+		    doubledelete(VinvLambdaV_A,num_states);
+		    doubledelete(V_r,num_states);
+		    doubledelete(Vinv_r,num_states);
+		    doubledelete(Omega,num_states);
+		    doubledelete(Vvar,num_states);
+		    doubledelete(Qbuffer,num_states);
+		    doubledelete(Lambda_k,num_states);
+		    singledelete(eLambda_k);
+		    singledelete(eLambda_k_r);
+		    singledelete(x_k_prev);
+		    singledelete(m);
+		    singledelete(B);
+		    singledelete(t_k);
+		    singledelete(dt_k);
+		    singledelete(resids_time);
+		    doubledelete(Q_k_buff,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(Omega_r,num_states);
+		    doubledelete(Vvar_r,num_states);
+		    doubledelete(Qbuffer_r,num_states);
+		    doubledelete(Lambda_k_r,num_states);
+		    doubledelete(P_k_buffer,num_states);
+		    tripledelete(Q_k,len,num_states);
+		    singledelete(W);
+		    singledelete(W_r);
+		    singledelete(u_k_buff);
+		    singledelete(u_k_buff_r);
+		    doubledelete(x_k_now,len);
+		    tripledelete(F_k,len,num_states);
+		    doubledelete(u_k,len);
+		    tripledelete(P_k_now,len,num_states);
+		    tripledelete(P_k_prev,len,num_states);
+		    tripledelete(P_k_s,meas_smooth_len,num_states);
+		    doubledelete(x_k_s,meas_smooth_len);
+		    singledelete(t_k_smooth);
+		    singledelete(dt_k_smooth);
+		    doubledelete(C_k,num_states);
+		    doubledelete(PAbuffer,num_states);
+		    
+		    return(-1e+200);
+		  }
+	    
+		u_k[0][i]=u_k_buff[i].Re();
 	      }
 	    else
 	      {
-		double W_t=0.0;
-		
-		for(j=numsites;j<2*numsites;j++)
-		  if(V_r[i][j]!=0.0)
-		    {
-		      if(j>=numsites && j<2*numsites)
-			{
-			  double ee=lambda_r[i]*(dt2-u);
-			  W_t+=exp(ee)*V_r[i][j]*extdata[t].y*ser[0].beta;
-			}
-		    }
-		
-		W_r[i]+=W_t*dt;
-	      }
-	}
-      
-      for(i=0;i<num_states;i++) // traverse the sites
-	if(is_complex)
-	  {
-	    u_k_buff[i]=u_k[0][i];
-	    for(j=0;j<num_states;j++)
-	      if(Vinv[i][j]!=0.0)
-		u_k_buff[i]+=Vinv[i][j]*W[j];
-	    
-	    
-	    if(ABSVAL((u_k_buff[i].Im()))>0.001)
-	      {
-#ifdef MAIN
-		cerr << "Complex expectancy! u_k[" << k << "][" << i << "]=" << 
-		  u_k_buff[i].Re() << "+" << u_k_buff[i].Im() << "i" << endl;
-#else
-		Rcout << "Complex expectancy! u_k[" << k << "][" <<
-		  i << "]=" << u_k_buff[i].Re() << "+" <<
-		  u_k_buff[i].Im() << "i" << std::endl;
-#endif // MAIN
-#ifdef DETAILED_TIMERS
-		timers[1][1]=clock();
-		timers[1][2]+=(timers[1][1]-timers[1][0]);
-		timers[2][1]=clock();
-		timers[2][2]+=(timers[2][1]-timers[2][0]);
-#endif // DETAILED_TIMERS
-		
-		doubledelete(prior_expectancy, numobs);
-		doubledelete(resids, numobs);
-		doubledelete(var, num_states);
-		singledelete(stddevs);
-		singledelete(lambda);
-		singledelete(lambda_r);
-		doubledelete(A, num_states);
-		doubledelete(V,num_states);
-		doubledelete(Vinv,num_states);
-		doubledelete(VinvLambdaV_A,num_states);
-		doubledelete(V_r,num_states);
-		doubledelete(Vinv_r,num_states);
-		doubledelete(Omega,num_states);
-		doubledelete(Vvar,num_states);
-		doubledelete(Qbuffer,num_states);
-		doubledelete(Lambda_k,num_states);
-		singledelete(eLambda_k);
-		singledelete(eLambda_k_r);
-		singledelete(x_k_prev);
-		singledelete(m);
-		singledelete(B);
-		singledelete(t_k);
-		singledelete(dt_k);
-		singledelete(resids_time);
-		doubledelete(Q_k_buff,num_states);
-		doubledelete(Lambda_k_r,num_states);
-		doubledelete(Omega_r,num_states);
-		doubledelete(Vvar_r,num_states);
-		doubledelete(Qbuffer_r,num_states);
-		doubledelete(Lambda_k_r,num_states);
-		doubledelete(P_k_buffer,num_states);
-		tripledelete(Q_k,len,num_states);
-		singledelete(W);
-		singledelete(W_r);
-		singledelete(u_k_buff);
-		singledelete(u_k_buff_r);
-		doubledelete(x_k_now,len);
-		tripledelete(F_k,len,num_states);
-		doubledelete(u_k,len);
-		tripledelete(P_k_now,len,num_states);
-		tripledelete(P_k_prev,len,num_states);
-		tripledelete(P_k_s,meas_smooth_len,num_states);
-		doubledelete(x_k_s,meas_smooth_len);
-		singledelete(t_k_smooth);
-		singledelete(dt_k_smooth);
-		doubledelete(C_k,num_states);
-		doubledelete(PAbuffer,num_states);
-		
-		return(-1e+200);
-	      }
-	    
-	    u_k[0][i]=u_k_buff[i].Re();
-	  }
-	else
-	  {
-	    u_k_buff_r[i]=u_k[0][i];
-	    for(j=0;j<num_states;j++)
-	      if(Vinv_r[i][j]!=0.0)
-		u_k_buff_r[i]+=Vinv_r[i][j]*W_r[j];
-	    u_k[0][i]=u_k_buff_r[i];
-
-	    if(simulation_files && debug)
-	      {
-#ifdef MAIN
-		double upd=0.0;
-		cout << " W[" << i << "]=" << W_r[i] << endl;
+		u_k_buff_r[i]=u_k[0][i];
 		for(j=0;j<num_states;j++)
+		  if(Vinv_r[i][j]!=0.0)
+		    u_k_buff_r[i]+=Vinv_r[i][j]*W_r[j];
+		u_k[0][i]=u_k_buff_r[i];
+		
+		if(simulation_files && debug)
 		  {
-		    cout << Vinv_r[i][j] << " ";
-		    if(Vinv_r[i][j]!=0.0)
-		      upd+=Vinv_r[i][j]*W_r[j];
-		  }
-		cout << endl;
-		cout << " u_k_upd" << i << ":" << upd << endl;
+#ifdef MAIN
+		    double upd=0.0;
+		    cout << " W[" << i << "]=" << W_r[i] << endl;
+		    for(j=0;j<num_states;j++)
+		      {
+			cout << Vinv_r[i][j] << " ";
+			if(Vinv_r[i][j]!=0.0)
+			  upd+=Vinv_r[i][j]*W_r[j];
+		      }
+		    cout << endl;
+		    cout << " u_k_upd" << i << ":" << upd << endl;
 #endif // MAIN
+		  }
+		
+		if(detailed_loglik)
+		  Rcout << "i=" << i << " u_k_buff_r[i]=" << u_k_buff_r[i] <<
+		    " u_k[0][i]=" << u_k[0][i] << std::endl;
 	      }
-	  }
-      
-      t_0=t;
-      //t0=t1;
-    }
+	    }
+	  
+	  t_0[ext]=t;
+	  if(detailed_loglik)
+	    Rcout << "t_0[" << ext << "]=" << t_0[ext] << std::endl;
+	} // for ext
+    } // if useext
   
 
   if(simulation_files && debug)
@@ -13109,10 +13247,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
   // Traverse the measurements:
   for(k=0;k<(int)len;k++)
     {
-      
       if(detailed_loglik)
 	Rcout << "k=" << k << std::endl;
-	  
+      
       // fetch the time of the current measurement:
       t_k[k]=me[k].tm;
       
@@ -13150,6 +13287,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	{
 	  // Calculate u_k:
 	  double dt=t_k[k]-t_k[k-1];
+
+	  unsigned int *t_0_buff=NULL;
+	  if(useext && ext_num>0)
+	    {
+	      t_0_buff=new unsigned int[ext_num]; 
+	      for(unsigned int ext=0;ext<ext_num;ext++)
+		t_0_buff[ext]=t_0[ext];
+	    }
 	  
 	  for(i=0;i<num_states;i++) // traverse the processes
 	    {
@@ -13175,6 +13320,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    " numlayers-1=" << nl-1 << std::endl;
 #endif // MAIN
 		}
+
+	      if(detailed_loglik)
+		Rcout << "start i=" << i << " W_r=" << W_r[i] << std::endl;
 	      
 	      if(//!ser[s].no_pull_lower &&
 		 ((is_complex && lambda && lambda[i]!=0.0) ||
@@ -13197,11 +13345,18 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      double ee=lambda_r[i]*dt;
 		      
 		      for(b=i%numsites2;b<num_states;b+=numsites2)
-			W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]*(1.0-exp(ee))-
-			  1.0/lambda_r[i]*(1.0/lambda_r[i]*exp(ee)+
-					   t_k[k]-meantime-
-					   (t_k[k-1]-meantime)*(1.0-exp(ee)))*
-			  V_r[i][b]*B[b];
+			{
+			  W_r[i] -= 1.0/lambda_r[i]*V_r[i][b]*m[b]*(1.0-exp(ee))-
+			    1.0/lambda_r[i]*(1.0/lambda_r[i]*exp(ee)+
+					     t_k[k]-meantime-
+					     (t_k[k-1]-meantime)*(1.0-exp(ee)))*
+			    V_r[i][b]*B[b];
+			  if(detailed_loglik)
+			    Rcout << "b=" << b << " i=" << i << " lambda_r=" <<
+			      lambda_r[i] << " exp(ee)=" << exp(ee) <<
+			      " V_r=" << V_r[i][b] << " m=" << m[b] << " B=" <<
+			      B[b] << std::endl;
+			}
 		    }
 
 		  /*
@@ -13283,78 +13438,135 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  */
 		}
 	      
-	      // If an external timeseries is given:
-	      if(useext && state_series[i]==0)
-		{
-		  // Update the numerical integral:
-
-		  if(detailed_loglik && !is_complex)
-		    show_vec("W_r before useext", W_r, num_states);
-		  
-		  // find the external timeseries time closest to the 
-		  // current measurement:
-		  for(t=t_0;t<ext_len && (extdata[t].x+0.5*step)<(me[k].tm);t++);
-		  t1=extdata[t].x;
+	      if(detailed_loglik)
+		Rcout << "m/B   i=" << i << " W_r=" << W_r[i] << std::endl;
 	      
-		  if(detailed_loglik)
-		    Rcout << "t_0=" << t_0 << " t=" << t <<
-		      " me[k].tm=" << me[k].tm << " t1=" << t1 << std::endl;
+	      // If an external timeseries is given:
+	      if(useext) 
+		{
+		  // Update the numerical integral, using the
+		  // triangle method of numeric intergration.
+		  // Value of the external time series at
+		  // the previous and current time point
+		  // gotten by linear interpolation.
 		  
-		  // Traverse the time steps in the external timeseries
-		  // from the previously handled time to the current measurement:
-		  for(t=t_0;t<ext_len && (extdata[t].x+0.5*step)<(me[k].tm);t++)
+		  for(unsigned int ext=0;ext<ext_num;ext++)
 		    {
-		      // time difference between currently handled time and start time:
-		      double u=extdata[t].x;
-		      double dt=extdata[t].x-extdata[t-1].x;
-
-		      if(detailed_loglik)
-			Rcout << "t=" << t << std::endl;
+		      unsigned int s2=ext_series_connection[ext];
+		      unsigned int l2=ext_layer_connection[ext];
+	      
+		      // find the external timeseries time closest before the 
+		      // current measurement:
+		      for(t=t_0[ext];t<ext_len[ext] &&
+			    extdata[ext][t].x<me[k].tm;t++);
+		      unsigned int last_index=t;
 		      
-		      if(is_complex)
+		      // Linearly interpolated value of the external time series
+		      // at the first measurement time point:
+		      double atvalue=t<=(ext_len[ext]-2) ?
+			linear(extdata[ext][t].x,extdata[ext][t].y,
+			       extdata[ext][t+1].x,extdata[ext][t+1].y,
+			       me[k].tm) : extdata[ext][t].x;
+		      double attime=me[k].tm;
+
+		      // Todo: Check this code!
+		      t=t_0[ext];
+		      double atprevvalue=t<=(ext_len[ext]-2) ?
+			linear(extdata[ext][t].x,extdata[ext][t].y,
+			       extdata[ext][t+1].x,extdata[ext][t+1].y,
+			       me[k-1].tm) : extdata[ext][t].x;
+		      double atprevtime=me[k-1].tm;
+		      
+		      // Traverse the time steps in the external timeseries
+		      // between the previous and current measurement:
+		      for(t=t_0[ext];t<ext_len[ext] &&
+			    extdata[ext][t].x<me[k].tm;t++)
 			{
-			  Complex W_t=0.0;
-			  Complex ee=lambda[i]*(t1-u);
+			  double t1, y1, t2, y2;
 			  
-			  for(j=numsites;j<2*numsites;j++)
-			    if(V[i][j]!=0.0)
-			      W_t+=complex_exp(ee)*V[i][j]*extdata[t].y;
-			  
-			  W[i]+=ser[0].beta*W_t*dt;
-			}
-		      else
-			{
-			  double W_t=0.0;
-			  double ee=lambda_r[i]*(t1-u);
-			  
-			  for(j=numsites;j<2*numsites;j++)
+			  if(t>t_0[ext])
 			    {
+			      t1=extdata[ext][t].x;
+			      y1=extdata[ext][t].y;
+			    }
+			  else
+			    {
+			      t1=atprevtime;
+			      y1=atprevvalue;
+			    }
+			  if(t<last_index)
+			    {
+			      t2=extdata[ext][t+1].x;
+			      y2=extdata[ext][t+1].y;
+			    }
+			  else
+			    {
+			      t2=me[k].tm;
+			      y2=atvalue;
+			    }
+			  
+			  double dt2=t2-t1;
+	      	      
+			  j=series_state_start[s2]+i%numsites+numsites*l2;
+			  if(is_complex)
+			    {
+			      Complex ee1=lambda[i]*(attime-t1);
+			      Complex ee2=lambda[i]*(attime-t2);
+		
+			      if(V[i][j]!=0.0)
+				W[i]+=V[i][j]*
+				(0.5*complex_exp(ee1)*y1+
+				 0.5*complex_exp(ee2)*y2)*dt2*
+				  ser[s2].beta_ext[ext]*
+				  ser[s2].pull[l2][j%numsites];
+			    }
+			  else
+			    {
+			      double ee1=lambda_r[i]*(attime-t1);
+			      double ee2=lambda_r[i]*(attime-t2);
+					
 			      if(detailed_loglik)
 				Rcout << "V_r[" << i << "][" << j << "]=" <<
 				  V_r[i][j] << " num_states=" << num_states <<
-				  std::endl; 
+				  std::endl;
+			      
 			      if(V_r[i][j]!=0.0)
-				W_t+=exp(ee)*V_r[i][j]*extdata[t].y;
+				W_r[i]+=V_r[i][j]*
+				  (0.5*exp(ee1)*y1+0.5*exp(ee2)*y2)*dt2*
+				  ser[s2].beta_ext[ext]*
+				  ser[s2].pull[l2][j%numsites];
+			      
+			      if(detailed_loglik)
+				Rcout << "ee1=" << ee1 << "ee2=" << ee2 <<
+				  " beta=" << ser[0].beta_ext[ext] <<
+				  " numsites=" << numsites << 
+				  " y1=" << y1 << " y2=" << y2 << std::endl;
 			    }
-			  
-			  if(detailed_loglik)
-			    Rcout << "ee=" << ee << " W_t=" << W_t <<
-			      " beta=" << ser[0].beta <<
-			      " numsites=" << numsites << 
-			      " extdata[t].y=" << extdata[t].y << std::endl;
-			  
-			  W_r[i]+=ser[0].beta*W_t*dt;
 			}
-		    }
-		  
-		  if(detailed_loglik && !is_complex)
-		    show_vec("W_r after useext", W_r, num_states);
-		  
-		}
+		      
+		      if(useext && ext_num>0)
+			{
+			  // Old code:t_0=t; // todo, check if this is dangerous!
+			  // Conclusion: Yes, it was dangerous! Using buffer
+			  // instead.
+			  
+			  t_0_buff[ext]=t;
+			}
+		    } // for ext
+		} // if useext
+	      
+	      if(detailed_loglik)
+		Rcout << "after i=" << i << " W_r=" << W_r[i] << std::endl;
+	      
+	    } // for i
+	  
+	  if(useext && ext_num>0)
+	    {
+	      for(unsigned int ext=0;ext<ext_num;ext++)
+		t_0[ext]=t_0_buff[ext];
+	      singledelete(t_0_buff);
 	    }
-	  if(useext)
-	    t_0=t;
-		  
+	  
 	  for(i=0;i<num_states;i++) // traverse the sites
 	    if(is_complex)
 	      {
@@ -13380,6 +13592,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    timers[3][1]=clock();
 		    timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+		    singledelete(t_0);
 		    doubledelete(prior_expectancy, numobs);
 		    doubledelete(resids, numobs);
 		    singledelete(resids_time);
@@ -13443,7 +13656,6 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		
 		u_k[k][i]=u_k_buff_r[i];
 	      }
-
 	  
 	  // find e^{lambda*timediff}
 	  for(i=0;i<num_states;i++)
@@ -13518,6 +13730,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			timers[3][1]=clock();
 			timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+			singledelete(t_0);
 			doubledelete(prior_expectancy, numobs);
 			doubledelete(resids, numobs);
 			doubledelete(var, num_states);
@@ -13607,6 +13820,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  int start_i=num_series_feed>0 ? i%numsites2 : i;
 	  for(l=start_i;l<num_states;l+=numsites2)
 	    x_k_prev[i]+=F_k[k][i][l]*x_k_now[(k>0 ? k-1 : 0)][l];
+	  if(detailed_loglik)
+	    {
+	      show_vec("x_k_prev",x_k_prev,num_states);
+	    }
 	}
       
       // Calculate Q_k = Vinv * Lambda_k * Vinv' :
@@ -13721,6 +13938,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    timers[3][1]=clock();
 		    timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+		    singledelete(t_0);
 		    doubledelete(prior_expectancy, numobs);
 		    doubledelete(resids, numobs);
 		    singledelete(resids_time);
@@ -13815,6 +14033,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       if(!sanity_check_variance("Q_k",k,Q_k[k],stddevs,num_states,
 				laxness_level))
 	{
+	  singledelete(t_0);
 	  doubledelete(var, num_states);
 	  singledelete(stddevs);
 	  singledelete(lambda);
@@ -13889,6 +14108,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       if(!sanity_check_variance("P_k_prev",k,P_k_prev[k],stddevs,
 				num_states, laxness_level))
 	{
+	  singledelete(t_0);
 	  doubledelete(var, num_states);
 	  singledelete(stddevs);
 	  singledelete(lambda);
@@ -13956,6 +14176,10 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		for(i=0;i<ser[s].numlayers*numsites;i++)
 		  for(j=0;j<ser[s].numlayers*numsites;j++)
 		    P_k_prev[k][start+i][start+j]=0.0;
+		
+		if(detailed_loglik)
+		  Rcout << "end initvalue k=" << k << " s=" << s << std::endl;
+      
 	      }
 	  }
       
@@ -13965,10 +14189,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  show_mat_R("P_k_prev", P_k_prev[k],num_states,num_states);
 	}
       
-      if(detailed_loglik)
-	Rcout << "end initvalue" << k << std::endl;
-	  
-      // Check that P_k__prev values are finite 
+      // Check that P_k_prev values are finite 
       for(i=0;i<num_states;i++)
 	for(j=0;j<num_states;j++)
 	  if(!(P_k_prev[k][i][j]> -1e+200 && P_k_prev[k][i][j]< 1e+200))
@@ -13979,6 +14200,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      timers[3][1]=clock();
 	      timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+	      singledelete(t_0);
 	      doubledelete(prior_expectancy, numobs);
 	      doubledelete(resids, numobs);
 	      singledelete(resids_time);
@@ -14104,6 +14326,11 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      " numsites=" << numsites << " index=" << s*numsites+s_site <<
 	      " k=" << k << " y_k=" << y_k << " S_k=" << S_k <<
 	      " y_k/sqrt(S_k)=" << y_k/sqrt(S_k) << std::endl;
+	  if(detailed_loglik)
+	    Rcout << "s=" << " site=" << s_site <<
+	      " numsites=" << numsites << " index=" << s*numsites+s_site <<
+	      " k=" << k << " y_k=" << y_k << " S_k=" << S_k <<
+	      " y_k/sqrt(S_k)=" << y_k/sqrt(S_k) << std::endl;
 #endif // MAIN
 	      
 	  // Calculate K_k = P_k,(k-1) * H_k' * inv(S_k)
@@ -14129,6 +14356,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				      stddevs, num_states,
 				      LOGLIK_LAXNESS(int(laxness_level)+1)))
 	      {
+		singledelete(t_0);
 		doubledelete(var, num_states);
 		singledelete(stddevs);
 		singledelete(lambda);
@@ -14203,14 +14431,14 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		x_k_prev[me[k].index[0]] << " y_k=" << y_k << " S_k= " <<
 		S_k << " ll= " << -ret << " P_k_prev=" <<
 		P_k_prev[k][me[k].index[0]][me[k].index[0]] << " u_k=" <<
-		u_k[me[k].index[0]][0] << endl;
+		u_k[k][me[k].index[0]] << endl;
 #else
 	      Rcout << "k=" << k << " meas=" << me[k].meanval[0] <<
 		" x_k_prev[" << me[k].index[0] << "]=" <<
 		x_k_prev[me[k].index[0]] << " y_k=" << y_k << " S_k= " <<
 		S_k << " ll= " << -ret << " P_k_prev=" <<
 		P_k_prev[k][me[k].index[0]][me[k].index[0]] << " u_k=" <<
-		u_k[me[k].index[0]][0] << endl;
+		u_k[k][me[k].index[0]] << endl;
 #endif
 	    }
 	  
@@ -14238,6 +14466,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    }  
 
 	  if(debug)
+	    cout << "k=" << k << " l=" << -ret << endl;
+	  if(detailed_loglik)
 	    cout << "k=" << k << " l=" << -ret << endl;
 #endif // MAIN	
 	  
@@ -14385,6 +14615,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				      stddevs,num_states,
 				      LOGLIK_LAXNESS(int(laxness_level)+1)))
 	      {
+		singledelete(t_0);
 		doubledelete(var, num_states);
 		singledelete(stddevs);
 		singledelete(lambda);
@@ -14459,6 +14690,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      timers[3][1]=clock();
 	      timers[3][2]+=(timers[3][1]-timers[3][0]);
 #endif // DETAILED_TIMERS
+	      singledelete(t_0);
 	      doubledelete(var, num_states);
 	      singledelete(stddevs);
 	      singledelete(lambda);
@@ -14873,6 +15105,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  timers[5][1]=clock();
 			  timers[5][2]+=(timers[5][1]-timers[5][0]);
 #endif // DETAILED_TIMERS
+			  singledelete(t_0);
 			  doubledelete(var, num_states);
 			  singledelete(stddevs);
 			  singledelete(lambda);
@@ -14972,6 +15205,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				  timers[5][1]=clock();
 				  timers[5][2]+=(timers[5][1]-timers[5][0]);
 #endif // DETAILED_TIMERS
+				  singledelete(t_0);
 				  doubledelete(var, num_states);
 				  singledelete(stddevs);
 				  singledelete(lambda);
@@ -15220,6 +15454,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   singledelete(x_k_prev);
   singledelete(m);
   singledelete(B);
+  singledelete(t_0);
 
 #ifdef MAIN
   if(f)
@@ -17008,6 +17243,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   int return_mcmc=as<int>(ReturnMCMC);
   int return_residuals=as<int>(ReturnResiduals);
 
+  if(talkative_likelihood)
+    detailed_loglik=1;
   
   int intmode=as<int>(mode);
   if(intmode<0 || intmode>=((int)LAYERANALYZER_UNKNOWN))
@@ -17960,40 +18197,88 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   //Rcout << "Connections made" << std::endl;
 
   
-  List expseries(external_input);
-  unsigned int num_exp=expseries.size();
+  List extseries(external_input);
+  unsigned int num_ext=extseries.size();
   
-  //if(!silent)
-  Rcout << "expseries.size=" << num_exp << std::endl;
-  if(num_exp>0)
-    for(s=0;s<MINIM(1,num_exp);s++)
-    // Only support for one external series, so far!
+  if(!silent)
+    Rcout << "extseries.size=" << num_ext << std::endl;
+  if(num_ext>0)
     {
-      List external_data=as<List>(expseries[s]);
-
-      NumericVector ext_time=as<NumericVector>(external_data["time"]);
-      unsigned int len_ext_time=ext_time.size();
+      if(!silent)
+	Rcout << "extstart: extseries.size=" << num_ext << std::endl;
+      ext_num=int(num_ext);
+      extdata=new double_2d*[num_ext];
+      extname=new char*[num_ext];
+      ext_len=new unsigned int[num_ext];
+      ext_series_connection=new unsigned int[num_ext];
+      ext_layer_connection=new unsigned int[num_ext];
+      if(!silent)
+	Rcout << "ext2: extseries.size=" << num_ext << std::endl;
       
-      NumericVector ext_value=as<NumericVector>(external_data["value"]);
-      unsigned int len_ext_value=ext_value.size();
+      for(unsigned int ext=0;ext<num_ext;ext++)
+	{
+	  if(!silent)
+	    Rcout << "ext=" << ext << std::endl;
       
-      if(len_ext_time!=len_ext_value)
-	{
-	  Rcout << "Length of external 'time' array ("<< len_ext_time <<
-	    ")!= length of external 'value' array ("
-		<< len_ext_value << ")!" << std::endl;
-	  PutRNGstate();
-	  return NULL;
-	}
-      ext_len=len_ext_time;
+	  List external_data=as<List>(extseries[ext]);
 
-      extdata=new double_2d[ext_len];
-      for(i=0;i<ext_len;i++)
-	{
-	  extdata[i].x=ext_time[i];
-	  extdata[i].y=ext_value[i];
+	  if(!silent)
+	    Rcout << "Read external data" << std::endl;
+      
+	  // Series and layers go from 0 to #series-1, #layers-1,
+	  // respectively. Interface must check that these
+	  // indeces makes sense.
+	  ext_series_connection[ext]=as<int>(external_data["series"])-1;
+	  ext_layer_connection[ext]=as<int>(external_data["layer"])-1;
+	  
+	  if(!silent)
+	    Rcout << "ext_series_connection[ext]=" <<
+	      ext_series_connection[ext] << "ext_layer_connection[ext]=" <<
+	      ext_layer_connection[ext]<< std::endl;
+	    
+	  std::string name=as<std::string>(external_data["name"]);
+	  extname[ext]=new char[strlen(name.c_str())+1];
+	  strcpy(extname[ext],name.c_str());
+      
+	  if(!silent)
+	    Rcout << "extname filled out" << std::endl;
+	  
+	  NumericVector ext_time=as<NumericVector>(external_data["time"]);
+	  unsigned int len_ext_time=ext_time.size();
+      
+	  NumericVector ext_value=as<NumericVector>(external_data["value"]);
+	  unsigned int len_ext_value=ext_value.size();
+      
+	  if(!silent)
+	    Rcout << "exttime, extvalue made" << std::endl;
+	      
+	  if(len_ext_time!=len_ext_value)
+	    {
+	      Rcout << "External dataset #" << int(ext) <<
+		": length of external 'time' array ("<< len_ext_time <<
+		")!= length of external 'value' array ("
+		    << len_ext_value << ")!" << std::endl;
+	      PutRNGstate();
+	      return NULL;
+	    }
+	  
+	  ext_len[ext]=len_ext_time;
+	  
+	  extdata[ext]=new double_2d[ext_len[ext]];
+	  if(!silent)
+	    Rcout << "extdata made" << std::endl;
+	  for(i=0;i<ext_len[ext];i++)
+	    {
+	      extdata[ext][i].x=ext_time[i];
+	      extdata[ext][i].y=ext_value[i];
+	    }
+	  
+	  if(!silent)
+	    Rcout << "extdata filled out" << std::endl;
 	}
       useext=1;
+      if(!silent)
+	Rcout << "Done with extdata/extname" << std::endl;
     }
   
 

@@ -50,7 +50,9 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
      maximum.likelihood.numstart=num.optim,
      num.MCMC=0,spacing=0,burnin=0,num.temp=0,
      layer.analyzer.mode="Loglik-from-input",
-     external.series=analysis2$external.series)
+     external.series=analysis2$external.series,
+     external.series.connection=analysis2$external.series.connection,
+     external.layer.connection=analysis2$external.layer.connection)
  if(do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
      previous.run=analysis2,silent.mode=silent.mode,
@@ -59,7 +61,9 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
      maximum.likelihood.numstart=num.optim,
      num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp,
      layer.analyzer.mode="Loglik-from-input",
-     external.series=analysis2$external.series)
+     external.series=analysis2$external.series,
+     external.series.connection=analysis2$external.series.connection,
+     external.layer.connection=analysis2$external.layer.connection)
      
  return(res$loglik)
 }
@@ -110,7 +114,9 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
       maximum.likelihood.numstart=num.optim,
       num.MCMC=0,spacing=0,burnin=0,num.temp=0,
       layer.analyzer.mode="Loglik-from-input",
-      external.series=analysis2$external.series)
+      external.series=analysis2$external.series,
+      external.series.connection=analysis2$external.series.connection,
+      external.layer.connection=analysis2$external.layer.connection)
  if(do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
       previous.run=analysis2,silent.mode=silent.mode,
@@ -119,7 +125,9 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
       maximum.likelihood.numstart=num.optim,
       num.MCMC=num.MCMC,spacing=spacing,burnin=burnin,num.temp=num.temp,
       layer.analyzer.mode="Loglik-from-input",
-      external.series=analysis2$external.series)
+      external.series=analysis2$external.series,
+      external.series.connection=analysis2$external.series.connection,
+      external.layer.connection=analysis2$external.layer.connection)
      
  return(res$loglik)
 }

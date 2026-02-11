@@ -43,7 +43,8 @@ layer.analyzer=function(... ,
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE,
   loglik.laxness="high",
-  external.series=NULL
+  external.series=NULL, external.series.connection=integer(0),
+  external.layer.connection=integer(0)
   )
 {
   data.structure=list(...)
@@ -140,7 +141,7 @@ layer.analyzer=function(... ,
       smoothing.specs=smoothing.specs, realization.specs=realization.specs,
       return.residuals=return.residuals, smooth.previous.run=FALSE,
       previous.run=nonconn, layer.analyzer.mode=mode, loglik.laxness,
-      external.series)
+      external.series, external.series.connection, external.layer.connection)
       
   return(ret)
 }
@@ -171,7 +172,8 @@ layer.analyzer.timeseries.list=function(data.structure ,
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL,
   layer.analyzer.mode="Bayes",
-  loglik.laxness="high", external.series=NULL
+  loglik.laxness="high", external.series=NULL,
+  external.series.connection=integer(0), external.layer.connection=integer(0)
   )
 {
  layer.analyzer.modes=c("Bayes","ML-from-MCMC","ML-from-input",
@@ -190,7 +192,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
  if(!is.null(previous.run))
     if(!is.null(previous.run$mcmc) & smooth.previous.run==FALSE)
    {
-     print.srcref("likelihood calculation mode!")
+     #print.srcref("likelihood calculation mode!")
      likelihood.mode=TRUE
    }
 
@@ -1309,12 +1311,19 @@ layer.analyzer.timeseries.list=function(data.structure ,
   # Check external series
   if(!is.null(external.series))
   {
-    if(length(external.series)>1)
-    {
-      stop("So far, there is only support for one external timeseries!")
-    }
     if(length(external.series)>0)
     {
+      if(length(external.series.connection)!=length(external.series))
+      {
+        stop(sprintf("Number of external series, %d, does not match the number of external series to series connections, %d!",
+	  length(external.series),length(external.series.connection)))
+      }
+      if(length(external.layer.connection)!=length(external.series))
+      {
+        stop(sprintf("Number of external series, %d, does not match the number of external series to series layer connections, %d!",
+	  length(external.series),length(external.layer.connection)))
+      }
+
       for(i in 1:length(external.series))
       {
         if(is.null(external.series[[i]]$time))
@@ -1374,6 +1383,100 @@ layer.analyzer.timeseries.list=function(data.structure ,
         {
           external.series[[i]]$name=sprintf("extdata%d",i)
         }
+	
+	# Check if the connections go to existing observed series:
+        if(external.series.connection[i]<0 |
+	   external.series.connection[i]>length(data.structure))
+	{
+	  stop(sprintf("External data series must be connected to a numbered series going from 1 up to (and including) the number of observed data series (%d). Yet external series number %d (%s) goes to series number %d, which does not exist!",
+	     length(data.structure),
+	     i, external.series[[i]]$name, external.series.connection[i]))
+	}
+	
+	# Check if the connections go to existing observed series layer:
+        if(external.layer.connection[i]<0 |
+	   external.layer.connection[i]>
+	   data.structure[[external.series.connection[i]]]$numlayers)
+	{
+	  stop(sprintf("External data series must be connected to a numbered layer going from 1 up to (and including) the number of layers observed data series (%d for series number %d). Yet external series number %d (%s) goes to layer number %d, which does not exist!",
+	     data.structure[[external.series.connection[i]]]$numlayers,
+	     external.series.connection[i],
+	     i, external.series[[i]]$name, external.layer.connection[i]))
+	}
+	
+	# Set external data connections:
+        external.series[[i]]$series=external.series.connection[i]
+        external.series[[i]]$layer=external.layer.connection[i]
+	
+	
+	# Check time spans of external serie vs observational series
+	t1=min(external.series[[i]]$time)
+	t2=max(external.series[[i]]$time)
+	
+        for(j in 1:n)
+        {
+          to1=min(data.structure[[j]]$timeseries$time)
+          to2=max(data.structure[[j]]$timeseries$time)
+
+          if(to1<t1)
+	  {
+	    stop(sprintf("External data series need to have data points preceeding anything in the observed data series. But external data series number %d (%s) starts at t=%f but observed series number %d (%s) has data all the way back to t=%f!",
+	      i, external.series[[i]]$name, t1,
+	      j, data.structure[[j]]$timeseries$name, to1))
+	  }
+	  
+          if(to2>t2)
+	  {
+	    warning(sprintf("External data series should have data points after anything in the observed data series. If not, the last value in the external data series will be assumed to be the external process' state ever after. External data series number %d (%s) ends at t=%f but observed series number %d (%s) has data going to t=%f!",
+	      i, external.series[[i]]$name, t2,
+	      j, data.structure[[j]]$timeseries$name, to2))
+	  }
+	}
+	
+	# If smoothing, external data series also has to preceed that.
+	if(!is.null(smoothing.specs))
+	{
+	  if(smoothing.specs$start.end.given)
+	  {
+	    to1=smoothing.specs$smoothing.start
+	    to2=smoothing.specs$smoothing.end
+
+	    if(to1<t1)
+	    {
+	      stop(sprintf("External data series need to have data points preceeding smoothing specs. But external data series number %d (%s) starts at t=%f but smoothing specs start at t=%f!",
+	        i, external.series[[i]]$name, t1, to1))
+ 	     }
+	     
+            if(to2>t2)
+	    {
+	      warning(sprintf("External data series should have data points after smoothing end. If not, the last value in the external data series will be assumed to be the external process' state ever after. External data series number %d (%s) ends at t=%f but smoothing goes to t=%f!",
+	        i, external.series[[i]]$name, t2, to2))
+	     }
+	  }
+	}
+	
+	# If realization, external data series also has to preceed that.
+	if(!is.null(realization.specs))
+	{
+	  if(realization.specs$start.end.given)
+	  {
+	    to1=realization.specs$realization.start
+	    to2=realization.specs$realization.end
+
+	    if(to1<t1)
+	    {
+	      stop(sprintf("External data series need to have data points preceeding realization specs. But external data series number %d (%s) starts at t=%f but realization specs start at t=%f!",
+	        i, external.series[[i]]$name, t1, to1))
+ 	     }
+	     
+            if(to2>t2)
+	    {
+	      warning(sprintf("External data series should have data points after realizations end. If not, the last value in the external data series will be assumed to be the external process' state ever after. External data series number %d (%s) ends at t=%f but realization goes to t=%f!",
+	        i, external.series[[i]]$name, t2, to2))
+	     }
+	  }
+	}
+
       }
     }
   }
@@ -1507,6 +1610,8 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
  out$data.structure=out.data.structure
 
  out$external.series=external.series
+ out$external.series.connection=external.series.connection
+ out$external.layer.connection=external.layer.connection
 
  # Store input options:
  out$input.options=
@@ -1687,7 +1792,20 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
            out$data.structure[[s2]]$timeseries$name,l2)
    }
  }
- 
+ if(length(external.series)>0)
+ {
+   for(ext in 1:length(external.series))
+   {
+     out$description=
+      sprintf("%s\nExternal series %d (%s) -> internal series %d (%s), layer %d",
+      out$description, ext, external.series[[ext]]$name,
+      external.series.connection[ext],
+      out$data.structure[[external.series.connection[ext]]]$timeseries$name,
+      external.layer.connection[ext])
+   }
+ }
+
+
  
  # Set class type of output:
  class(out)="layered"
