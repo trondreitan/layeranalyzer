@@ -17,6 +17,245 @@
 
 library(coda)
 
+
+##################################################################
+# Some functions for alternative connection specification first
+##################################################################
+
+# Output conenction pairs given the set of timeseries structures given
+layer.pairs.list=function(data.structure)
+{
+ if(sum(class(data.structure)=="list")==0)
+   stop("layer.pairs.list: data.structure must be a list!")
+
+ # Number of time series/structures:
+ n.ser=n=length(data.structure)
+
+ if(n.ser<2)
+   stop("There must be at least two distinct processes belonging to two different series, for process pairing to make sense!")
+
+ n.proc=0
+ proc.series=rep(0,0)
+ proc.layer=rep(0,0)
+
+ # Some error checking, from "layer.analyzer.timeseries.list"
+ for(i in 1:n)
+ {
+  if(typeof(data.structure[[i]])!="list")
+    stop("data.structure[[i]] must be a list, preferrably belonging to the 'layer.series.structure' class (as this class has the right elements).")
+  
+  if(is.null(data.structure[[i]]$timeseries))
+    stop("data.structure[[i]] does not contain a time series (of type layer.data.series)!")
+  
+  if(is.null(data.structure[[i]]$timeseries$time))
+    stop("No 'time' array in the incoming data list!")
+    
+  if(is.null(data.structure[[i]]$timeseries$value))
+    stop("No 'value' array in the incoming data list!")
+    
+  if(length(data.structure[[i]]$timeseries$time)!=length(data.structure[[i]]$timeseries$value))
+    stop("The 'time' and 'value' part of the data list must correspond, so the lengths must be the same!")
+    
+  if(length(data.structure[[i]]$timeseries$time)<2)
+    stop("There must be at least two data points!")
+     
+  if(typeof(data.structure[[i]]$timeseries$time)!="integer" & 
+     typeof(data.structure[[i]]$timeseries$time)!="numeric" & 
+     typeof(data.structure[[i]]$timeseries$time)!="double" & 
+     typeof(data.structure[[i]]$timeseries$time)!="POSIXct")
+    stop("The 'time' array must be numeric or date-time (POSIXct)!")
+  data.structure[[i]]$timeseries$is.datetime=0
+  if(typeof(data.structure[[i]]$timeseries$time)=="POSIXct")
+    data.structure[[i]]$timeseries$is.datetime=1
+  data.structure[[i]]$timeseries$time=as.numeric(data.structure[[i]]$timeseries$time)
+  
+  if(typeof(data.structure[[i]]$timeseries$value)!="integer" & 
+     typeof(data.structure[[i]]$timeseries$time)!="numeric" & 
+     typeof(data.structure[[i]]$timeseries$time)!="double")
+    stop("The 'value' array must be numeric!")
+  if(sum(is.na(data.structure[[i]]$timeseries$value))>0)
+    data.structure[[i]]$timeseries$value[is.na(data.structure[[i]]$timeseries$value)]=-10000000
+  data.structure[[i]]$timeseries$value=as.numeric(data.structure[[i]]$timeseries$value)
+  
+  if(!is.null(data.structure[[i]]$timeseries$num.meas.per.value))
+  {
+    if(typeof(data.structure[[i]]$timeseries$num.meas.per.value)!="integer" & 
+      typeof(data.structure[[i]]$timeseries$num.meas.per.value)!="numeric" & 
+      typeof(data.structure[[i]]$timeseries$num.meas.per.value)!="double")
+      stop("The number of measurement array 'num.meas.per.value' array must be integer!")
+    
+    if(length(data.structure[[i]]$timeseries$num.meas.per.value)!=
+       length(data.structure[[i]]$timeseries$value))
+      stop("Number of measurements array 'num.meas.per.value' must correspond with the 'value' and 'time' arrays, so the lengths must be the same(3)!")
+    
+    if(sum(is.na(data.structure[[i]]$timeseries$num.meas.per.value))>0)
+      data.structure[[i]]$timeseries$num.meas.per.value[is.na(data.structure[[i]]$timeseries$num.meas.per.value)]=-10000000
+  }
+
+  if(!is.null(data.structure[[i]]$numlayers))
+  {
+    if(typeof(data.structure[[i]]$numlayers)!="integer" & typeof(data.structure[[i]]$numlayers)!="double" & typeof(data.structure[[i]]$numlayers)!="numeric")
+      stop("Number of layers, 'numlayers', must be an integer")
+  }
+  if(is.null(data.structure[[i]]$numlayers))
+  {
+    warning("Number of layers not given. Defaulting to 1 (Ornstein-Uhlenbeck)")
+    data.structure[[i]]$numlayers=1
+  }
+  data.structure[[i]]$numlayers=as.integer(data.structure[[i]]$numlayers)
+  if(data.structure[[i]]$numlayers<0)
+  {
+    stop("Number of layers must be 0 or more.")
+  }
+  if(data.structure[[i]]$numlayers>=100)
+  {
+    stop("Cannot handle 100 layers or more (at this time).")
+  }
+  
+  n.proc=n.proc+data.structure[[i]]$numlayers
+  if(data.structure[[i]]$numlayers>0)
+  {
+    proc.series=c(proc.series, rep(i,data.structure[[i]]$numlayers))
+    proc.layer=c(proc.layer, 1:data.structure[[i]]$numlayers)
+  }
+ }
+
+ n.pairs=0
+ pairs=as.matrix(array(0,c(n.proc^2,4)))
+ descr=rep("",0)
+ for(i in 1:(n.proc-1))
+  for(j in (i+1):n.proc)
+   if(proc.series[i]!=proc.series[j])
+    {
+     s1=proc.series[i]
+     l1=proc.layer[i]
+     s2=proc.series[j]
+     l2=proc.layer[j]
+     n.pairs=n.pairs+1
+     pairs[n.pairs,]=c(proc.series[i],proc.layer[i],
+          proc.series[j],proc.layer[j])
+
+     descr=c(descr,
+        sprintf("Pair %d: first process is series %d (%s), layer %d, second process is series %d (%s), layer %d",
+        n.pairs,
+	proc.series[s1], data.structure[[s1]]$timeseries$name,l1,
+	proc.series[s2], data.structure[[s2]]$timeseries$name,l2))
+    }
+
+ pairs=matrix(pairs[1:n.pairs,],nrow=n.pairs)
+ colnames(pairs)=c("comp1.series","comp1.layer","comp2.series","comp2.layer")
+ if(n.pairs>0)
+   row.names(pairs)=sprintf("pair%d",1:n.pairs)
+
+ out=list(pairs=pairs, description=descr)
+ class(out)="layer.pairs"
+
+ return(out)
+}
+
+layer.pairs=function(...)
+{
+  data.structure=list(...)
+
+  return(layer.pairs.list(data.structure))
+}
+
+layer.connections.list=function(data.structure, conn)
+{
+  if(sum(class(data.structure)=="list")==0)
+   stop("layer.pairs.list: data.structure must be a list!")
+  
+  p=NULL
+  p=layer.pairs.list(data.structure)
+  if(is.null(p))
+    stop("Pair structure not found! Could not proceed!")
+  n.pairs=length(p$description)
+
+  if(typeof(conn)!="integer" & typeof(conn)!="numeric" &
+     typeof(conn)!="double")
+     stop("conn must be an integer array!")
+
+  if(n.pairs!=length(conn))
+    stop(sprintf("Number of pairs, %d, does not match the length of conn, %d!",
+      n.pairs,length(conn)))
+
+  if(sum(conn!=round(conn))>0)
+    stop("Connection list must contain integers (from 0 to 4)!")
+  
+  causal=NULL
+  corr=NULL
+  
+  for(i in 1:n.pairs)
+  {
+    if(conn[i]<0 | conn[i]>4)
+      stop(sprintf("Connection element nr %d is not between 0 and 4!"))
+    
+    if(conn[i]==1)
+    {
+      if(is.null(corr))
+      {
+       corr=p$pairs[i,]
+      }
+      else
+      {
+       corr=cbind(corr, p$pairs[i,])
+      }
+    }
+    if(conn[i]==2)
+    {
+      if(is.null(causal))
+      {
+       causal=p$pairs[i,]
+      }
+      else
+      {
+       causal=cbind(causal, p$pairs[i,])
+      }
+    }
+    if(conn[i]==3)
+    {
+      if(is.null(causal))
+      {
+       causal=c(p$pairs[i,3:4],p$pairs[i,1:2])
+      }
+      else
+      {
+       causal=cbind(causal, c(p$pairs[i,3:4],p$pairs[i,1:2]))
+      }
+    }
+    if(conn[i]==4)
+    {
+      if(is.null(causal))
+      {
+       causal=cbind(p$pairs[i,],c(p$pairs[i,3:4],p$pairs[i,1:2]))
+      }
+      else
+      {
+       causal=cbind(causal, p$pairs[i,], c(p$pairs[i,3:4],p$pairs[i,1:2]))
+      }
+    }
+  }
+
+ if(!is.null(causal))
+   causal=matrix(causal,nrow=4)
+
+ if(!is.null(corr))
+   corr=matrix(corr,nrow=4)
+
+ out=list(causal=causal,corr=corr)
+ class(out)="layer.connections"
+ 
+ return(out)
+}
+
+
+layer.connections=function(..., conn)
+{
+  data.structure=list(...)
+
+  return(layer.connections.list(data.structure,conn))
+}
+
 #####################################################
 # 'layer.analyzer' allows the user to input a set of
 # time series+structures into the analysis.
@@ -44,10 +283,27 @@ layer.analyzer=function(... ,
   return.residuals=FALSE,
   loglik.laxness="high",
   external.series=NULL, external.series.connection=integer(0),
-  external.layer.connection=integer(0)
+  external.layer.connection=integer(0),
+  site.distance.matrix=NULL,
+  conn=NULL
   )
 {
   data.structure=list(...)
+
+  if(!is.null(conn))
+  {
+   if(!is.null(causal) | !is.null(corr))
+     stop("\"conn\" is an alternative way of specifying connections without using \"corr\" or \"causal\" and cannot be used in combination with that type of specification!")
+   
+   connspec=NULL
+   connspec=layer.connections.list(data.structure,conn)
+   if(is.null(connspec))
+     stop("Connection specification failed!")
+
+   causal=connspec$causal
+   corr=connspec$corr
+  }
+  
 
   layer.analyzer.ml.strategies=c("MCMC-from-model","MCMC-from-nonconnected",
     "MCMC-from-model-and-nonconnected")
@@ -69,34 +325,58 @@ layer.analyzer=function(... ,
      (maximum.likelihood.strategy=="MCMC-from-nonconnected" | 
      maximum.likelihood.strategy=="MCMC-from-model-and-nonconnected"))
   {
-      model=layer.analyzer.timeseries.list(data.structure,
-        num.MCMC=num.MCMC, spacing=spacing,burnin=burnin,num.temp=num.temp,
+      model=layer.analyzer.timeseries.list(data.structure=data.structure,
+        num.MCMC=num.MCMC,
+	spacing=spacing,
+	burnin=burnin,
+	num.temp=num.temp,
         do.model.likelihood=FALSE,
         do.maximum.likelihood=FALSE,
         maximum.likelihood.numstart=0,
-        silent.mode=TRUE,talkative.burnin=FALSE,
+        silent.mode=TRUE,
+	talkative.burnin=FALSE,
         talkative.likelihood=FALSE,
-        id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
+        id.strategy=id.strategy,
+	use.stationary.stdev=use.stationary.stdev,
         T.ground=T.ground, # start.parameters=0,
-        use.half.lives=use.half.lives, mcmc=FALSE,
-        causal=causal,causal.symmetric=causal.symmetric,corr=corr,
-        smoothing.specs=smoothing.specs, realization.specs=realization.specs,
-        return.residuals=return.residuals, smooth.previous.run=FALSE,
-        previous.run=NULL,layer.analyzer.mode="Numpar")
+        use.half.lives=use.half.lives,
+	mcmc=FALSE,
+        causal=causal,
+	causal.symmetric=causal.symmetric,
+	corr=corr,
+        smoothing.specs=smoothing.specs,
+	realization.specs=realization.specs,
+        return.residuals=return.residuals,
+	smooth.previous.run=FALSE,
+        previous.run=NULL,
+	layer.analyzer.mode="Numpar",
+	external.series=external.series,
+	external.series.connection=external.series.connection,
+        external.layer.connection=external.layer.connection,
+        site.distance.matrix=site.distance.matrix
+	)
       numpar=model$numpar
       #print.srcref(sprintf("numpar=%d",numpar))
 
      nonconn=layer.analyzer.timeseries.list(data.structure,
-      num.MCMC=num.MCMC, spacing=spacing,burnin=burnin,num.temp=num.temp,
+      num.MCMC=num.MCMC,
+      spacing=spacing,
+      burnin=burnin,
+      num.temp=num.temp,
       do.model.likelihood=FALSE,
       do.maximum.likelihood=TRUE,
       maximum.likelihood.numstart=maximum.likelihood.numstart,
-      silent.mode=TRUE,talkative.burnin=FALSE,
+      silent.mode=TRUE,
+      talkative.burnin=FALSE,
       talkative.likelihood=FALSE,
-      id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
+      id.strategy=id.strategy,
+      use.stationary.stdev=use.stationary.stdev,
       T.ground=T.ground, # start.parameters=0,
-      use.half.lives=use.half.lives, mcmc=TRUE,
-        causal=NULL,causal.symmetric=NULL,corr=NULL,
+      use.half.lives=use.half.lives,
+      mcmc=TRUE,
+      causal=NULL,
+      causal.symmetric=NULL,
+      corr=NULL,
       smoothing.specs=
          list(do.smoothing=FALSE,smoothing.time.diff=0,
          smoothing.start=NULL,smoothing.end=NULL,
@@ -104,8 +384,14 @@ layer.analyzer=function(... ,
       realization.specs=
          list(do.realizations=FALSE,num.realizations=1000,strategy="N",
          realization.time.diff=0,realization.start=NULL,realization.end=NULL),
-      return.residuals=FALSE, smooth.previous.run=FALSE,
-      previous.run=NULL,layer.analyzer.mode="ML-from-MCMC")
+      return.residuals=FALSE,
+      smooth.previous.run=FALSE,
+      previous.run=NULL,
+      layer.analyzer.mode="ML-from-MCMC",
+      external.series=external.series,
+      external.series.connection=external.series.connection,
+      external.layer.connection=external.layer.connection,
+      site.distance.matrix=site.distance.matrix)
 
       #print.srcref(sprintf("numpar.conn=%d",numpar))
       #print.srcref(sprintf("old nonconn size=%d",dim(nonconn$mcmc)[2]))
@@ -128,20 +414,35 @@ layer.analyzer=function(... ,
   }
 
   ret=layer.analyzer.timeseries.list(data.structure,
-      num.MCMC=num.MCMC, spacing=spacing,burnin=burnin,num.temp=num.temp,
+      num.MCMC=num.MCMC,
+      spacing=spacing,
+      burnin=burnin,
+      num.temp=num.temp,
       do.model.likelihood=do.model.likelihood,
       do.maximum.likelihood=do.maximum.likelihood,
       maximum.likelihood.numstart=maximum.likelihood.numstart,
-      silent.mode=silent.mode,talkative.burnin=talkative.burnin,
+      silent.mode=silent.mode,
+      talkative.burnin=talkative.burnin,
       talkative.likelihood=talkative.likelihood,
-      id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
+      id.strategy=id.strategy,
+      use.stationary.stdev=use.stationary.stdev,
       T.ground=T.ground, # start.parameters=0,
-      use.half.lives=use.half.lives, mcmc=mcmc,
-      causal=causal,causal.symmetric=causal.symmetric,corr=corr,
-      smoothing.specs=smoothing.specs, realization.specs=realization.specs,
-      return.residuals=return.residuals, smooth.previous.run=FALSE,
-      previous.run=nonconn, layer.analyzer.mode=mode, loglik.laxness,
-      external.series, external.series.connection, external.layer.connection)
+      use.half.lives=use.half.lives, 
+      mcmc=mcmc,
+      causal=causal,
+      causal.symmetric=causal.symmetric,
+      corr=corr,
+      smoothing.specs=smoothing.specs,
+      realization.specs=realization.specs,
+      return.residuals=return.residuals,
+      smooth.previous.run=FALSE,
+      previous.run=nonconn,
+      layer.analyzer.mode=mode,
+      loglik.laxness,
+      external.series,
+      external.series.connection,
+      external.layer.connection,
+      site.distance.matrix)
       
   return(ret)
 }
@@ -173,7 +474,8 @@ layer.analyzer.timeseries.list=function(data.structure ,
   return.residuals=FALSE, smooth.previous.run=FALSE, previous.run=NULL,
   layer.analyzer.mode="Bayes",
   loglik.laxness="high", external.series=NULL,
-  external.series.connection=integer(0), external.layer.connection=integer(0)
+  external.series.connection=integer(0), external.layer.connection=integer(0),
+  site.distance.matrix=NULL
   )
 {
  layer.analyzer.modes=c("Bayes","ML-from-MCMC","ML-from-input",
@@ -201,6 +503,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
  # User input checks:
  ######################
 
+ some.distance.corr=FALSE
 
  for(i in 1:n)
  {
@@ -483,6 +786,23 @@ layer.analyzer.timeseries.list=function(data.structure ,
       stop("Pairwise correlated sigma specification out of range!")
   }
   
+  if(!is.null(data.structure[[i]]$distance.correlated.sigma))
+  {
+    if(typeof(data.structure[[i]]$distance.correlated.sigma)!="integer" & typeof(data.structure[[i]]$distance.correlated.sigma)!="double" & typeof(data.structure[[i]]$distance.correlated.sigma)!="numeric")
+      stop("Distance correlated sigma indicator, 'distance.correlated.sigma', must be an integer vector specifying layers")
+  }
+  if(is.null(data.structure[[i]]$distance.correlated.sigma))
+  {
+    data.structure[[i]]$distance.correlated.sigma=0
+  }
+  data.structure[[i]]$distance.correlated.sigma=as.integer(data.structure[[i]]$distance.correlated.sigma)
+  if(length(data.structure[[i]]$distance.correlated.sigma)>1 | data.structure[[i]]$distance.correlated.sigma[1]>0)
+  {
+    some.distance.corr=TRUE
+    if(sum(data.structure[[i]]$distance.correlated.sigma>data.structure[[i]]$numlayers | data.structure[[i]]$distance.correlated.sigma<0)>0)
+      stop("Distance correlated sigma specification out of range!")
+  }
+  
   if(!is.null(data.structure[[i]]$one.dim.sigma))
   {
     if(typeof(data.structure[[i]]$one.dim.sigma)!="integer" & typeof(data.structure[[i]]$one.dim.sigma)!="double" & typeof(data.structure[[i]]$one.dim.sigma)!="numeric")
@@ -753,6 +1073,12 @@ layer.analyzer.timeseries.list=function(data.structure ,
     if(length(data.structure[[i]]$prior$beta)!=2)
       stop("Prior for 'beta' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'beta'!")
     data.structure[[i]]$prior$beta=as.numeric(data.structure[[i]]$prior$beta)
+    
+    if(is.null(data.structure[[i]]$prior$dist.corr.falloff))
+      data.structure[[i]]$prior$dist.corr.falloff=c(1e-6,1e+6)
+    if(length(data.structure[[i]]$prior$dist.corr.falloff)!=2)
+      stop("Prior for 'dist.corr.falloff' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'dist.corr.falloff'!")
+    data.structure[[i]]$prior$dist.corr.falloff=as.numeric(data.structure[[i]]$prior$dist.corr.falloff)
     
     if(is.null(data.structure[[i]]$prior$obs) & is.null(data.structure[[i]]$std.dev))
       stop("If prior is given and measurement-wise observational standard deviation is not given, the prior must contain the 95% prior credibility for the observational standard deviation, given as element 'obs'!")
@@ -1257,6 +1583,35 @@ layer.analyzer.timeseries.list=function(data.structure ,
    realization.specs$do.realizations=as.integer(realization.specs$do.realizations)
  }
 
+ if(!is.null(site.distance.matrix))
+ {
+   if(sum(class(site.distance.matrix)=="matrix")==0)
+     stop("'site.distance.matrix' must be a matrix!")
+   if(dim(site.distance.matrix)[1]!=dim(site.distance.matrix)[2])
+     stop("The matrix 'site.distance.matrix' must be square 8same amount of rows and columns))!")
+   show("site.distance.matrix")
+   show(site.distance.matrix)
+   show(typeof(site.distance.matrix))
+   if(typeof(site.distance.matrix)!="numeric" &
+      typeof(site.distance.matrix)!="double")
+     stop("The distance matrix 'site.distance.matrix' must contain numeric (double) elements!")
+   if(sum(abs(diag(site.distance.matrix)))>0)
+     stop("The distance matrix 'site.distance.matrix' must have zeros one the diagonal!")
+   if(sum(site.distance.matrix<0)>0)
+     stop("The distance matrix 'site.distance.matrix' must have elements that are positive (or zero)!")
+   if(sum(site.distance.matrix!=t(site.distance.matrix))>0)
+     stop("The distance matrix 'site.distance.matrix' must be symmatric!")
+   if(dim(site.distance.matrix)[1]==0 & some.distance.corr==TRUE)
+     stop("Distance correlation specified but no distance matrix given!")
+ }
+ if(is.null(site.distance.matrix))
+ {
+   site.distance.matrix=matrix(0,nrow=1)
+   if(some.distance.corr==TRUE)
+     stop("Distance correlation specified but no distance matrix given!")
+ } 
+
+ 
 
   if(!is.null(previous.run))
   {
@@ -1596,7 +1951,8 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
       layeranalyzer.mode,
       layeranalyzer.laxness,	
       input.mcmc,
-      external.series 
+      external.series,
+      site.distance.matrix
      )
 
  if(is.null(out))
@@ -1805,8 +2161,12 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
    }
  }
 
+ out$site.distance.matrix=NULL
+ if(!is.null(site.distance.matrix))
+   if(dim(site.distance.matrix)[1]>1)
+     out$site.distance.matrix=site.distance.matrix
 
- 
+
  # Set class type of output:
  class(out)="layered"
 

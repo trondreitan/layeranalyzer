@@ -10,7 +10,7 @@ Note: Lapack, the library I use for linear algebra tasks, recently changed their
 
 Code:
 
-* The current version of the layeranalyzer R package, layeranalyzer_0.3.5.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/_archive/layeranalyzer_0.3.5.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
+* The current version of the layeranalyzer R package, layeranalyzer_0.4.0.tar.gz, uses the same underlying C++ code (layeranalyzer.cpp). It can be installed with the R code: install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/_archive/layeranalyzer_0.4.0.tar.gz",type="source") or install_github(repo="trondreitan/layeranalyzer",dependencies=FALSE,build_vignettes=TRUE) if devtools is installed. Note that if vignettes are activated, you need the rmarkdown and markdown packages also! On Linux at least, you need the program 'pandoc' also (not in R but on the Linux machine). You might need sudo rights for that. If this is too troublesome, use the option 'vignettes=FALSE' instead.  See "troubleshooting" for technical issues. 
 
 * Note that a new install file for upcoming version has been added. The old one can be installed with install.packages("https://github.com/trondreitan/layeranalyzer/raw/master/_archive/layeranalyzer_0.1.1.tar.gz",type="source").
 
@@ -115,9 +115,28 @@ Simulations can be used for testing the behaviour of the analysis.
 Updates and older versions
 Update history:
 
+    11/3-2026: Added an alternative way of specyfing connections (used instead
+    of 'causal' and 'corr') if one wants a compact (but less user-friendly)
+    way to specify connections. This alternative way of specifying a
+    connection was introduced in order to make it easy to produce
+    different connection models by simply traversing the possible
+    connection between each pair of processes. If one use a script to
+    traverse all possible connections models, reads a script and
+    corrects the connection specification, one has a tool for
+    outputing one script for each connection models. These scripts
+    can then possibly be run in parallel on a computer with many cores
+    or a computing cluster.
+
+    In addition, support for distance-based correlation (exponential
+    decrease of correlation with distance) has been introduced. One
+    needs to specify a distance matrix between the different sites. This
+    for using layeranalyzer to analyze spatiotemporal processes.
+    Note however that there is much more freedom in specifying the
+    temporal correlation structure than the spatial correlation structure.
+
     11/02-2026: Added support for external time series. That is series that are not treated as stochastic processes to be modelled, but only considered as possible causal drivers of the observational time series that are modelled. In order for this to work properly, they should have many times more sample points than the observational time series (and also going further back in time), as their influence on the observed time series are calculated using numerical integration. Consider interpolation algorithms if that is not the case. This is mainly meant for time series that do not represent directly observed processes, but instead come about by modelling, interpolation and possible smoothing (such as paleontological climate series).
 
-    17/10-2025: Memory leak issue in log-likelihood calculations due to early return in error situations fixed and tested. This is the current version, 0.3.4, found in archive_/layeranalyzer_0.3.4.tar.gz.
+    17/10-2025: Memory leak issue in log-likelihood calculations due to early return in error situations fixed and tested. This was the version, 0.3.4, found in archive_/layeranalyzer_0.3.4.tar.gz.
 
     02/10-2025: Combined new code (for using stationary standard deviation instead of stochastic contribution for stationary processes) with CRAN compliance corrections, to make Version 0.3.3,.
 

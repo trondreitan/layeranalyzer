@@ -28,9 +28,12 @@ layer.analyzer(... ,
      list(do.realizations=FALSE,num.realizations=1000,strategy="N",
           realization.time.diff=0,realization.start=NULL,realization.end=NULL),
   return.residuals=FALSE,
-  loglik.laxness="high", external.series=NULL,
+  loglik.laxness="high",
+  external.series=NULL,
   external.series.connection=integer(0),
-  external.layer.connection=integer(0))
+  external.layer.connection=integer(0),
+  site.distance.matrix=NULL,
+  conn=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -358,6 +361,47 @@ layer.analyzer(... ,
    numbered from 1 to the number of layers in the series specified in
    'external.series.conneciton'. The length of this vector should match the
    number of external time series.
+ }
+ \item{site.distance.matrix}{
+   A matrix that specifies the distance between each pair of sites.
+   Only relevant when on series uses the 'distance.correlated.sigma'
+   option to specify between-site correlation based on distance
+   and a distance correlation falloff parameter. But in such a case,
+   the site distance matrix is very necessary! 
+   (Keep in mind, sites are numbered from 0 to number of sites-1,
+   so element i,j in the matrix should tell the distance between site i-1
+   and site j-1. Also keep in mind that the size of the matrix must
+   match the number of sites in the dataset. Also, diagonal elements
+   are the distance from a specific site to itself and so shoulød be 0.
+   Also, the matrix must be square and symmetric, since the distance
+   from site i-1 to site j-1 is the distance from site j-1 to site i-1.)
+ }
+ \item{conn}{
+ Alternative connection specification through an
+ array of integers between 0 and 4, one for each possible pairing
+ of two processes (series+layer) belonging to different series
+ (see 'layer.pairs').
+ For each pair, 0 means no connection between the two,
+ 1 means correlative connection between the two,
+ 2 means causal connection from the first process in the pair
+ to the second, 3 means causal connection from the second
+ process in the pair to the first and 4 means causal connection
+ going both ways between the pair of processes.
+
+ Used instead
+ of 'causal' and 'corr' if one wants a compact (but less user-friendly)
+ way to specify connections. This alternative way of specifying a
+ connection was introduced in order
+ to make it easy to produce different connection models by
+ simply traversing the possible connection between each pair of
+ processes. If one use a script to traverse all possible
+ connections models, reads a script and corrects the connection
+ specification, one has a tool for outputing one script for each
+ connection models. These scripts can then possibly be run in parallel
+ on a computer with many cores or a computing cluster.
+
+ See the function 'layer.pairs' and 'layer.connections' for ways to
+ make sure that you use this specification correctly.
  }
 }
 \details{
