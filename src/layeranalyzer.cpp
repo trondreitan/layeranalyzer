@@ -75,7 +75,8 @@ struct double_2d
 // correlations, external timeseries regression coefficients and
 // indicator functions (for grouping sites together, not used in
 // the paper). 
-enum param_type {MU, LIN_T, DT, SIGMA, STAT_SDEV, CORR, PAIR_CORR, SERIES_CORR, 
+enum param_type {MU, LIN_T, DT, SIGMA, STAT_SDEV, CORR, PAIR_CORR,
+		 DISTANCE_CORR_FALLOFF, SERIES_CORR, 
 		 BETA, INIT, INDICATOR, OBS_SD, TRIG};
 
 // Transformation types for parameters: linear (no transformation),
@@ -216,6 +217,11 @@ unsigned int ext_num=0,*ext_len=NULL;
 double_2d **extdata=NULL;
 char **extname=NULL;
 unsigned int *ext_series_connection=NULL, *ext_layer_connection=NULL;
+
+
+// Distance-based correlation between sites
+double **corr_distances=NULL;
+unsigned int num_corr_dists=0;
 
 // Run options:
 int silent=0; // indicates silent modues. Default switched off.
@@ -6810,6 +6816,9 @@ struct prior
   
   double os_1, os_2, los_m, los_s;
   // prior for observational noise terms
+
+  double dist_1, dist_2, ldist_m, ldist_s;
+  // prior for distance correlation falloff parameters
   
   // Prior for initial values:
   double init_1, init_2, init_m, init_s;
@@ -6829,6 +6838,7 @@ struct prior
 	   double beta1, double beta2, 
 	   double init1, double init2,
 	   double obs_sd1=MISSING_VALUE,double obs_sd2=MISSING_VALUE,
+	   double dist1=1e-6, double dist2=1e+6,
 	   double meanval=MISSING_VALUE /* used for setting prior for
 					   log-transformed observational noise
 					*/);
@@ -6845,11 +6855,13 @@ struct prior
 	double sigma1,  double sigma2, double stat_sdev1, double stat_sdev2,
 	double lin1, double lin2, double beta1, double beta2,
 	double init1, double init2, double obs_sd1,double obs_sd2,
+	double dist1,double dist2,
 	double meanval);
   prior(int islog, double mu1, double mu2, double dt1,   double dt2,
 	double sigma1,  double sigma2, double stat_sdev1, double stat_sdev2,
 	double lin1, double lin2, double beta1, double beta2,
 	double init1, double init2,double obs_sd1,double obs_sd2,
+	double dist1,double dist2,
 	double meanval);
   prior(prior *orig);
   prior(char *infile,double meanval);
@@ -6906,6 +6918,7 @@ public:
   int regional_mu, regional_lin_t,regional_pull[100], regional_sigma[100];
   int no_sigma[100], no_pull_lower;
   int sigma_correlated[100], sigma_pairwise_correlated[100],sigma_1dim[100];
+  int sigma_distance_correlated[100];
   int indicator_corr[100], indicator_corr2[100], indicator_sigma[100],
     indicator_pull[100], indicator_mu, indicator_lin_t;
   int time_integral[100];
@@ -7235,6 +7248,13 @@ void reset_global_variables(void)
     delete [] beta_feed;
   beta_feed=NULL;
 
+  if(num_corr_dists>0)
+    {
+      doubledelete(corr_distances,num_corr_dists);
+      corr_distances=NULL;
+      num_corr_dists=0;
+    }
+  
   if(ext_num>0)
     {
       doubledelete(extdata,ext_num);
@@ -7593,11 +7613,12 @@ prior::prior(double mu1, double mu2, double dt1, double dt2,
 	     double stat_sdev1, double stat_sdev2,
 	     double lin1, double lin2, 
 	     double beta1, double beta2, double init1, double init2,
-	     double obs_sd1,double obs_sd2,double meanval)
+	     double obs_sd1,double obs_sd2,
+	     double dist1,double dist2,double meanval)
 {
   is_log=0;
   set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1, stat_sdev2,
-      lin1,lin2,beta1,beta2,init1, init2,obs_sd1,obs_sd2,meanval);
+      lin1,lin2,beta1,beta2,init1, init2,obs_sd1,obs_sd2,dist1,dist2,meanval);
 }
 
 prior::prior(int islog, double mu1, double mu2, double dt1, double dt2,
@@ -7605,11 +7626,12 @@ prior::prior(int islog, double mu1, double mu2, double dt1, double dt2,
 	     double stat_sdev1, double stat_sdev2,
 	     double lin1, double lin2, 
 	     double beta1, double beta2, double init1, double init2,
-	     double obs_sd1,double obs_sd2,double meanval)
+	     double obs_sd1,double obs_sd2,
+	     double dist1,double dist2,double meanval)
 {
   is_log=islog;
   set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1,stat_sdev2,
-      lin1,lin2,beta1,beta2,init1, init2,obs_sd1,obs_sd2,meanval);
+      lin1,lin2,beta1,beta2,init1, init2,obs_sd1,obs_sd2,dist1,dist2,meanval);
 }
 
 prior::prior(prior *orig)
@@ -7627,6 +7649,7 @@ void prior::copy(prior *orig)
       orig->sigma_1,orig->sigma_2,orig->stat_sdev_1,orig->stat_sdev_2,
       orig->lin_1,orig->lin_2,orig->beta_1,orig->beta_2,
       orig->init_1, orig->init_2, orig->os_1,orig->os_2,
+      orig->dist_1, orig->dist_2,
       orig->mean_val);
 }
 
@@ -7642,6 +7665,7 @@ void prior::show(void)
 	   "beta       in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
 	   "init       in (%7.3f,%7.3f), m =%7.3f s =%7.3f),\n"
 	   "obs        in (%7.3f,%7.3f), lm=%7.3f ls=%7.3f).\n"
+	   "d.falloff  in (%7.3f,%7.3f), lm=%7.3f ls=%7.3f).\n"
 	   "is_log=%d.",
 	   mu_1,mu_2,mu_m,mu_s,
 	   dt_1,dt_2,ldt_m,ldt_s,
@@ -7651,6 +7675,7 @@ void prior::show(void)
 	   beta_1,beta_2,beta_m,beta_s,
 	   init_1,init_2,init_m,init_s,
 	   os_1,os_2,los_m,los_s,
+	   dist_1, dist_2, ldist_m, ldist_s,
 	   is_log);
 
 #ifdef MAIN
@@ -7665,7 +7690,8 @@ void prior::set(double mu1, double mu2, double dt1, double dt2,
 		double stat_sdev1, double stat_sdev2,
 		double lin1, double lin2, 
 		double beta1, double beta2, double init1, double init2,
-		double obs_sd1,double obs_sd2,double meanval)
+		double obs_sd1,double obs_sd2,
+		double dist1, double dist2, double meanval)
 {
   mu_1=mu1;
   mu_2=mu2;
@@ -7697,6 +7723,10 @@ void prior::set(double mu1, double mu2, double dt1, double dt2,
   beta_s=(beta_2-beta_1)/2.0/1.96;
   init_m=(init_1+init_2)/2.0;
   init_s=(init_2-init_1)/2.0/1.96;
+  dist_1=dist1;
+  dist_2=dist2;
+  ldist_m=(log(dist_1)+log(dist_2))/2.0;
+  ldist_s=(log(dist_2)-log(dist_1))/2.0/1.96;
   if(obs_sd1!=MISSING_VALUE && obs_sd2!=MISSING_VALUE)
     {
       if(is_log!=1)
@@ -7800,6 +7830,33 @@ prior::prior(char *infile, double meanval)
       set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1,stat_sdev2,
 	  lin1,lin2,beta1,beta2,init1,init2,
 	  obs_sd1,obs_sd2,meanval);
+    }
+  else if(c.get_length()==19)
+    {
+      int islog=(int) c.get_value(0);
+      double mu1=c.get_value(1);
+      double mu2=c.get_value(2);
+      double dt1=c.get_value(3);
+      double dt2=c.get_value(4);
+      double sigma1=c.get_value(5);
+      double sigma2=c.get_value(6);
+      double stat_sdev1=c.get_value(7);
+      double stat_sdev2=c.get_value(8);
+      double lin1=c.get_value(9);
+      double lin2=c.get_value(10);
+      double beta1=c.get_value(11);
+      double beta2=c.get_value(12);
+      double init1=c.get_value(13);
+      double init2=c.get_value(14);
+      double obs_sd1=c.get_value(15);
+      double obs_sd2=c.get_value(16);
+      double dist1=c.get_value(17);
+      double dist2=c.get_value(18);
+
+      is_log=islog;
+      set(mu1,mu2,dt1,dt2,sigma1,sigma2,stat_sdev1,stat_sdev2,
+	  lin1,lin2,beta1,beta2,init1,init2,
+	  obs_sd1,obs_sd2,dist1,dist2,meanval);
     }
   else
     {
@@ -8940,7 +8997,8 @@ void series::init(void)
   
   for(int i=0;i<100;i++)
     regional_pull[i]=no_sigma[i]=time_integral[i]=regional_sigma[i]=
-      sigma_correlated[i]=sigma_pairwise_correlated[i]=sigma_1dim[i]=
+      sigma_correlated[i]=sigma_pairwise_correlated[i]=
+      sigma_distance_correlated[i]=sigma_1dim[i]=
       indicator_corr[i]=indicator_corr2[i]=
       indicator_sigma[i]=indicator_pull[i]=0;
   
@@ -9078,7 +9136,7 @@ void series::set_series(char *serie_name, int serienum,
     pr=new prior(-10.0,10.0, 0.001,1000.0, 0.01, 1000.0,
 		 0.00001,10.0,
 		 -10.0,10.0, -10.0,10.0, 
-		 -100.0,100.0, 0.0001,10.0, 1.0);
+		 -100.0,100.0, 0.0001,10.0, 1e-6, 1e+6, 1.0);
   
   set_summary_stats();
   
@@ -9132,7 +9190,7 @@ void series::set_series(double **X, unsigned int n, unsigned int num_layers)
   
   pr=new prior(-10.0,10.0, 0.001,1000.0, 0.0001,1000.0, 0.01,10.0,
 	       -10.0,10.0, -10.0,10.0, 
-	       -100.0,100.0, 0.0001,10.0, 1.0);
+	       -100.0,100.0, 0.0001,10.0, 1e-6, 1e+6, 1.0);
 }
 
 
@@ -10816,8 +10874,65 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			    }
 			}
 		    }
-		
-		if(ser[s].sigma_pairwise_correlated[l])
+
+		if(ser[s].sigma_distance_correlated[l])
+		  {
+		    if(pars)
+		      {
+			double falloff=
+			  invtransform_parameter(pars[numpar],T_LOG);
+			
+			// set the parameter values:
+			for(i=0;i<numsites;i++)
+			  ser[s].paircorr[l][i][i]=1.0;
+			
+			for(i=0;i<(numsites-1);i++)			
+			  for(j=i+1;j<numsites;j++)
+			    ser[s].paircorr[l][i][j]=ser[s].paircorr[l][j][i]=
+			      exp(-corr_distances[i][j]/falloff);
+
+			if(detailed_loglik)
+			  {
+			    show_mat("paircorr",ser[s].paircorr[l],numsites,numsites);
+			    if(ser[s].paircorr[l][0][1]==1)
+			      Rcout << "ser[s].paircorr[l][0][1]=1!" << std::endl;
+			    else if(ser[s].paircorr[l][0][1]>0.999999)
+			      Rcout << "1-ser[s].paircorr[l][0][1]=" <<
+				1.0-ser[s].paircorr[l][0][1]<< std::endl;
+			  }
+			    
+			double *sigma_lambda=
+			  double_eigenvalues(ser[s].paircorr[l],numsites);
+			
+			if(detailed_loglik)
+			  show_vec("sigma_lambda",sigma_lambda,numsites);
+
+			double max_sigma_lambda=
+			  find_statistics(sigma_lambda,numsites,MAX);			
+			
+			for(i=0;i<numsites;i++)
+			  if(sigma_lambda[i]<=0.0 ||
+			     sigma_lambda[i]/max_sigma_lambda<1.0e-7 ||
+			     !(sigma_lambda[i]<1e+200))
+			    {
+			      pairwise_wrong=true;
+			    }
+		      }
+		    else
+		      {
+			// fill the global parameter arrays with
+			// appropriate contents:
+			par_trans_type[numpar]=T_LOG;
+			par_type[numpar]=DISTANCE_CORR_FALLOFF;
+			par_layer[numpar]=l+1;
+			par_region[numpar]=-1;
+			par_series[numpar]=s;
+			snprintf(par_name[numpar], 250,
+				 "distfalloff_%s_%d",ser[s].name,l+1);
+		      }
+		    numpar++;
+		  }
+		else if(ser[s].sigma_pairwise_correlated[l])
 		  {
 		    if(pars)  // parameter value array is given?
 		      {
@@ -10827,15 +10942,12 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			
 			for(i=0;i<(numsites-1);i++)			
 			  for(j=i+1;j<numsites;j++)
-			    ser[s].paircorr[l][i][j]=ser[s].paircorr[l][j][i]=
-			      invtransform_parameter(pars[numpar++],T_LOGIST_PAIR);
-
-
-      
+			    ser[s].paircorr[l][i][j]=
+			      ser[s].paircorr[l][j][i]=
+			      invtransform_parameter(pars[numpar++],T_LOGIST_PAIR);   
 			
-			double *sigma_lambda=double_eigenvalues(ser[s].paircorr[l],
-								numsites);
-
+			double *sigma_lambda=
+			  double_eigenvalues(ser[s].paircorr[l],numsites);
 			
 			for(i=0;i<numsites;i++)
 			  if(sigma_lambda[i]<0.0 || !(sigma_lambda[i]<1e+200))
@@ -11225,6 +11337,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
 #endif // MAIN
 
     
+  if(detailed_loglik)
+    {
+      Rcout << "numpar=" << numpar << std::endl;
+      for(i=0;i<numpar;i++)
+	Rcout << i+1 << " " << par_name[i] << std::endl;
+    }
+  
     
   // If no parameter values were given, the global
   // parameter arrays should now have been filled and
@@ -12034,7 +12153,8 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		corr_layer[i][j][k]=corr_layer[i][k][j]=
 		  dosmooth ? 0.999999 : 1.0;
 	  }
-	else if(ser[s].sigma_pairwise_correlated[l])
+	else if(ser[s].sigma_pairwise_correlated[l] |
+		ser[s].sigma_distance_correlated[l])
 	  {
 	    for(j=0;j<(numsites-1);j++)
 	      for(k=j+1;k<(int)numsites;k++)
@@ -13469,7 +13589,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			       me[k].tm) : extdata[ext][t].x;
 		      double attime=me[k].tm;
 
-		      // Todo: Check this code!
+		      // Fetch the external time series stata at the
+		      // previous measurement through linear interpolation.
+		      // PS: Complicated code, so beware of potential errors
 		      t=t_0[ext];
 		      double atprevvalue=t<=(ext_len[ext]-2) ?
 			linear(extdata[ext][t].x,extdata[ext][t].y,
@@ -15468,9 +15590,9 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
   if(talkative_likelihood)
 #ifdef MAIN
-    cout << "ll=" << -ret << endl;
+    cout << "ll_final=" << -ret << endl;
 #else  
-  Rcout << "ll=" << -ret << std::endl;
+  Rcout << "ll_final=" << -ret << std::endl;
 #endif // MAIN
   
 #ifdef DETAILED_TIMERS
@@ -15500,9 +15622,9 @@ double minusloglik(double *pars)
 double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 {
   unsigned int s,i,l;
-  
+
   // fetch the log-likelihood:
-  double ll=loglik(par.param, dosmooth, do_realize), prp=0.0;;
+  double ll=loglik(par.param, dosmooth, do_realize), prp=0.0;
 
   // sanity check on the likelihood:
   if(!(ll>-1e+199 && ll<1e+199))
@@ -15929,6 +16051,7 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 	  }
     }
 
+  
   if(some_pairwise_correlations)
     {
       for(s=0;s<num_series;s++)
@@ -15936,7 +16059,7 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 	  if(ser[s].sigma_pairwise_correlated[l])
 	    prp-=log(p_pos_site_sigma2);
     }
-
+  
   if(num_series_corr>0)
     prp-=log(p_pos_series_sigma2);
   
@@ -16007,6 +16130,12 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(2.0) -
 	      0.5*curr_val*curr_val/2.0/2.0;
+	    break;
+	  }
+	case DISTANCE_CORR_FALLOFF:
+	  {
+	    prp += -0.5*log(2.0*M_PI) - log(pr->ldist_s) -
+	      0.5*(curr_val - pr->ldist_m)*(curr_val - pr->ldist_m)/pr->ldist_s/pr->ldist_s;
 	    break;
 	  }
 	case SERIES_CORR:
@@ -16200,6 +16329,9 @@ double init_par(int i) // i=parameter number
     case CORR:
     case INIT:
       ret=-4.0+8.0*drand();
+      break;
+    case DISTANCE_CORR_FALLOFF:
+      ret=-6.0+12.0*drand();
       break;
     case PAIR_CORR:
     case SERIES_CORR:
@@ -17196,23 +17328,33 @@ enum LAYERANALYZER_MODE {LAYERANALYZER_BAYESIAN=0,
   LAYERANALYZER_SMOOTH_FROM_INPARS=5, LAYERANALYZER_NUMPAR=6,
   LAYERANALYZER_UNKNOWN=7};
 
-RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
-			      SEXP Spacing,SEXP NumTemp,
+RcppExport SEXP layeranalyzer(SEXP input,
+			      SEXP num_MCMC ,
+			      SEXP Burnin,
+			      SEXP Spacing,
+			      SEXP NumTemp,
 			      SEXP do_model_likelihood,
 			      SEXP do_maximum_likelihood,
 			      SEXP maximum_likelihood_numstart,
-			      SEXP SilentMode, SEXP TalkativeBurnin,
+			      SEXP SilentMode,
+			      SEXP TalkativeBurnin,
 			      SEXP TalkativeLikelihood,
-			      SEXP IdStrategy, SEXP UseStationarySdev,
-			      SEXP TempGround, SEXP UseHalfLives,
+			      SEXP IdStrategy,
+			      SEXP UseStationarySdev,
+			      SEXP TempGround,
+			      SEXP UseHalfLives,
 			      SEXP ReturnMCMC, 
-                              SEXP causal, SEXP causal_symmetric, SEXP corr,
-			      SEXP smooth_specs, SEXP realization_specs,
+                              SEXP causal,
+			      SEXP causal_symmetric,
+			      SEXP corr,
+			      SEXP smooth_specs,
+			      SEXP realization_specs,
 			      SEXP ReturnResiduals,
 			      SEXP mode,
 			      SEXP loglik_laxness,
 			      SEXP input_param_values,
-			      SEXP external_input)
+			      SEXP external_input,
+			      SEXP distance_matrix)
 {  
   reset_global_variables();
   ser=new series[100];  
@@ -17244,7 +17386,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   int return_residuals=as<int>(ReturnResiduals);
 
   if(talkative_likelihood)
-    detailed_loglik=1;
+    detailed_loglik=true;
   
   int intmode=as<int>(mode);
   if(intmode<0 || intmode>=((int)LAYERANALYZER_UNKNOWN))
@@ -17266,12 +17408,55 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
   
   //if(!silent)
   //Rcout << "Reading Inparameters" << std::endl;
-     
+
+  NumericMatrix distmat=as<NumericMatrix>(distance_matrix);
+  unsigned int distmat_rows=distmat.nrow(), distmat_cols=distmat.ncol();
+  if(distmat_rows!=distmat_cols)
+    {
+      Rcout << "Distance matrix must be a square matrix!" << std::endl;
+      return NULL;
+    }
+  if(distmat_rows>1)
+    {
+      num_corr_dists=distmat_rows;
+      corr_distances=Make_matrix(num_corr_dists,num_corr_dists);
+      for(unsigned int i=0;i<num_corr_dists;i++)
+	for(unsigned int j=0;j<num_corr_dists;j++)
+	  {
+	    if(distmat(i,j)<0.0)
+	      {
+		Rcout << "Element " << i << "," << j << " in distance "
+		  "matrix has negative distance= " << distmat(i,j) <<
+		  "!" << std::endl;
+		return NULL;
+	      }
+	    
+	    if(i==j && distmat(i,j)>0)
+	      {
+		Rcout << "Element " << i+1 << "," << i+1 << " in distance "
+		  "matrix has positive distance=" << distmat(i,j) <<
+		  " (should be 0)!" << std::endl;
+		return NULL;
+	      }
+	    
+	    if(i!=j && distmat(i,j)!=distmat(j,i))
+	      {
+		Rcout << "Element " << i+1 << "," << j+1 << "=" <<
+		  distmat(i,j) << " in distance "
+		  "matrix is not equal to element " << j+1 << "," << i+1 <<
+		  "=" << distmat(j,i) << "!" << std::endl;
+		return NULL;
+	      }
+	    
+	    corr_distances[i][j]=distmat(i,j);
+	  }
+    }
+  
   NumericMatrix in_pars=as<NumericMatrix>(input_param_values); 
   int inpars_numsets=in_pars.nrow();
   int inpars_numpars=in_pars.ncol();
   bool no_inpars = (inpars_numsets==1 && inpars_numpars==1) ? true : false;
-
+  
   //if(!silent)
   //Rcout << "Inparameters read" << std::endl;
      
@@ -17473,6 +17658,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       unsigned int num_corrsigma=corrsigma_layers.size();
       IntegerVector pcorrsigma_layers=as<IntegerVector>(inlist["pairwise.correlated.sigma"]);
       unsigned int num_pcorrsigma=pcorrsigma_layers.size();
+      IntegerVector distcorr_layers=as<IntegerVector>(inlist["distance.correlated.sigma"]);
+      unsigned int num_distcorr=distcorr_layers.size();
       IntegerVector nosigma_layers=as<IntegerVector>(inlist["no.sigma"]);
       unsigned int num_nosigma=nosigma_layers.size();
       IntegerVector onedimsigma_layers=as<IntegerVector>(inlist["one.dim.sigma"]);
@@ -17560,6 +17747,8 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
       NumericVector prior_beta=as<NumericVector>(currprior["beta"]);
       NumericVector prior_init=as<NumericVector>(currprior["init"]);
       NumericVector prior_obs=as<NumericVector>(currprior["obs"]);
+      NumericVector prior_distcorr=
+	as<NumericVector>(currprior["dist.corr.falloff"]);
       int prior_islog=as<int>(currprior["islog"]);
       prior *newprior=new prior(prior_islog, prior_mu[0],prior_mu[1],
 				prior_dt[0],prior_dt[1],
@@ -17569,6 +17758,7 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 				prior_beta[0],prior_beta[1],
 				prior_init[0],prior_init[1],
 				prior_obs[0],prior_obs[1],
+				prior_distcorr[0],prior_distcorr[1],
 				meanval);
       if(!silent)
 	{
@@ -17634,6 +17824,17 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	  {
 	    ser[s].sigma_pairwise_correlated[pcorrsigma_layers[i]-1]=1;
 	    some_pairwise_correlations=true;
+	  }
+      for(i=0;i<num_distcorr;i++)
+	if(distcorr_layers[i])
+	  {
+	    ser[s].sigma_distance_correlated[distcorr_layers[i]-1]=1;
+	    if(!corr_distances)
+	      {
+	      Rcout << "Distance matrix is missing, so "
+		"distance-specific correlation not possible!" << std::endl;
+	      return NULL;
+	      }
 	  }
       for(i=0;i<num_nosigma;i++)
 	if(nosigma_layers[i])
@@ -17716,7 +17917,15 @@ RcppExport SEXP layeranalyzer(SEXP input,SEXP num_MCMC ,SEXP Burnin,
 	    ser[s].num_per++;
 	  }
     }
-
+  
+  if(distmat_rows>1 && distmat_rows!=numsites)
+    {
+      Rcout << "Error: Number of sites=" << numsites <<
+	" and size of distance matrix=" << distmat_rows <<
+	" do not match!" << std::endl;
+      return NULL;
+    }
+  
   num_states=0;
   num_tot_layers=0;
   for(s=0;s<num_series;s++)
