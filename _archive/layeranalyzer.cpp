@@ -19952,7 +19952,7 @@ void usage(void)
   printf("         -U : Allows for positive (unstable) pull coefficients.\n");
   printf("               Only alloweable with initial value treatment.\n");
   printf("               The prior 95%% credibility interval for the untransformed\n");
-  printf("               pulls will be set to ±1/lower boundry for\n");
+  printf("               pulls will be set to Â±1/lower boundry for\n");
   printf("               the characteristic time, using the normal distribution.\n");
   printf("               Should only be used when the pull identificaiton restriciton "
 	 "is switched off.\n");
