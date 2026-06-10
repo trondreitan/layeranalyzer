@@ -7181,7 +7181,8 @@ void reset_global_variables(void)
 
 
 #ifdef __linux__  
-  mkl_set_num_threads(1);
+  flexiblas_set_num_threads(1);
+  //mkl_set_num_threads(1);
 #endif // __linux__
   
   
@@ -10213,6 +10214,16 @@ bool sanity_check_variance(const char *name,int iteration,
 
   int i,j,k=iteration;
   
+  Complex *eval=Complex_eigenvalues(var, size);
+  if(!eval)
+    {
+      Rcout << "Warning: Stopped calculation at iteration " <<
+	k << ". Eigenvalues could not be calculated for matrix " <<
+	name << "!" << std::endl;
+      return(false);
+    }
+
+  
   for(i=0;i<size;i++)
     {
       double tolerance_diag=1.0;
@@ -10236,60 +10247,148 @@ bool sanity_check_variance(const char *name,int iteration,
 	  tolerance_diag=tolerance_nondiag=1.0;
 	  break;
 	}
+
+      if(stddevs)
+	{
+	  if(var[i][i] < -tolerance_diag*stddevs[i]*stddevs[i])
+	    {
+	      if(!silent)
+		{
+		  Rcout << "Warning: Stopped calculation at iteration " << k <<
+		    ". Diagonal term number " << i << " of " << name <<
+		    " has negative value " << var[i][i] << std::endl;	
+		  show_mat_R(name, var,size,size);
+		}
+	      return(false);
+	    }
+	  
+	  
+	  for(j=0;j<size;j++)
+	    if(j!=i)
+	      {
+		if(!almost_equal_lax(var[i][j]/stddevs[i]/stddevs[j],
+				     var[j][i]/stddevs[i]/stddevs[j],laxness) &&
+		   (fabs(var[i][j])>tolerance_nondiag ||
+		    fabs(var[j][i])>tolerance_nondiag) &&
+		   var[i][j]*var[i][j]>tolerance_nondiag*var[i][i]*var[j][j])
+		  {
+		    if(!silent)
+		      {
+			Rcout << "Warning: Stopped calculation at iteration " <<
+			  k << ". Nondiagonal terms number " << i << " and " << 
+			  j << " of " << name << " is not symmetric " <<
+			  var[i][j] << "!=" << var[j][i] << std::endl;	
+			show_mat_R(name, var,size,size);
+		      }
+		    return(false);
+		  }
+		if(!almost_equal(var[i][j],var[j][i]))
+		  var[j][i]=var[i][j];
+		
+		if(var[i][j]*var[i][j]>var[i][i]*var[j][j] &&
+		   fabs(var[i][j]*var[i][j])>tolerance_diag)
+		  {
+		    if(!silent)
+		      {
+			Rcout << "Warning: Stopped calculation at iteration " <<
+			  k << ". Nondiagonal terms number " << i << "," << 
+			  j << " of " << name << " has higher covariance than "
+			  "possible given the diagonal terms. " <<
+			  "var[i][j]*var[i][j]=" << var[i][j]*var[i][j] << ">" <<
+			  "var[i][i]*var[j][j]="<< var[i][i]*var[j][j] <<
+			  std::endl;	
+			show_mat_R(name, var,size,size);
+		      }
+		    return(false);
+		  }
+	      }
+	}
+      else
+	{
+	  if(var[i][i] < -tolerance_diag)
+	    {
+	      if(!silent)
+		{
+		  Rcout << "Warning: Stopped calculation at iteration " << k <<
+		    ". Diagonal term number " << i << " of " << name <<
+		    " has negative value " << var[i][i] << std::endl;	
+		  show_mat_R(name, var,size,size);
+		}
+	      return(false);
+	    }
+	  
+	  
+	  for(j=0;j<size;j++)
+	    if(j!=i)
+	      {
+		if(!almost_equal_lax(var[i][j],var[j][i],laxness) &&
+		   (fabs(var[i][j])>tolerance_nondiag ||
+		    fabs(var[j][i])>tolerance_nondiag) &&
+		   var[i][j]*var[i][j]>tolerance_nondiag*var[i][i]*var[j][j])
+		  {
+		    if(!silent)
+		      {
+			Rcout << "Warning: Stopped calculation at iteration " <<
+			  k << ". Nondiagonal terms number " << i << " and " << 
+			  j << " of " << name << " is not symmetric " <<
+			  var[i][j] << "!=" << var[j][i] << std::endl;	
+			show_mat_R(name, var,size,size);
+		      }
+		    return(false);
+		  }
+		if(!almost_equal(var[i][j],var[j][i]))
+		  var[j][i]=var[i][j];
+		
+		if(var[i][j]*var[i][j]>var[i][i]*var[j][j] &&
+		   fabs(var[i][j]*var[i][j])>tolerance_diag)
+		  {
+		    if(!silent)
+		      {
+			Rcout << "Warning: Stopped calculation at iteration " <<
+			  k << ". Nondiagonal terms number " << i << "," << 
+			  j << " of " << name << " has higher covariance than "
+			  "possible given the diagonal terms. " <<
+			  "var[i][j]*var[i][j]=" << var[i][j]*var[i][j] << ">" <<
+			  "var[i][i]*var[j][j]="<< var[i][i]*var[j][j] <<
+			  std::endl;	
+			show_mat_R(name, var,size,size);
+		      }
+		    return(false);
+		  }
+	      }
+	}
       
-      if(var[i][i] < -tolerance_diag*stddevs[i]*stddevs[i])
+      // Check eigenvalues
+      if(fabs(eval[i].Im())>1e-7*(MAXIM(1.0,eval[i].Re())))
 	{
 	  if(!silent)
 	    {
-	      Rcout << "Warning: Stopped calculation at iteration " << k <<
-		". Diagonal term number " << i << " of " << name <<
-		" has negative value " << var[i][i] << std::endl;	
+	      Rcout << "Warning: Stopped calculation "
+		"at iteration " << k << ". Eigenvalue nr " << i <<
+		" of " << name << " has imaginary component " <<
+		eval[i].Im() <<
+		std::endl;	
 	      show_mat_R(name, var,size,size);
 	    }
 	  return(false);
 	}
-
       
-      for(j=0;j<size;j++)
-	if(j!=i)
-	  {
-	    if(!almost_equal_lax(var[i][j]/stddevs[i]/stddevs[j],
-				 var[j][i]/stddevs[i]/stddevs[j],laxness) &&
-	       (fabs(var[i][j])>tolerance_nondiag ||
-		fabs(var[j][i])>tolerance_nondiag) &&
-	       var[i][j]*var[i][j]>tolerance_nondiag*var[i][i]*var[j][j])
-	      {
-		if(!silent)
-		  {
-		    Rcout << "Warning: Stopped calculation at iteration " <<
-		      k << ". Nondiagonal terms number " << i << " and " << 
-		      j << " of " << name << " is not symmetric " <<
-		      var[i][j] << "!=" << var[j][i] << std::endl;	
-		    show_mat_R(name, var,size,size);
-		  }
-		return(false);
-	      }
-	    if(!almost_equal(var[i][j],var[j][i]))
-	      var[j][i]=var[i][j];
-	    
-	    if(var[i][j]*var[i][j]>var[i][i]*var[j][j] &&
-	       fabs(var[i][j]*var[i][j])>tolerance_diag)
-	      {
-		if(!silent)
-		  {
-		    Rcout << "Warning: Stopped calculation at iteration " <<
-		      k << ". Nondiagonal terms number " << i << "," << 
-		      j << " of " << name << " has higher covariance than "
-		      "possible given the diagonal terms. " <<
-		      "var[i][j]*var[i][j]=" << var[i][j]*var[i][j] << ">" <<
-		      "var[i][i]*var[j][j]="<< var[i][i]*var[j][j] <<
-		      std::endl;	
-		    show_mat_R(name, var,size,size);
-		  }
-		return(false);
-	      }
-	  }
-    } 
+      if(fabs(eval[i].Re()<=0.0))
+	{
+	  if(!silent)
+	    {
+	      Rcout << "Warning: Stopped calculation "
+		"at iteration " << k << ". Eigenvalue nr " << i <<
+		" of " << name << " has real value at or below 0 " <<
+		eval[i].Re() << std::endl;	
+	      show_mat_R(name, var,size,size);
+	    }
+	  return(false);
+	}
+    }
+  
+  delete [] eval;
+
   
   return(true);
 }
@@ -14646,6 +14745,64 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	    for(i2=0;i2<n;i2++)
 	      S_k[i][i2] = P_k_prev[k][me[k].index[i]][me[k].index[i2]] + 
 		R_k[i][i2];
+	  
+	  // Sanity check of P_k_now
+	  if(laxness_level!=COMPLETELY_LAX)
+	    if(!sanity_check_variance("S_k",k,S_k,
+				      NULL,n,laxness_level))
+	      {
+		singledelete(t_0);
+		doubledelete(var, num_states);
+		singledelete(stddevs);
+		singledelete(lambda);
+		singledelete(lambda_r);
+		doubledelete(A, num_states);
+		doubledelete(V,num_states);
+		doubledelete(Vinv,num_states);
+		doubledelete(VinvLambdaV_A,num_states);
+		doubledelete(V_r,num_states);
+		doubledelete(Vinv_r,num_states);
+		doubledelete(Omega,num_states);
+		doubledelete(Vvar,num_states);
+		doubledelete(Qbuffer,num_states);
+		doubledelete(Lambda_k,num_states);
+		singledelete(eLambda_k);
+		singledelete(eLambda_k_r);
+		singledelete(x_k_prev);
+		singledelete(m);
+		singledelete(B);
+		singledelete(t_k);
+		singledelete(dt_k);
+		singledelete(resids_time);
+		doubledelete(Q_k_buff,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(Omega_r,num_states);
+		doubledelete(Vvar_r,num_states);
+		doubledelete(Qbuffer_r,num_states);
+		doubledelete(Lambda_k_r,num_states);
+		doubledelete(P_k_buffer,num_states);
+		tripledelete(Q_k,len,num_states);
+		singledelete(W);
+		singledelete(W_r);
+		singledelete(u_k_buff);
+		singledelete(u_k_buff_r);
+		doubledelete(resids,numobs);
+		doubledelete(prior_expectancy,numobs);
+		doubledelete(x_k_now,len);
+		tripledelete(F_k,len,num_states);
+		doubledelete(u_k,len);
+		tripledelete(P_k_now,len,num_states);
+		tripledelete(P_k_prev,len,num_states);
+		tripledelete(P_k_s,meas_smooth_len,num_states);
+		doubledelete(x_k_s,meas_smooth_len);
+		singledelete(t_k_smooth);
+		singledelete(dt_k_smooth);
+		doubledelete(C_k,num_states);
+		doubledelete(PAbuffer,num_states);
+  
+  
+		return -1e+200;
+	      }
 	  
 	  double **S_k_inv=matrix_inverse(S_k, n);
 	  
@@ -19952,7 +20109,7 @@ void usage(void)
   printf("         -U : Allows for positive (unstable) pull coefficients.\n");
   printf("               Only alloweable with initial value treatment.\n");
   printf("               The prior 95%% credibility interval for the untransformed\n");
-  printf("               pulls will be set to Â±1/lower boundry for\n");
+  printf("               pulls will be set to ±1/lower boundry for\n");
   printf("               the characteristic time, using the normal distribution.\n");
   printf("               Should only be used when the pull identificaiton restriciton "
 	 "is switched off.\n");
