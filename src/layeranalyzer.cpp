@@ -10214,15 +10214,6 @@ bool sanity_check_variance(const char *name,int iteration,
 
   int i,j,k=iteration;
   
-  Complex *eval=Complex_eigenvalues(var, size);
-  if(!eval)
-    {
-      Rcout << "Warning: Stopped calculation at iteration " <<
-	k << ". Eigenvalues could not be calculated for matrix " <<
-	name << "!" << std::endl;
-      return(false);
-    }
-
   
   for(i=0;i<size;i++)
     {
@@ -10262,9 +10253,8 @@ bool sanity_check_variance(const char *name,int iteration,
 	      return(false);
 	    }
 	  
-	  
-	  for(j=0;j<size;j++)
-	    if(j!=i)
+	  if(i<(size-1))
+	     for(j=i+1;j<size;j++)
 	      {
 		if(!almost_equal_lax(var[i][j]/stddevs[i]/stddevs[j],
 				     var[j][i]/stddevs[i]/stddevs[j],laxness) &&
@@ -10317,9 +10307,8 @@ bool sanity_check_variance(const char *name,int iteration,
 	      return(false);
 	    }
 	  
-	  
-	  for(j=0;j<size;j++)
-	    if(j!=i)
+	  if(i<(size-1))
+	    for(j=i+1;j<size;j++)
 	      {
 		if(!almost_equal_lax(var[i][j],var[j][i],laxness) &&
 		   (fabs(var[i][j])>tolerance_nondiag ||
@@ -10357,38 +10346,55 @@ bool sanity_check_variance(const char *name,int iteration,
 		  }
 	      }
 	}
-      
-      // Check eigenvalues
-      if(fabs(eval[i].Im())>1e-7*(MAXIM(1.0,eval[i].Re())))
-	{
-	  if(!silent)
-	    {
-	      Rcout << "Warning: Stopped calculation "
-		"at iteration " << k << ". Eigenvalue nr " << i <<
-		" of " << name << " has imaginary component " <<
-		eval[i].Im() <<
-		std::endl;	
-	      show_mat_R(name, var,size,size);
-	    }
-	  return(false);
-	}
-      
-      if(fabs(eval[i].Re()<=0.0))
-	{
-	  if(!silent)
-	    {
-	      Rcout << "Warning: Stopped calculation "
-		"at iteration " << k << ". Eigenvalue nr " << i <<
-		" of " << name << " has real value at or below 0 " <<
-		eval[i].Re() << std::endl;	
-	      show_mat_R(name, var,size,size);
-	    }
-	  return(false);
-	}
     }
   
-  delete [] eval;
-
+  if(laxness==LITTLE_LAXNESS || laxness==MODERATE_LAXNESS)
+    {
+      Complex *eval=Complex_eigenvalues(var, size);
+      if(!eval)
+	{
+	  Rcout << "Warning: Stopped calculation at iteration " <<
+	    k << ". Eigenvalues could not be calculated for matrix " <<
+	    name << "!" << std::endl;
+	  return(false);
+	}
+      
+      // Check all eigenvalues
+      
+      for(i=0;i<size;i++)
+	{
+	  // Check that there's no significant imaginary component:
+	  if(fabs(eval[i].Im())>1e-7*(MAXIM(1.0,eval[i].Re())))
+	    {
+	      if(!silent)
+		{
+		  Rcout << "Warning: Stopped calculation "
+		    "at iteration " << k << ". Eigenvalue nr " << i <<
+		    " of " << name << " has imaginary component " <<
+		    eval[i].Im() <<
+		    std::endl;	
+		  show_mat_R(name, var,size,size);
+		}
+	      return(false);
+	    }
+	  
+	  // Check that all eigenvalues are above zero:
+	  if(fabs(eval[i].Re()<=0.0))
+	    {
+	      if(!silent)
+		{
+		  Rcout << "Warning: Stopped calculation "
+		    "at iteration " << k << ". Eigenvalue nr " << i <<
+		    " of " << name << " has real value at or below 0 " <<
+		    eval[i].Re() << std::endl;	
+		  show_mat_R(name, var,size,size);
+		}
+	      return(false);
+	    }
+	}
+      
+      delete [] eval;
+    }
   
   return(true);
 }
@@ -14573,10 +14579,13 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  // Sanity check of P_k_now
 	  if(laxness_level!=COMPLETELY_LAX)
-	    if(!sanity_check_variance("P_k_now",k,P_k_now[k],
-				      stddevs, num_states,
-				      LOGLIK_LAXNESS(int(laxness_level)+1)))
-	      {
+	    {
+	      if(!sanity_check_variance("P_k_now",k,P_k_now[k],
+					stddevs, num_states,
+					laxness_level!=COMPLETELY_LAX ? 
+					LOGLIK_LAXNESS(int(laxness_level)+1) :
+					laxness_level))
+		{
 		singledelete(t_0);
 		doubledelete(var, num_states);
 		singledelete(stddevs);
@@ -14628,6 +14637,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
 		return -1e+200;
 	      }
+	    }
 	  
 	
 	  
@@ -14748,6 +14758,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  // Sanity check of P_k_now
 	  if(laxness_level!=COMPLETELY_LAX)
+	    {
 	    if(!sanity_check_variance("S_k",k,S_k,
 				      NULL,n,laxness_level))
 	      {
@@ -14803,6 +14814,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
 		return -1e+200;
 	      }
+	    }
 	  
 	  double **S_k_inv=matrix_inverse(S_k, n);
 	  
@@ -14890,6 +14902,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  
 	  // Sanity check of P_k_now
 	  if(laxness_level!=COMPLETELY_LAX)
+	    {
 	    if(!sanity_check_variance("P_k_now",k,P_k_now[k],
 				      stddevs,num_states,
 				      LOGLIK_LAXNESS(int(laxness_level)+1)))
@@ -14946,6 +14959,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
   
 		return -1e+200;
 	      }
+	    }
 	  
 	  
 	  /* DEBUG stuff
@@ -17555,7 +17569,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 
   
   int intlaxness=as<int>(loglik_laxness);
-  if(intlaxness<0 || intlaxness>=((int)COMPLETELY_LAX))
+  if(intlaxness<0 || intlaxness>((int)COMPLETELY_LAX))
     {
       Rcout << "loglik_laxness=" << intlaxness << " is not valid!" << std::endl;
       return NULL;
