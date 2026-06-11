@@ -36,7 +36,8 @@ layer.analyzer.timeseries.list(data.structure ,
   layer.analyzer.mode="Bayes",
   loglik.laxness="high", external.series=NULL,
   external.series.connection=integer(0),
-  external.layer.connection=integer(0))
+  external.layer.connection=integer(0),
+  site.distance.matrix=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -351,13 +352,27 @@ layer.analyzer.timeseries.list(data.structure ,
  \item{loglik.laxness}{
  There are sanity checks for each measurement point handled during the
  log-likelihood calculation, in order to avoid errors in the calculation
- due to nuemrical errors. However, some nuemrical inaccuracies will
+ due to numerical errors. However, some numerical inaccuracies will
  always exist, so some laxness in these checks must be allowed.
+ Varianles that should be equal might not be
+ exactly equal. And covariance matrices, which should be symmetric, might not
+ be exactly symmetric or be so nearly singular that numerical errors
+ destroys positive definiteness (only checked for levels "low" and "moderate").
  Too much laxness and erroneous log-likelihoods may be used.
  Too much rigidity, i.e. too little laxness and parameter values
- may needlessly be excluded and the optimal estiamtion is not
+ may needlessly be excluded and the optimal estimation is not
  achieved. Default laxness is "high", but options are also "low"
  (very rigid), "moderate" and "complete" (sanity checks are not performed).
+ 
+ PS: The test covariance matrix test for positive definiteness (positive
+ eigenvalues) do take quite a lot of computational resources.
+ If you run with loglik.laxness="complete" or "high" (default), you
+ might run things as much as 3 times faster! But unless you run some
+ fairly simple models, be sure to check
+ both parameter estimates and the stability of the log-likelihood.
+ (Perhaps compare it to a simpler model). loglik.laxness="high" (default),
+ doesn't cost much more than loglik.laxness="complete" (nothing is checked),
+ but doesn't check for positive definiteness.
  }
  \item{external.series}{
  External series are time series that are treated as explanatory variables
@@ -383,6 +398,20 @@ layer.analyzer.timeseries.list(data.structure ,
    numbered from 1 to the number of layers in the series specified in
    'external.series.conneciton'. The length of this vector should match the
    number of external time series.
+ }
+ \item{site.distance.matrix}{
+   A matrix that specifies the distance between each pair of sites.
+   Only relevant when on series uses the 'distance.correlated.sigma'
+   option to specify between-site correlation based on distance
+   and a distance correlation falloff parameter. But in such a case,
+   the site distance matrix is very necessary! 
+   (Keep in mind, sites are numbered from 0 to number of sites-1,
+   so element i,j in the matrix should tell the distance between site i-1
+   and site j-1. Also keep in mind that the size of the matrix must
+   match the number of sites in the dataset. Also, diagonal elements
+   are the distance from a specific site to itself and so shoulød be 0.
+   Also, the matrix must be square and symmetric, since the distance
+   from site i-1 to site j-1 is the distance from site j-1 to site i-1.)
  }
 }
 \details{

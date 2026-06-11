@@ -329,13 +329,27 @@ layer.analyzer(... ,
  \item{loglik.laxness}{
  There are sanity checks for each measurement point handled during the
  log-likelihood calculation, in order to avoid errors in the calculation
- due to nuemrical errors. However, some nuemrical inaccuracies will
+ due to numerical errors. However, some numerical inaccuracies will
  always exist, so some laxness in these checks must be allowed.
+ Varianles that should be equal might not be
+ exactly equal. And covariance matrices, which should be symmetric, might not
+ be exactly symmetric or be so nearly singular that numerical errors
+ destroys positive definiteness (only checked for levels "low" and "moderate").
  Too much laxness and erroneous log-likelihoods may be used.
  Too much rigidity, i.e. too little laxness and parameter values
- may needlessly be excluded and the optimal estiamtion is not
+ may needlessly be excluded and the optimal estimation is not
  achieved. Default laxness is "high", but options are also "low"
  (very rigid), "moderate" and "complete" (sanity checks are not performed).
+ 
+ PS: The test covariance matrix test for positive definiteness (positive
+ eigenvalues) do take quite a lot of computational resources.
+ If you run with loglik.laxness="complete" or "high" (default), you
+ might run things as much as 3 times faster! But unless you run some
+ fairly simple models, be sure to check
+ both parameter estimates and the stability of the log-likelihood.
+ (Perhaps compare it to a simpler model). loglik.laxness="high" (default),
+ doesn't cost much more than loglik.laxness="complete" (nothing is checked),
+ but doesn't check for positive definiteness.
  }
  \item{external.series}{
  External series are time series that are treated as explanatory variables
