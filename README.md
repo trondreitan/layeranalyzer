@@ -115,7 +115,12 @@ Simulations can be used for testing the behaviour of the analysis.
 Updates and older versions
 Update history:
 
-    11/3-2026: Added an alternative way of specyfing connections (used instead
+    11/6-2026: Extra sanity checks of covariance matrices (positive definiteness, checked on eigenvalues) 
+    for laxness levels "moderate" and "low". Sanity check for laxness level "high" (default) has been sped up.
+    Also, sanity check is now performed on S_k, the measurement covariance matrix. Changed from using 
+    mkl_set_num_threads to flexiblas_set_num_threads on Linux, because the mkl version crashed on Fedora 44.
+
+    11/3-2026: Added an alternative way of specifyng connections (used instead
     of 'causal' and 'corr') if one wants a compact (but less user-friendly)
     way to specify connections. This alternative way of specifying a
     connection was introduced in order to make it easy to produce
