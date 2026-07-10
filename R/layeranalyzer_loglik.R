@@ -19,14 +19,14 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
  analysis2$input.options$num.MCMC=1
  if(is.null(new.param.values))
  {
-  analysis2$mcmc=analysis2$mcmc.origpar=coda::mcmc(matrix(analysis2$est.par,nrow=1))
+  analysis2$input.params=coda::mcmc(matrix(analysis2$est.par,nrow=1))
  }
  
  if(!is.null(new.param.values))
  {
   if(length(analysis2$est.origpar)!=length(new.param.values))
     stop("Number of new input parameter values has a length that does not match the models number of parameters (as specified in 'est.origpar')!")
-  analysis2$mcmc=analysis2$mcmc.origpar=new.param.values
+  analysis2$input.params=new.param.values
  }
  
  # need to transform back to characteristic times if half life
@@ -35,13 +35,11 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
   for(j in 1:numpar)
   {
    if(substr(analysis2$parameter.names[j],1,3)=="dt_")
-     analysis2$mcmc[j,]=analysis2$mcmc[j,]/log(2)
+     analysis2$input.params[j,]=analysis2$input.params[j,]/log(2)
   }
- analysis2$mcmc[which(is.na(analysis2$mcmc), arr.ind=TRUE)] = -1e+7
- analysis2$mcmc.origpar[which(is.na(analysis2$mcmc.origpar), arr.ind=TRUE)] = -1e+7
- analysis2$mcmc=coda::as.mcmc(rbind(analysis2$mcmc))
- analysis2$mcmc.origpar=coda::as.mcmc(rbind(analysis2$mcmc.origpar))
-
+ analysis2$input.params[which(is.na(analysis2$mcmc), arr.ind=TRUE)] = -1e+7
+ analysis2$input.params=coda::as.mcmc(rbind(analysis2$input.params))
+ 
  if(!do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
      previous.run=analysis2,silent.mode=silent.mode,
@@ -52,7 +50,8 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
      layer.analyzer.mode="Loglik-from-input",
      external.series=analysis2$external.series,
      external.series.connection=analysis2$external.series.connection,
-     external.layer.connection=analysis2$external.layer.connection)
+     external.layer.connection=analysis2$external.layer.connection,
+     site.distance.matrix=analysis2$site.distance.matrix)
  if(do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
      previous.run=analysis2,silent.mode=silent.mode,
@@ -63,7 +62,8 @@ layer.param.loglik=function(analysis, new.param.values=NULL, silent.mode=TRUE,
      layer.analyzer.mode="Loglik-from-input",
      external.series=analysis2$external.series,
      external.series.connection=analysis2$external.series.connection,
-     external.layer.connection=analysis2$external.layer.connection)
+     external.layer.connection=analysis2$external.layer.connection,
+     site.distance.matrix=analysis2$site.distance.matrix)
      
  return(res$loglik)
 }
@@ -91,7 +91,7 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
  
  if(length(analysis2$est.origpar)!=dim(new.param.value.sets)[2])
     stop("Number of new input parameter values has a length that does not match the models number of parameters (as specified in 'est.origpar')!")
-  analysis2$mcmc=analysis2$mcmc.origpar=new.param.value.sets
+  analysis2$input.params=new.param.value.sets
  
  # need to transform back to characteristic times if half life
  numpar=length(analysis2$est.origpar)
@@ -99,12 +99,10 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
   for(j in 1:numpar)
   {
    if(substr(analysis2$parameter.names[j],1,3)=="dt_")
-     analysis2$mcmc[j,]=analysis2$mcmc[j,]/log(2)
+     analysis2$input.params[j,]=analysis2$input.params[j,]/log(2)
   }
- analysis2$mcmc[which(is.na(analysis2$mcmc), arr.ind=TRUE)] = -1e+7
- analysis2$mcmc.origpar[which(is.na(analysis2$mcmc.origpar), arr.ind=TRUE)] = -1e+7
- analysis2$mcmc=coda::as.mcmc(analysis2$mcmc)
- analysis2$mcmc.origpar=coda::as.mcmc(analysis2$mcmc.origpar)
+ analysis2$input.params[which(is.na(analysis2$input.params), arr.ind=TRUE)] = -1e+7
+ analysis2$params=coda::as.mcmc(analysis2$input.params)
      
  if(!do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
@@ -116,7 +114,8 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
       layer.analyzer.mode="Loglik-from-input",
       external.series=analysis2$external.series,
       external.series.connection=analysis2$external.series.connection,
-      external.layer.connection=analysis2$external.layer.connection)
+      external.layer.connection=analysis2$external.layer.connection,
+      site.distance.matrix=analysis2$site.distance.matrix)
  if(do.preanalysis.mcmc)
    res=layer.analyzer.timeseries.list(analysis$data.structure,
       previous.run=analysis2,silent.mode=silent.mode,
@@ -127,7 +126,8 @@ layer.param.logliks=function(analysis, new.param.value.sets, silent.mode=TRUE,
       layer.analyzer.mode="Loglik-from-input",
       external.series=analysis2$external.series,
       external.series.connection=analysis2$external.series.connection,
-      external.layer.connection=analysis2$external.layer.connection)
+      external.layer.connection=analysis2$external.layer.connection,
+      site.distance.matrix=analysis2$site.distance.matrix)
      
  return(res$loglik)
 }

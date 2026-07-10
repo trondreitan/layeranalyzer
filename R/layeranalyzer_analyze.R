@@ -303,7 +303,6 @@ layer.analyzer=function(... ,
    causal=connspec$causal
    corr=connspec$corr
   }
-  
 
   layer.analyzer.ml.strategies=c("MCMC-from-model","MCMC-from-nonconnected",
     "MCMC-from-model-and-nonconnected")
@@ -398,13 +397,13 @@ layer.analyzer=function(... ,
 
       # Assume structural elements comes first and connection
       # parameters at the end:
-      new.mcmc=array(0,c(dim(nonconn$mcmc)[1]+1,numpar))
-      new.mcmc[1,1:dim(nonconn$mcmc)[2]]=nonconn$est.par
-      new.mcmc[1+1:dim(nonconn$mcmc)[1],1:dim(nonconn$mcmc)[2]]=nonconn$mcmc
+      new.input=array(0,c(dim(nonconn$mcmc)[1]+1,numpar))
+      new.input[1,1:dim(nonconn$mcmc)[2]]=nonconn$est.par
+      new.input[1+1:dim(nonconn$mcmc)[1],1:dim(nonconn$mcmc)[2]]=nonconn$mcmc
       
-      nonconn$mcmc=coda::mcmc(new.mcmc)
+      nonconn$input.params=coda::mcmc(new.input)
       
-      #print.srcref(sprintf("new mcmc size=%d",dim(nonconn$mcmc)[2])) 
+      #print.srcref(sprintf("new input size=%d",dim(nonconn$input.params)[2])) 
 
    if(maximum.likelihood.strategy=="MCMC-from-nonconnected")
      mode="ML-from-input"
@@ -493,6 +492,12 @@ layer.analyzer.timeseries.list=function(data.structure ,
  likelihood.mode=FALSE
  if(!is.null(previous.run))
     if(!is.null(previous.run$mcmc) & smooth.previous.run==FALSE)
+   {
+     #print.srcref("likelihood calculation mode!")
+     likelihood.mode=TRUE
+   }
+ if(!is.null(previous.run))
+    if(!is.null(previous.run$input.params) & smooth.previous.run==FALSE)
    {
      #print.srcref("likelihood calculation mode!")
      likelihood.mode=TRUE
@@ -629,6 +634,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
   {
     stop("Cannot handle 100 layers or more (at this time).")
   }
+
   
   if(!is.null(data.structure[[i]]$lin.time))
   {
@@ -1186,8 +1192,6 @@ layer.analyzer.timeseries.list=function(data.structure ,
  if(is.null(causal.symmetric))
    causal.symmetric=as.matrix(array(NA,c(4,0)))
  
- 
- 
  if(!is.null(corr))
  {
    if(sum(class(corr)=="matrix")==0)
@@ -1272,9 +1276,6 @@ layer.analyzer.timeseries.list=function(data.structure ,
    typeof(num.MCMC)!="double" )
    stop("Option 'num.MCMC' must be an integer!") 
  num.MCMC=as.integer(num.MCMC)
-
- if(num.MCMC<1 & !likelihood.mode)
-  stop("Option 'num.MCMC' must be 1 or larger  (preferrably much larger)!")
 
  if(typeof(spacing)!="integer" & typeof(spacing)!="numeric" & 
    typeof(spacing)!="double" )
@@ -1589,9 +1590,9 @@ layer.analyzer.timeseries.list=function(data.structure ,
      stop("'site.distance.matrix' must be a matrix!")
    if(dim(site.distance.matrix)[1]!=dim(site.distance.matrix)[2])
      stop("The matrix 'site.distance.matrix' must be square 8same amount of rows and columns))!")
-   show("site.distance.matrix")
-   show(site.distance.matrix)
-   show(typeof(site.distance.matrix))
+   print.srcref("site.distance.matrix")
+   print.srcref(site.distance.matrix)
+   print.srcref(typeof(site.distance.matrix))
    if(typeof(site.distance.matrix)!="numeric" &
       typeof(site.distance.matrix)!="double")
      stop("The distance matrix 'site.distance.matrix' must contain numeric (double) elements!")
@@ -1619,13 +1620,19 @@ layer.analyzer.timeseries.list=function(data.structure ,
       stop("Previous run class must be a 'layered' object!")
   }
 
+
  #################################################
  # Call to C++ code for the actual analysis:
  #################################################
  
+ input.params=matrix(as.numeric(c(-1e+7)),nrow=1) # used for indicating 
+      # that no input paramerers are used.
+      # Input parameters is only used for logliks.
+
  input.mcmc=matrix(as.numeric(c(-1e+7)),nrow=1) # used for indicating 
       # that no input MCMC is used.
-      # Input MCMC is only used for later smoothing.
+      # Input MCMC is only used for later smoothing and possibly for
+      # logliks.
 
  if(smooth.previous.run==TRUE)
  {
@@ -1641,21 +1648,6 @@ layer.analyzer.timeseries.list=function(data.structure ,
    }
 
    input.mcmc=previous.run$mcmc.origpar
- }
-
- if(smooth.previous.run==FALSE &  !is.null(previous.run))
- {
-   # The other entrance to specifying MCMC () uses parameters in original scale
-   # not re-parametrized versions
-   if(is.null(previous.run$mcmc))
-     stop("Previous run has not MCMC samples (mcmc). Run again with the 'mcmc=TRUE' option!")
-
-   if(sum(class(previous.run$mcmc)=="mcmc")==0)
-   {
-     stop("MCMC sample structure 'previous.run$mcmc' is not an MCMC object!")
-   }
-
-   input.mcmc=previous.run$mcmc
  }
 
  # Check laxness:
@@ -1840,6 +1832,7 @@ layer.analyzer.timeseries.list=function(data.structure ,
     external.series=list()
   }
 
+
  # Check mode:
  if(sum(layer.analyzer.mode==layer.analyzer.modes)!=1)
    stop(sprintf("Illegal layer.analyzer.mode. Options are \"%s\".",
@@ -1855,6 +1848,22 @@ layer.analyzer.timeseries.list=function(data.structure ,
    if(smooth.previous.run)
      stop("mode=\"Bayes\" and smooth.previous.run=TRUE cannot both be true!")
  }
+
+ if(layer.analyzer.mode=="Loglik-from-input" & num.MCMC>0 & !is.null(previous.run))
+ {
+   if(is.null(previous.run$mcmc.origpar))
+   {
+     if(sum(class(previous.run$mcmc.origpar)=="mcmc")==0)
+     {
+       stop("MCMC sample structure 'previous.run$mcmc.origpar' is not an MCMC object!")
+     }
+     
+     input.mcmc=previous.run$mcmc.origpar
+   }	
+ }  
+
+ if(num.MCMC<1 & !likelihood.mode & layer.analyzer.mode!="Loglik-from-input" )
+  stop("Option 'num.MCMC' must be 1 or larger  (preferrably much larger)!")
 
  if(layer.analyzer.mode=="ML-from-MCMC")
  {
@@ -1874,6 +1883,8 @@ layer.analyzer.timeseries.list=function(data.structure ,
    if(is.null(previous.run))
      stop("Input structure must be provided for when mode=\"ML-from-input\"")
 
+   input.mcmc=previous.run$mcmc.origpar
+
    if(dim(input.mcmc)[1]==1 & dim(input.mcmc)[2]==1)
      stop("Input parameters must be provided for when mode=\"ML-from-input\"")
 
@@ -1892,10 +1903,21 @@ layer.analyzer.timeseries.list=function(data.structure ,
  
  if(layer.analyzer.mode=="Loglik-from-input")
  {
-   if(is.null(previous.run))
-     stop("Input structure must be provided for when mode=\"Loglik-from-input\"")
- 
-   if(dim(input.mcmc)[1]==1 & dim(input.mcmc)[2]==1)
+   # The other entrance to specifying MCMC () uses parameters in original scale
+   # not re-parametrized versions
+   if(is.null(previous.run$input.params))
+     stop("Previous run has no input parameters!")
+
+   if(!is.null(previous.run$mcmc.origpar))
+   {
+     if(sum(class(previous.run$mcmc.origpar)=="mcmc")==0)
+       stop("MCMC sample structure 'previous.run$mcmc' is not an MCMC object!")
+     input.mcmc=previous.run$mcmc.origpar
+   }
+
+   input.params=previous.run$input.params
+   
+   if(dim(input.params)[1]==1 & dim(input.params)[2]==1)
      stop("Input parameters must be provided for when mode=\"Loglik-from-input\"")
    if(smooth.previous.run)
      stop("mode=\"Loglik-from-input\" and smooth.previous.run=TRUE cannot both be true!")
@@ -1907,7 +1929,7 @@ if(layer.analyzer.mode=="Smooth-from-input")
      stop("Input structure must be provided for when mode=\"Smooth-from-input\"")
  
    if(dim(input.mcmc)[1]==1 & dim(input.mcmc)[2]==1)
-     stop("Input parameters must be provided for when mode=\"Smooth-from-input\"")
+     stop("Input MCMC must be provided for when mode=\"Smooth-from-input\"")
    if(!smooth.previous.run)
      stop("mode=\"Smooth-from-input\" and smooth.previous.run=FALSE cannot both be true!")
 }
@@ -1924,6 +1946,7 @@ layeranalyzer.mode=which(layer.analyzer.mode==layer.analyzer.modes)-1
 
 layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
 
+
  out=.Call('layeranalyzer',
       data.structure,
       num.MCMC,
@@ -1938,8 +1961,7 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
       as.integer(talkative.likelihood),
       id.strategy,
       as.integer(use.stationary.stdev),
-      as.numeric(T.ground),
-      #start.parameters=as.numeric(0),
+      as.numeric(T.ground),   
       as.integer(use.half.lives),
       as.integer(mcmc),
       as.integer(causal), 
@@ -1949,11 +1971,13 @@ layeranalyzer.laxness=which(loglik.laxness==layer.analyzer.laxnesses)-1
       realization.specs,
       ReturnResiduals,
       layeranalyzer.mode,
-      layeranalyzer.laxness,	
+      layeranalyzer.laxness,
+      input.params,
       input.mcmc,
       external.series,
       site.distance.matrix
      )
+
 
  if(is.null(out))
    return(NULL)
