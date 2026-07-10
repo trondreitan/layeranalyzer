@@ -56,7 +56,7 @@ traverse.standalone.layered=function(timeseries,
   init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
   init.same.layers=FALSE, init.specified=NULL,
   allow.pos.pull=FALSE, period=NULL,
-  prior=layer.standard.prior)
+  prior=layer.standard.prior,site.distance.matrix=NULL)
 {
   if(is.null(timeseries$time))
     stop("No 'time' array in the incoming time series!")
@@ -522,7 +522,8 @@ traverse.standalone.layered=function(timeseries,
           T.ground, 
           as.character(use.stationary.stdev),
           as.character(mcmc), 
-          as.character(!is.null(curr.causal)) ))
+          as.character(!is.null(curr.causal)),
+	  site.distance.matrix=site.distance.matrix))
        }
 
 
@@ -540,7 +541,8 @@ traverse.standalone.layered=function(timeseries,
            T.ground=T.ground, 
            use.half.lives=use.half.lives, 
            mcmc=mcmc,
-           causal=curr.causal)
+           causal=curr.causal,
+	   site.distance.matrix=site.distance.matrix)
 
          #layer.analyzer.timeseries.list(list(struct),
          #  num.MCMC=num.MCMC, spacing=spacing, 
@@ -586,7 +588,10 @@ traverse.connections.layered=function(... ,
   talkative.traversal=TRUE, test.mode=FALSE,
   id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE, 
-  allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE)
+  allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE,
+  external.series=NULL,
+  external.series.connection=integer(0), external.layer.connection=integer(0),
+  site.distance.matrix=NULL)
 {
  data.structure=list(...)
  n=length(data.structure)
@@ -840,7 +845,11 @@ traverse.connections.layered=function(... ,
              talkative.likelihood=talkative.likelihood,
              id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
              T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=causal,corr=corr, layer.analyzer.mode=mode)
+             causal=causal,corr=corr, layer.analyzer.mode=mode,
+	     external.series=external.series,
+             external.series.connection=external.series.connection,
+	     external.layer.connection=external.layer.connection,
+	     site.distance.matrix=site.distance.matrix)
          
        ll=res$model.log.lik
        if(do.maximum.likelihood)
@@ -860,7 +869,11 @@ traverse.connections.layered=function(... ,
              talkative.likelihood=talkative.likelihood,
              id.strategy=id.strategy,use.stationary.stdev=use.stationary.stdev,
              T.ground=T.ground, use.half.lives=use.half.lives, mcmc=mcmc,
-             causal=causal,corr=corr,layer.analyzer.mode=mode)
+             causal=causal,corr=corr,layer.analyzer.mode=mode,
+	     external.series=external.series,
+             external.series.connection=external.series.connection,
+	     external.layer.connection=external.layer.connection,
+	     site.distance.matrix=site.distance.matrix)
          
             ll=res$model.log.lik
 	    if(do.maximum.likelihood)
