@@ -1,0 +1,18 @@
+citHeader("To cite layeranalyzer in publications, use the following citation:")
+
+bibentry(bibtype = "article",
+  title        = "Layeranalyzer: inferring correlative and causal connections from time series data in R",
+  author       = c(as.person("Trond Reitan"), as.person("Lee Hsiang Liow")),
+  url          = "https://doi.org/10.1111/2041-210X.13299",
+  journal      = "Methods in Ecology and Evolution",
+  year		   = 2019,
+  volume       = 10,
+  number       = 12,
+  pages        = "2183-2188",
+  textVersion  =
+	  paste(
+			"Reitan, T., & Liow, L. H. (2019).",
+			"layeranalyzer: inferring correlative and causal connections from time series data in R.",
+			"Methods in Ecology and Evolution, Vol. 10, 2183-2188. https://doi.org/10.1111/2041-210X.13299"
+	)
+)
