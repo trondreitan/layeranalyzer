@@ -282,13 +282,13 @@ protected:
     CTime(totalSecondsType t) : tsec(t) {};
     
 public:
-    void totSec2time(hourType&, minuteType&, secondType&) const;
+    void totSec2time(hourType&, minuteType&, secondType&);
     
     /* Convert seconds to hhmmss CTime (hour:minute:sec). This function is 
        not valid for CTime whose total seconds is greter 
        than 2**sizeof(int)-1. */
     
-    totalSecondsType time2totSec(hourType, minuteType, secondType) const;
+    totalSecondsType time2totSec(hourType, minuteType, secondType);
     
     /* Convert an hhmmss CTime (hour:minute:sec) to seconds. 
        This function is not valid for CTime whose total seconds is greter 
@@ -302,7 +302,7 @@ public:
     CTime (hourType, minuteType, secondType=0);
 
     void now();
-    int legal() const;
+    int legal();
 
     // assignment operator
     CTime& operator= (const CTime &t2) { 
@@ -343,20 +343,20 @@ public:
     friend int between(const CTime &t3, const CTime &t1, const CTime &t2)
 	{ return int(t3.tsec >= t1.tsec && t3.tsec <= t2.tsec); };
     
-    friend ostream& operator<<(ostream&, const CTime &);
+    friend ostream& operator<<(ostream&, CTime &);
     //void print();
     
-    hourType getHour() const;
-    minuteType getMinute() const;
-    secondType getSecond() const;
-    char *getChTime() const;
+    hourType getHour();
+    minuteType getMinute();
+    secondType getSecond();
+    char *getChTime();
 
-    int minofday() const;		// [0 - 1399]
+    int minofday();		// [0 - 1399]
 
-    int secofday() const;		// [0 - 86399]
+    int secofday();		// [0 - 86399]
 
       // help function for CTime(istream&)
-    totalSecondsType parseTime(istream&)const;
+    totalSecondsType parseTime(istream&);
 };
 
 
@@ -384,13 +384,13 @@ protected:
     
 public:
   julType date2jday(void);
-  julType date2jday(dayType, monthType, yearType) const;
+  julType date2jday(dayType, monthType, yearType);
   /* Convert a Gregorian Calender date to its corresponding 
      Julian day number. Gregorian Calender started on Sep. 14, 1752 
      (we use this to denote an illegal date).
      This function is not valid before that date. */
   
-  void jday2date(dayType&, monthType&, yearType&) const;
+  void jday2date(dayType&, monthType&, yearType&);
   /* Convert a Julian day number to its corresponding Gregorian
      Calender date. Gregorian Calender started on Sep. 14, 1752.
      This function is not valid before that date. */
@@ -403,7 +403,7 @@ public:
   HydDate(yearType y, monthType m, dayType d = 1); 
   
   void now(); // sets the date to today
-  int legal() const; /* returns true if a legal date.
+  int legal(); /* returns true if a legal date.
 			OBS: illegal date is stored as 1752.sep.14*/
   
   // assignment operator
@@ -457,29 +457,29 @@ public:
   friend ostream& operator<<(ostream&, HydDate &);
     //  void print();
     
-  char *charHydDate() const;  // yyyy.mm.dd
-  yearType getYear() const;
-  monthType getMonth() const;
-  dayType getDay() const;
-  int getDayOfWeek() const; // sunday = 0, saturday = 6
+  char *charHydDate();  // yyyy.mm.dd
+  yearType getYear();
+  monthType getMonth();
+  dayType getDay();
+  int getDayOfWeek(); // sunday = 0, saturday = 6
     
-  int leap() const; // whether the current date-object's year is leap
+  int leap(); // whether the current date-object's year is leap
     
-  julType parseHydDate(istream&) const; // help function for HydDate(istream&)
+  julType parseHydDate(istream&); // help function for HydDate(istream&)
     
-  int dayOfYear() const;    // returns the corresponding day of the year
+  int dayOfYear();    // returns the corresponding day of the year
 			    // starting at 1
 
 					     
-  int dayIndex() const;	  // returns the corresponding day of the year
+  int dayIndex();	  // returns the corresponding day of the year
 			  // starting at 1, ingoring leap days
 
 
-  int daysInYear() const; // returns no. of days in the year: 365 or 366
-  int firstDayOfMonth() const;	// returns the first day of the month
-  int noDaysInMonth() const;	// returns no. of days in the month
+  int daysInYear(); // returns no. of days in the year: 365 or 366
+  int firstDayOfMonth();	// returns the first day of the month
+  int noDaysInMonth();	// returns no. of days in the month
     
-  int idxOfYear() const;		// return pos in year starting at 
+  int idxOfYear();		// return pos in year starting at 
 
   int Get_weekday_index(void);
   WEEKDAY Get_weekday(void);
@@ -509,7 +509,7 @@ public:
     HydDateTime(char *datetime,int form); // se syCh(int form)
 
     void now();				// sets the datetime to now.
-    int legal() const;		// checks for legal datetime.
+    int legal() ;		// checks for legal datetime.
 
     HydDateTime Floor(int precision_min); // round down
     // to the given precision (in minutes)
@@ -561,12 +561,12 @@ public:
     friend int overlap(const HydDateTime &start1, const HydDateTime &end1,  
 		       const HydDateTime &start2, const HydDateTime &end2);
 
-    friend ostream& operator<<(ostream&, const HydDateTime &);
+    friend ostream& operator<<(ostream&, HydDateTime &);
     void Print();
     void getHydDateTime(yearType &yyyy , monthType &mm, dayType &dd, 
 		     hourType &hh, minuteType &mn, secondType &ss);
 
-    char *syCh(int form = 0) const;		// Sybase format
+    char *syCh(int form = 0);		// Sybase format
     // 0 - MM/dd/yyyy hh:mm:ss
     // 1 - dd.MM.yyyy hh:mm
     // 2 - yyyyMMddhhmm
@@ -580,17 +580,17 @@ public:
     
     
 
-    int  isNull() const;
+    int  isNull();
 
 
-    HydDateTime StartOfDay() const;		// yyyymmdd 00:00:00
-    HydDateTime EndOfDay() const;		        // yyyymmdd 23:59:00
+    HydDateTime StartOfDay();		// yyyymmdd 00:00:00
+    HydDateTime EndOfDay();		        // yyyymmdd 23:59:00
     
-    HydDateTime StartOfMonth() const;		// yyyymmdd 00:00:00  	   
-    HydDateTime EndOfMonth() const;	        // yyyymmdd 23:59:0 	   
+    HydDateTime StartOfMonth();		// yyyymmdd 00:00:00  	   
+    HydDateTime EndOfMonth();	        // yyyymmdd 23:59:0 	   
 
-    HydDateTime StartOfYear() const;		// yyyymmdd 00:00:00
-    HydDateTime EndOfYear() const;		        // yyyymmdd 23:59:00			     
+    HydDateTime StartOfYear();		// yyyymmdd 00:00:00
+    HydDateTime EndOfYear();		        // yyyymmdd 23:59:00			     
     double as_floating_point_year(void);
 						     
 };
@@ -651,7 +651,7 @@ int legalTime(const short h, const short m, const short s) {
       0 : 1;
 }
 
-totalSecondsType CTime::time2totSec(hourType h, minuteType m, secondType s) const {
+totalSecondsType CTime::time2totSec(hourType h, minuteType m, secondType s) {
     /* Convert an hhmmss time (hour:minute:sec) to seconds. 
        This function is not valid for time whose total seconds is greater 
        than 2**sizeof(unsigned int). */
@@ -663,7 +663,7 @@ totalSecondsType CTime::time2totSec(hourType h, minuteType m, secondType s) cons
 } /* time2totSec */
 
 
-void CTime::totSec2time(hourType &h, minuteType &m, secondType &s) const {
+void CTime::totSec2time(hourType &h, minuteType &m, secondType &s) {
     /* Convert seconds to hhmmss time (hour:minute:sec). This function is 
        not valid for time whose total seconds is greter 
        than 2**sizeof(unsigned int). */
@@ -687,7 +687,10 @@ CTime::CTime(const CTime &t) {
 
 
 CTime::CTime(hourType h, minuteType m, secondType s) {
-    tsec = time2totSec(h,m,s);
+  hourType hh=h;
+  minuteType mm=m;
+  secondType ss=s;
+  tsec = time2totSec(hh,mm,ss);
 }
 
 CTime::CTime(const char *time) {
@@ -705,13 +708,13 @@ CTime::CTime(const char *time) {
       tsec = time2totSec(24, 60, 60);
 }
 
-int CTime::legal() const {
+int CTime::legal() {
     static hourType hh = 0;  static minuteType mm = 0;  static secondType ss = 0;
     totSec2time(hh, mm, ss);
     return (::legalTime(hh,mm,ss));
 }
 
-totalSecondsType CTime::parseTime(istream& is) const {
+totalSecondsType CTime::parseTime(istream& is) {
     /* parse time of the format hh:mm:ss
        Delimiter need not be ':',
        it can be any of the alphanumeric characters */
@@ -740,7 +743,7 @@ CTime::CTime(istream &is) {
 }
 
 
-ostream& operator<<(ostream& os, const CTime &t) 
+ostream& operator<<(ostream& os, CTime &t) 
 {    
   static hourType hh = 0;  
   static minuteType mm = 0;  
@@ -755,7 +758,7 @@ ostream& operator<<(ostream& os, const CTime &t)
 }
 
 
-char *CTime::getChTime() const
+char *CTime::getChTime() 
 {
   static char ctime[100];
   static hourType h = 0;  static minuteType mn = 0;  static secondType s = 0;
@@ -765,30 +768,30 @@ char *CTime::getChTime() const
   return ctime;
  }
 
-hourType CTime::getHour() const {
+hourType CTime::getHour()  {
     static hourType hh = 0;  static minuteType mm = 0;  static secondType ss = 0;
     totSec2time(hh, mm, ss);
     return hh;
 }
 
-minuteType CTime::getMinute() const {
+minuteType CTime::getMinute()  {
     static hourType hh = 0;  static minuteType mm = 0;  static secondType ss = 0;
     totSec2time(hh, mm, ss);
     return mm;
 }
 
-secondType CTime::getSecond() const {
+secondType CTime::getSecond()  {
     static hourType hh = 0;  static minuteType mm = 0;  static secondType ss = 0;
     totSec2time(hh, mm, ss);
     return ss;
 }
 
 
-int CTime::minofday() const {
+int CTime::minofday()  {
     return tsec / 60;
 }
 
-int CTime::secofday() const {
+int CTime::secofday()  {
     return tsec;
 }
 
@@ -862,7 +865,7 @@ julType HydDate::date2jday(void)
 // The algorithm used in the following 2 functions was described in 
 // Communications of the ACM, Vol. 6, No. 8 (Aug.63), p.444.
 
-julType HydDate::date2jday(dayType d, monthType m, yearType y) const 
+julType HydDate::date2jday(dayType d, monthType m, yearType y)  
 {
   /* Convert a Gregorian Calender date to its corresponding 
      Julian day number. Gregorian Calender started on  14,Sep. 1752.
@@ -891,7 +894,7 @@ julType HydDate::date2jday(dayType d, monthType m, yearType y) const
 } /* date2jday */
 
 
-void HydDate::jday2date(dayType &d, monthType &m, yearType &y) const 
+void HydDate::jday2date(dayType &d, monthType &m, yearType &y)  
 {
   /* Convert a Julian day number to its corresponding Gregorian
      Calender date. Gregorian Calender started on Sep. 14, 1752.
@@ -959,7 +962,7 @@ HydDate::HydDate(const char *date)
 
 
 
-julType HydDate::parseHydDate(istream& is) const 
+julType HydDate::parseHydDate(istream& is)  
 {
   /* parse dates of the format yyyy.mm.dd
      or dd.mm.yyyy. Delimiter need not be '.',
@@ -1056,7 +1059,7 @@ void HydDate::now()
 }
 
 
-int HydDate::legal() const 
+int HydDate::legal()  
 {
   return (*this != NoHydDate) ? 1 : 0;
 }
@@ -1069,7 +1072,7 @@ HydDate& HydDate::operator=(const HydDateTime &d1)
 }
 
 
-yearType HydDate::getYear() const 
+yearType HydDate::getYear()  
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yyyy = 0;
   jday2date(dd, mm, yyyy);
@@ -1077,7 +1080,7 @@ yearType HydDate::getYear() const
 }
 
 
-monthType HydDate::getMonth() const 
+monthType HydDate::getMonth()  
 {
   static dayType dd = 0;  static monthType mm = 0;  static yearType yyyy = 0;
   jday2date(dd, mm, yyyy);
@@ -1085,14 +1088,14 @@ monthType HydDate::getMonth() const
 }
 
 
-dayType HydDate::getDay() const 
+dayType HydDate::getDay()  
 {
   static dayType dd = 0;  static monthType mm = 0;  static yearType yyyy = 0;
   jday2date(dd, mm, yyyy);
   return dd;
 }
 
-int HydDate::leap() const 
+int HydDate::leap()  
 {
   return (::leap(getYear())) ? 1 : 0;
 }
@@ -1102,7 +1105,7 @@ int HydDate::leap() const
 
 
 
-int HydDate::dayOfYear() const 
+int HydDate::dayOfYear()  
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yy = 0;
   jday2date(dd, mm, yy);
@@ -1111,7 +1114,7 @@ int HydDate::dayOfYear() const
 }
 
 
-int HydDate::dayIndex() const
+int HydDate::dayIndex() 
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yy = 0;
   jday2date(dd, mm, yy);
@@ -1122,13 +1125,13 @@ int HydDate::dayIndex() const
   return firstdayinmonthtab[0][mm] + dd;
 }
 
-int HydDate::daysInYear() const 
+int HydDate::daysInYear()  
 {
   return  (leap()) ? 366 : 365;
 }
 
 
-int HydDate::firstDayOfMonth() const 
+int HydDate::firstDayOfMonth()  
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yyyy = 0; 
   int d = 0, i;
@@ -1140,7 +1143,7 @@ int HydDate::firstDayOfMonth() const
 }
 
 
-int HydDate::noDaysInMonth() const 
+int HydDate::noDaysInMonth()  
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yyyy = 0;
   jday2date(dd, mm, yyyy);
@@ -1149,7 +1152,7 @@ int HydDate::noDaysInMonth() const
 
 
 
-char *HydDate::charHydDate() const 
+char *HydDate::charHydDate()  
 {
   char *pt = new char[100];
   if(*this == NoHydDate)
@@ -1160,7 +1163,7 @@ char *HydDate::charHydDate() const
 }
 
 
-int HydDate::idxOfYear() const 
+int HydDate::idxOfYear()  
 {
   static dayType dd = 0; static monthType mm = 0; static yearType yy = 0;
   jday2date(dd, mm, yy);
@@ -1169,7 +1172,7 @@ int HydDate::idxOfYear() const
 }
 
 
-int HydDate::getDayOfWeek() const 
+int HydDate::getDayOfWeek()  
 {
   // 15. sept. 1752 was a Monday (day 1), so:
   return (julnum - date2jday(15,9,1752) +1) %7;
@@ -1414,7 +1417,7 @@ void HydDateTime::now()
   CTime::now();
 }
 
-int HydDateTime::legal() const 
+int HydDateTime::legal()  
 {
   return (HydDate::legal() && CTime::legal()) ? 1: 0;
 }
@@ -1579,12 +1582,12 @@ int operator<=(const HydDateTime &dt1, const HydDateTime &dt2)
 }
 
 
-int HydDateTime::isNull() const 
+int HydDateTime::isNull()  
 {
   return (*this == NoHydDateTime);
 }
 
-ostream& operator<<(ostream &os, const HydDateTime &dt) 
+ostream& operator<<(ostream &os, HydDateTime &dt) 
 {
   if (dt.isNull())
     os << "NULL";
@@ -1616,7 +1619,7 @@ void HydDateTime::getHydDateTime(yearType &yyyy, monthType &mm, dayType &dd,
 }
 
 
-char *HydDateTime::syCh(int form) const 
+char *HydDateTime::syCh(int form)  
 {
   char *pt = new char[100];
 
@@ -1662,7 +1665,7 @@ char *HydDateTime::syCh(int form) const
 }
 
 
-HydDateTime HydDateTime::StartOfDay() const 
+HydDateTime HydDateTime::StartOfDay()  
 {
   if(*this == NoHydDateTime)
     return NoHydDateTime;
@@ -1675,7 +1678,7 @@ HydDateTime HydDateTime::StartOfDay() const
     }
 }
 
-HydDateTime HydDateTime::StartOfMonth() const 
+HydDateTime HydDateTime::StartOfMonth()  
 {
   if(*this == NoHydDateTime)
     return NoHydDateTime;
@@ -1688,7 +1691,7 @@ HydDateTime HydDateTime::StartOfMonth() const
     } 
 }
 
-HydDateTime HydDateTime::StartOfYear() const 
+HydDateTime HydDateTime::StartOfYear()  
 {
   if(*this == NoHydDateTime)
     return NoHydDateTime;
@@ -1733,7 +1736,7 @@ HydDateTime  &HydDateTime::add_minutes(int num_minutes)
 
 
 
-HydDateTime HydDateTime::EndOfMonth() const 
+HydDateTime HydDateTime::EndOfMonth()  
 {
   if(*this == NoHydDateTime)
     return NoHydDateTime; 
@@ -1750,7 +1753,7 @@ HydDateTime HydDateTime::EndOfMonth() const
     }
 }
 
-HydDateTime HydDateTime::EndOfDay() const 
+HydDateTime HydDateTime::EndOfDay()  
 {
   if(*this == NoHydDateTime)
     return NoHydDateTime;
@@ -1763,7 +1766,7 @@ HydDateTime HydDateTime::EndOfDay() const
     }
 }
 
-HydDateTime HydDateTime::EndOfYear() const 
+HydDateTime HydDateTime::EndOfYear()  
 {
   if(*this == NoHydDateTime)
     return NoHydDateTime;
@@ -17494,13 +17497,13 @@ const double partial_loglikwrapper(const NumericVector &vals)
 
 
 enum LAYERANALYZER_MODE {LAYERANALYZER_BAYESIAN=0,
-  LAYERANALYZER_ML_FROM_MCMC=1, LAYERANALYZER_ML_FROM_INPARS=2,
+  LAYERANALYZER_ML_FROM_MCMC=1, LAYERANALYZER_ML_FROM_INMCMC=2,
   LAYERANALYZER_ML_FROM_HYBRID=3, LAYERANALYZER_LOGLIK_FOR_INPARS=4,
-  LAYERANALYZER_SMOOTH_FROM_INPARS=5, LAYERANALYZER_NUMPAR=6,
+  LAYERANALYZER_SMOOTH_FROM_INMCMC=5, LAYERANALYZER_NUMPAR=6,
   LAYERANALYZER_UNKNOWN=7};
 
 RcppExport SEXP layeranalyzer(SEXP input,
-			      SEXP num_MCMC ,
+			      SEXP num_MCMC,
 			      SEXP Burnin,
 			      SEXP Spacing,
 			      SEXP NumTemp,
@@ -17524,6 +17527,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 			      SEXP mode,
 			      SEXP loglik_laxness,
 			      SEXP input_param_values,
+			      SEXP input_mcmc,
 			      SEXP external_input,
 			      SEXP distance_matrix)
 {  
@@ -17628,11 +17632,16 @@ RcppExport SEXP layeranalyzer(SEXP input,
   int inpars_numpars=in_pars.ncol();
   bool no_inpars = (inpars_numsets==1 && inpars_numpars==1) ? true : false;
   
+  NumericMatrix in_mcmc=as<NumericMatrix>(input_mcmc); 
+  int inmcmc_numsets=in_mcmc.nrow();
+  int inmcmc_numpars=in_mcmc.ncol();
+  bool no_inmcmc = (inmcmc_numsets==1 && inmcmc_numpars==1) ? true : false;
+  
   //if(!silent)
   //Rcout << "Inparameters read" << std::endl;
      
   if(!do_ml && (lmode==LAYERANALYZER_ML_FROM_MCMC ||
-		lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		lmode==LAYERANALYZER_ML_FROM_INMCMC ||
 		lmode==LAYERANALYZER_ML_FROM_HYBRID))
     {
       Rcout << "mode=" << intmode << " needs ML treatment!" << std::endl;
@@ -17640,19 +17649,25 @@ RcppExport SEXP layeranalyzer(SEXP input,
     }
 	
   if(do_ml && !(lmode==LAYERANALYZER_ML_FROM_MCMC || 
-		lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		lmode==LAYERANALYZER_ML_FROM_INMCMC ||
 		lmode==LAYERANALYZER_ML_FROM_HYBRID))
     {
       Rcout << "mode=" << intmode << "cannot have treatment!" << std::endl;
       return NULL;
     }
 	
-  if(no_inpars && (lmode==LAYERANALYZER_ML_FROM_INPARS ||
-		   lmode==LAYERANALYZER_ML_FROM_HYBRID ||
-		   lmode==LAYERANALYZER_LOGLIK_FOR_INPARS ||
-		   lmode==LAYERANALYZER_SMOOTH_FROM_INPARS))
+  if(no_inpars && lmode==LAYERANALYZER_LOGLIK_FOR_INPARS)
     {
       Rcout << "mode=" << intmode << " requires input parameters!" << std::endl;
+      return NULL;
+    }
+  
+  if(no_inmcmc && (lmode==LAYERANALYZER_ML_FROM_INMCMC ||
+		   lmode==LAYERANALYZER_ML_FROM_HYBRID ||
+		   lmode==LAYERANALYZER_SMOOTH_FROM_INMCMC))
+    {
+      Rcout << "mode=" << intmode << " requires input MCMC parameters!" <<
+	std::endl;
       return NULL;
     }
   
@@ -17704,7 +17719,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
       dosmooth=1;
     }
   
-  if(dosmooth && (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+  if(dosmooth && (lmode==LAYERANALYZER_ML_FROM_INMCMC ||
 		  lmode==LAYERANALYZER_ML_FROM_HYBRID ||
 		  lmode==LAYERANALYZER_LOGLIK_FOR_INPARS))
     {
@@ -17760,10 +17775,10 @@ RcppExport SEXP layeranalyzer(SEXP input,
       
     }
   
-  if(do_realizations && (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+  if(do_realizations && (lmode==LAYERANALYZER_ML_FROM_INMCMC ||
 			lmode==LAYERANALYZER_ML_FROM_HYBRID ||
 			lmode==LAYERANALYZER_LOGLIK_FOR_INPARS ||
-			lmode==LAYERANALYZER_SMOOTH_FROM_INPARS))
+			lmode==LAYERANALYZER_SMOOTH_FROM_INMCMC))
     {
       Rcout << "mode=" << intmode << " does not allow for realizations!" <<
 	std::endl;
@@ -18675,9 +18690,9 @@ RcppExport SEXP layeranalyzer(SEXP input,
   double *lliks=NULL, *lpriors=NULL;
   int num_lliks=0, num_lpriors=0;
   
-  if(inpars_numpars>0 || lmode==LAYERANALYZER_NUMPAR)
+  if(inpars_numpars>0 || inmcmc_numpars>0 || lmode==LAYERANALYZER_NUMPAR)
     loglik(NULL); // gives us the global 'numpar', 
-
+  
   if(!silent)
     {
       Rcout << "numpar=" << numpar << std::endl;
@@ -18701,16 +18716,35 @@ RcppExport SEXP layeranalyzer(SEXP input,
       return(out);
     }
   
-  if(int(inpars_numpars)!=int(numpar) &&
-     (lmode==LAYERANALYZER_ML_FROM_INPARS ||
+  if(int(inmcmc_numpars)!=int(numpar) &&
+     (lmode==LAYERANALYZER_ML_FROM_INMCMC ||
       lmode==LAYERANALYZER_ML_FROM_HYBRID ||
-      lmode==LAYERANALYZER_LOGLIK_FOR_INPARS ||
-      lmode==LAYERANALYZER_SMOOTH_FROM_INPARS))
+      lmode==LAYERANALYZER_SMOOTH_FROM_INMCMC))
     {
-      Rcout << "Input parameter set's length=" << inpars_numpars <<
+      Rcout << "Input MCMC parameter set's length=" << inmcmc_numpars <<
 	" does not match the length of the model parameter set=" <<
 	numpar << "!" << std::endl;
       return NULL;
+    }
+  
+  if(lmode==LAYERANALYZER_LOGLIK_FOR_INPARS)
+    {
+      if(int(inpars_numpars)!=int(numpar))
+	{
+	  Rcout << "Input parameter set's length=" << inpars_numpars <<
+	    " does not match the length of the model parameter set=" <<
+	    numpar << "!" << std::endl;
+	  return NULL;
+	}
+      
+      if((int(inmcmc_numpars)>1 || int(inmcmc_numsets)>1) &&
+	 int(inmcmc_numpars)!=int(numpar))
+	{
+	  Rcout << "Input MCMC parameter set's length=" << inmcmc_numpars <<
+	    " does not match the length of the model parameter set=" <<
+	    numpar << "!" << std::endl;
+	  return NULL;
+	}
     }
   
   // DEBUG
@@ -18937,19 +18971,19 @@ RcppExport SEXP layeranalyzer(SEXP input,
       //if(!silent) 
       //Rcout << " Ending loglik treatment" << std::endl;
     }
-  else if(lmode==LAYERANALYZER_SMOOTH_FROM_INPARS &&
-	  inpars_numsets==1 && dosmooth && num_smooth==1) 
+  else if(lmode==LAYERANALYZER_SMOOTH_FROM_INMCMC &&
+	  inmcmc_numsets==1 && dosmooth && num_smooth==1) 
     // parameter-estimate-based smoothing
     {
       // PS: Should *not* have any missing values!
       // DEBUG:
 
-      num_mcmc=inpars_numsets;
+      num_mcmc=inmcmc_numsets;
       pars=new params[1];
       pars[0].numparam=numpar;
       pars[0].param=new double[numpar];
       for(i=0;i<numpar;i++)
-	pars[0].param[i]=in_pars(0,i);
+	pars[0].param[i]=in_mcmc(0,i);
       loglik(pars[0].param, 1, 0);
 
       P_k_smooth=new double **[meas_smooth_len];
@@ -18970,19 +19004,19 @@ RcppExport SEXP layeranalyzer(SEXP input,
       
       cleanup_x_and_P(meas_smooth_len);
     }
-  else if(lmode==LAYERANALYZER_SMOOTH_FROM_INPARS &&
-	  inpars_numsets>=1 && dosmooth)
+  else if(lmode==LAYERANALYZER_SMOOTH_FROM_INMCMC &&
+	  inmcmc_numsets>=1 && dosmooth)
     {
-      num_mcmc=inpars_numsets;
+      num_mcmc=inmcmc_numsets;
       pars=new params[num_mcmc];
       for(j=0;(int)j<num_mcmc;j++)
 	{
 	  pars[j].numparam=numpar;
 	  pars[j].param=new double[numpar];
 	  for(i=0;i<numpar;i++)
-	    pars[j].param[i]=in_pars(j,i);
+	    pars[j].param[i]=in_mcmc(j,i);
 	}
-      // DEBUG: Rcout << "Done getting MCMC from in_pars" << std::endl;
+      // DEBUG: Rcout << "Done getting MCMC from in_mcmc" << std::endl;
 
       x=new double**[num_states];
       for(i=0;i<num_states;i++)
@@ -19302,7 +19336,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
   double aic=MISSING_VALUE, aicc=MISSING_VALUE, bic=MISSING_VALUE;
   double *ml_pars=new double[numpar];
   double best_loglik=MISSING_VALUE;
-  if(lmode==LAYERANALYZER_ML_FROM_MCMC || lmode==LAYERANALYZER_ML_FROM_INPARS
+  if(lmode==LAYERANALYZER_ML_FROM_MCMC || lmode==LAYERANALYZER_ML_FROM_INMCMC
      || lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       if(do_ml)
@@ -19325,19 +19359,19 @@ RcppExport SEXP layeranalyzer(SEXP input,
 		  //if(!silent)
 		  //Rcout << i << "'th fetching transformed parameter " << j << std::endl;
 	      
-		  if(lmode==LAYERANALYZER_ML_FROM_INPARS ||
+		  if(lmode==LAYERANALYZER_ML_FROM_INMCMC ||
 		     (lmode==LAYERANALYZER_ML_FROM_HYBRID))
 		    {
 		      /* DEBUG if(!silent)
 			Rcout << i << "'th fetching of parameter " << j <<
-			  " fetching inpars " <<
-			  (i*(inpars_numsets-1)/num_optim) <<
-			  " i=" << i << "  inpars_numsets-1=" <<
-			  inpars_numsets << " num_optim=" <<
+			  " fetching inmcmc " <<
+			  (i*(inmcmc_numsets-1)/num_optim) <<
+			  " i=" << i << "  inmcmc_numsets-1=" <<
+			  inmcmc_numsets << " num_optim=" <<
 			  num_optim << std::endl; */
 
 		      curr_par[j]=
-			transform_parameter(in_pars(i*(inpars_numsets-1)/
+			transform_parameter(in_mcmc(i*(inmcmc_numsets-1)/
 						    (num_optim-1),j),
 					    par_trans_type[j]);
 		    }
@@ -19600,15 +19634,15 @@ RcppExport SEXP layeranalyzer(SEXP input,
   double *est_pars=new double[numpar];
   
   if(lmode==LAYERANALYZER_BAYESIAN || lmode==LAYERANALYZER_ML_FROM_MCMC ||
-     lmode==LAYERANALYZER_ML_FROM_INPARS || 
+     lmode==LAYERANALYZER_ML_FROM_INMCMC || 
      lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       for(j=0;j<(int)numpar;j++)
 	{
-	  double mean= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, MEAN) : MISSING_VALUE;
-	  double med= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, MEDIAN) : MISSING_VALUE;
-	  double lower= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, PERCENTILE_2_5) : MISSING_VALUE;
-	  double upper= lmode!=LAYERANALYZER_ML_FROM_INPARS ? find_statistics(parsample[j], numsamples, PERCENTILE_97_5) : MISSING_VALUE;
+	  double mean= lmode!=LAYERANALYZER_ML_FROM_INMCMC ? find_statistics(parsample[j], numsamples, MEAN) : MISSING_VALUE;
+	  double med= lmode!=LAYERANALYZER_ML_FROM_INMCMC ? find_statistics(parsample[j], numsamples, MEDIAN) : MISSING_VALUE;
+	  double lower= lmode!=LAYERANALYZER_ML_FROM_INMCMC ? find_statistics(parsample[j], numsamples, PERCENTILE_2_5) : MISSING_VALUE;
+	  double upper= lmode!=LAYERANALYZER_ML_FROM_INMCMC ? find_statistics(parsample[j], numsamples, PERCENTILE_97_5) : MISSING_VALUE;
 	  
 	  if(use_half_times && !strncmp(par_name[j],"dt_",3))
 	    {
@@ -19654,7 +19688,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
   if(lmode==LAYERANALYZER_BAYESIAN ||
      lmode==LAYERANALYZER_ML_FROM_MCMC ||
      lmode==LAYERANALYZER_ML_FROM_HYBRID ||
-     lmode==LAYERANALYZER_ML_FROM_INPARS)
+     lmode==LAYERANALYZER_ML_FROM_INMCMC)
     {
       NumericVector est_paramset(numpar);
       for(i=0;i<numpar;i++)
@@ -19797,7 +19831,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 	  
           process_names(i)=pname;
 	  
-	  if(inpars_numsets==1 && num_smooth==1) 
+	  if(inmcmc_numsets==1 && num_smooth==1) 
 	    // parameter-estimate-based smoothing
 	    {
 	      // DEBUG: Rcout << "Making standard smoothing output" << std::endl;
@@ -19850,7 +19884,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 	  out["smoothing.samples"]=smooth_samples;
 	}
       
-      if(inpars_numsets==1 && num_smooth==1) 
+      if(inmcmc_numsets==1 && num_smooth==1) 
 	// parameter-estimate-based smoothing
 	{
 	  // DEBUG: Rcout << "Making P_k smoothing output" << std::endl;
@@ -19953,7 +19987,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
   
   if(lmode==LAYERANALYZER_BAYESIAN ||
      lmode==LAYERANALYZER_ML_FROM_MCMC ||
-     lmode==LAYERANALYZER_ML_FROM_INPARS ||
+     lmode==LAYERANALYZER_ML_FROM_INMCMC ||
      lmode==LAYERANALYZER_ML_FROM_HYBRID)
     {
       NumericVector est_origpar(numpar);
@@ -19987,13 +20021,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
       for(i=0;i<numpar;i++)
 	for(j=0;j<(int)inpars_numsets;j++)
 	  mcmcsamples(i,j)=parsample[i][j];
-      out["mcmc"]=mcmcsamples;
-      
-      NumericMatrix mcmcsamples2(numpar,inpars_numsets);
-      for(i=0;i<numpar;i++)
-	for(j=0;j<(int)inpars_numsets;j++)
-	  mcmcsamples2(i,j)=parsample_repar[i][j];
-      out["mcmc.origpar"]=mcmcsamples2;
+      out["input.params"]=mcmcsamples;
     }
   
 
