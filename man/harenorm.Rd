@@ -32,5 +32,8 @@ See also other datasets: malta, lynx, bi.lext, br.lorig, br.lext.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ normalized, abundance, hare catchment, Hudson Bay Company,
-linear stochastic differential equations }
+\concept{normalized}
+\concept{abundance}
+\concept{hare catchment}
+\concept{Hudson Bay Company}
+\concept{linear stochastic differential equations}

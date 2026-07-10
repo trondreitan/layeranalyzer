@@ -45,4 +45,17 @@ X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ number of observations, anova, deviance, linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, eigenvalue decomposition, ML, classic, hypothesis testing }
+\concept{number of observations}
+\concept{anova}
+\concept{deviance}
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{eigenvalue decomposition}
+\concept{ML}
+\concept{classic}
+\concept{hypothesis testing}

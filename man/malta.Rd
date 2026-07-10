@@ -31,4 +31,5 @@ See also other datasets: hare.norm, lynx.norm, bi.lext, br.lorig, br.lext.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ phenotypic evolution, linear stochastic differential equations }
+\concept{phenotypic evolution}
+\concept{linear stochastic differential equations}

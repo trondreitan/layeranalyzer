@@ -61,4 +61,5 @@ n.combinations(3,2)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ number of combinations, model selection }
+\concept{number of combinations}
+\concept{model selection}

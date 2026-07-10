@@ -101,4 +101,15 @@ X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, eigenvalue decomposition, Bayesian, model comparison, AIC, BIC }
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{eigenvalue decomposition}
+\concept{Bayesian}
+\concept{model comparison}
+\concept{AIC}
+\concept{BIC}

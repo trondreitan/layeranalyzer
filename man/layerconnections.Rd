@@ -89,6 +89,12 @@ layer.connections(hare.st, lynx.st, conn=c(0,1,2,4))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ process pairs, alternative connection specification, linear stochastic differential equations, layered, hidden layers, causal, correlative}
+\concept{process pairs}
+\concept{alternative connection specification}
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
 
 

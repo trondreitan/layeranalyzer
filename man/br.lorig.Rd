@@ -39,4 +39,9 @@ See also other datasets: hare.norm, lynx.norm, br.lext, bi.lext.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ macroevolution, bivalve, brachiopod, diversification, extinction rate, linear stochastic differential equations }
+\concept{macroevolution}
+\concept{bivalve}
+\concept{brachiopod}
+\concept{diversification}
+\concept{extinction rate}
+\concept{linear stochastic differential equations}

@@ -126,6 +126,9 @@ lls=layer.param.logliks(res, sets, silent.mode=FALSE)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, likelihood, debug }
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{likelihood}
+\concept{debug}
 
 

@@ -172,6 +172,9 @@ See also layer.analyzer and layer.data.series.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, prediction, predictions }
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{prediction}
+\concept{predictions}
 
 
