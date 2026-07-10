@@ -15,7 +15,8 @@ layer.series.structure(timeseries, numlayers=1, lin.time=FALSE,
                        regional.mu=FALSE, regional.lin.time=FALSE,
                        regional.pull=NULL, regional.sigma=NULL,
                        correlated.sigma=NULL, pairwise.correlated.sigma=NULL,
-                       one.dim.sigma=NULL, grouping.sigma=NULL,
+                       distance.correlated.sigma=NULL,
+		       one.dim.sigma=NULL, grouping.sigma=NULL,
 		       remove.sigma=NULL, differentiate.sigma=NULL,
 		       differentiate.pull=NULL, differentiate.mu=FALSE,
                        differentiate.lin.time=FALSE,
@@ -123,6 +124,13 @@ layer.series.structure(timeseries, numlayers=1, lin.time=FALSE,
   \item{pairwise.correlated.sigma}{
  Only makes sense for time series with multiple sites. Should be an array
  of integers specifying which layers have correlated stochastic contributions
+ between the sites. Correlation between a pair of sites depend on the distance
+ between them, through a distance falloff parameter. A distance matrix
+ needs to be supplied!
+ }
+  \item{distance.correlated.sigma}{
+ Only makes sense for time series with multiple sites. Should be an array
+ of integers specifying which layers have correlated stochastic contributions
  between the sites. Different correlations are allowed between different pairs
  of sites.
  }
@@ -216,4 +224,12 @@ X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, eigenvalue decomposition, time series }
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{eigenvalue decomposition}
+\concept{time series}

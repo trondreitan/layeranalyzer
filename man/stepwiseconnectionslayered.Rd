@@ -252,4 +252,12 @@ X2struct=layer.series.structure(X2, numlayers=1)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, model traversal, connections }
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{model traversal}
+\concept{connections}

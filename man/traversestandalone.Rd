@@ -19,7 +19,8 @@ traverse.standalone.layered(timeseries,
   init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
   init.same.layers=FALSE, init.specified=NULL,
   allow.pos.pull=FALSE, period=NULL, 
-  prior=layer.standard.prior)
+  prior=layer.standard.prior,
+  site.distance.matrix=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -231,6 +232,20 @@ traverse.standalone.layered(timeseries,
  \item{prior}{
  An object specifying the prior distribution, in the form of a 'layer.prior' object.
  }
+ \item{site.distance.matrix}{
+   A matrix that specifies the distance between each pair of sites.
+   Only relevant when on series uses the 'distance.correlated.sigma'
+   option to specify between-site correlation based on distance
+   and a distance correlation falloff parameter. But in such a case,
+   the site distance matrix is very necessary! 
+   (Keep in mind, sites are numbered from 0 to number of sites-1,
+   so element i,j in the matrix should tell the distance between site i-1
+   and site j-1. Also keep in mind that the size of the matrix must
+   match the number of sites in the dataset. Also, diagonal elements
+   are the distance from a specific site to itself and so shoulød be 0.
+   Also, the matrix must be square and symmetric, since the distance
+   from site i-1 to site j-1 is the distance from site j-1 to site i-1.)
+ }
 }
 \details{
  This routine traverses all models for a time series up to a certain model 
@@ -285,6 +300,12 @@ X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, eigenvalue decomposition }
-
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{eigenvalue decomposition}
 

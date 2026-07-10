@@ -7,7 +7,7 @@ This class function represents a Bayesian prior distribution specified by a coup
 }
 \usage{
 layer.prior (mu, dt, sigma, stat.sdev = NULL, init = NULL, lin = NULL, 
-    beta = NULL, obs = NULL, islog = 0)
+    beta = NULL, obs = NULL, dist.corr.falloff=NULL, islog = 0)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -48,6 +48,14 @@ layer.prior (mu, dt, sigma, stat.sdev = NULL, init = NULL, lin = NULL,
  the 95\% credibility band of obs, the standard deviation of the
  observational errors.
  }
+  \item{dist.corr.falloff}{
+  If distance-based spatial correlation on sites is wanted,
+  there will be a parameter describing how the correlation
+  decreases (exponentially) with distance, the distance
+  correlation falloff parameter. The prior distribution
+  for this is log-normal with 95% credibility band which
+  if not specified is set extremely wide, going from 1e-6 to 1e+6.
+ }
   \item{islog}{
  If set to 1, the analysis will log-transform the data before analysis.
  If set to 2, the analysis will assume the data has already been
@@ -86,4 +94,13 @@ pr=layer.prior(mu=c(-10,10),dt=c(0.001,1000),sigma=c(0.01,10),
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, eigenvalue decomposition, Bayesian, prior }
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{eigenvalue decomposition}
+\concept{Bayesian}
+\concept{prior}

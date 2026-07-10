@@ -16,7 +16,11 @@ traverse.connections.layered(... ,
   talkative.traversal=TRUE, test.mode=FALSE,
   id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
   use.half.lives=FALSE, mcmc=FALSE, 
-  allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE)
+  allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE,
+  external.series=NULL,
+  external.series.connection=integer(0),
+  external.layer.connection=integer(0),
+  site.distance.matrix=NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -179,14 +183,55 @@ traverse.connections.layered(... ,
  }
  \item{allow.causal}{
  If set to 'FALSE', no causal connection models will be analyzed, only 
- correlative ones.}
+ correlative ones.
+ }
  \item{allow.correlation}{
  If set to 'FALSE', no correlative conneciton models will be analyzed, only
  causal ones. (Incompatible with 'allow.causal=FALSE'. }
  \item{allow.direct.feedback}{
  If set to 'FALSE', no direct causal loops will be examined, i.e. causal
  links from series 1, layer 1 to series 2, layer 2 and another liunk back again.
- (Does not rule out more elaborate causal loops.)}
+ (Does not rule out more elaborate causal loops.)
+ }
+ \item{external.series}{
+ External series are time series that are treated as explanatory variables
+ for the time series that are analyzed. They are not themselves
+ analyzed statistically. Instead they are taken as is, with the
+ assumption that what happenes between time points can be exppromately
+ attained through linear interpolation. Since the stochastic nature of
+ these series are not analyzed, only causal links are possible. 
+ Note that if external time series are given, one must
+ also specify which series and layers they go to (see the next two entries.)
+ Note that external data series are assumed global, and this connect
+ equally to all sites (if that is a thing in your datasets).
+ }
+ \item{external.series.connection}{
+   An vector of integers that should specify which external time series
+   are causally connected to which observed series, numbered from 1 to
+   the number of series. The length of this vector should match the
+   number of external time series.
+ }
+ \item{external.layer.connection}{
+   An vector of integers that should specify which external time series
+   are causally connected to which layers of the observed series,
+   numbered from 1 to the number of layers in the series specified in
+   'external.series.conneciton'. The length of this vector should match the
+   number of external time series.
+ }
+ \item{site.distance.matrix}{
+   A matrix that specifies the distance between each pair of sites.
+   Only relevant when on series uses the 'distance.correlated.sigma'
+   option to specify between-site correlation based on distance
+   and a distance correlation falloff parameter. But in such a case,
+   the site distance matrix is very necessary! 
+   (Keep in mind, sites are numbered from 0 to number of sites-1,
+   so element i,j in the matrix should tell the distance between site i-1
+   and site j-1. Also keep in mind that the size of the matrix must
+   match the number of sites in the dataset. Also, diagonal elements
+   are the distance from a specific site to itself and so shoulød be 0.
+   Also, the matrix must be square and symmetric, since the distance
+   from site i-1 to site j-1 is the distance from site j-1 to site i-1.)
+ }
 }
 \details{
 Traverses all causal and correlative link combinations between a set of
@@ -235,6 +280,13 @@ X2struct=layer.series.structure(X2, numlayers=1)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ linear stochastic differential equations, layered, hidden layers, causal, correlative, matrix inverse, Lapack, model traversal, connections }
-
+\concept{linear stochastic differential equations}
+\concept{layered}
+\concept{hidden layers}
+\concept{causal}
+\concept{correlative}
+\concept{matrix inverse}
+\concept{Lapack}
+\concept{model traversal}
+\concept{connections}
 
