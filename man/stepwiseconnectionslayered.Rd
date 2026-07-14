@@ -7,7 +7,8 @@ Traverse locally around a given connection model in a step-wise fashion,
 starting locally around the null model (no connections). Can perform
 larger model selections, but may not be robust enough still. Parallel
 runs using the standalone program 'layeranalyzer' should be preferred
-for larger model selection tasks.
+for larger model selection tasks. PS: No support for external series or
+spatial correlation so far (unlike traverse.connections.layered).
 }
 \usage{
 stepwise.connections.layered(..., num.MCMC = 1000, spacing = 10, burnin = 10000,
