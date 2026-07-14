@@ -388,6 +388,11 @@ layer.struct.name=function(struct)
        out=paste(out,", pairwise correlated")
        has.corr=TRUE
      }
+     if(sum(struct$distance.correlated.sigma==layer)==1)
+     {
+       out=paste(out,", distance-correlated")
+       has.corr=TRUE
+     }
      if(sum(struct$one.dim.sigma==layer)==1)
      {
        out=paste(out,", perfect correlation")
@@ -433,18 +438,33 @@ layer.struct.name=function(struct)
 }
    
 
-layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
-                              time.integral=NULL, no.pull=FALSE, no.sigma=NULL,
-                              regional.mu=FALSE, regional.lin.time=FALSE,
-                              regional.pull=NULL, regional.sigma=NULL,
-                              correlated.sigma=NULL, pairwise.correlated.sigma=NULL,
-                              one.dim.sigma=NULL, grouping.sigma=NULL,
-			      remove.sigma=NULL, differentiate.sigma=NULL,
-			      differentiate.pull=NULL, differentiate.mu=FALSE,
+layer.series.structure=function(timeseries,
+                              numlayers=1,
+			      lin.time=FALSE,
+                              time.integral=NULL,
+			      no.pull=FALSE,
+			      no.sigma=NULL,
+                              regional.mu=FALSE,
+			      regional.lin.time=FALSE,
+                              regional.pull=NULL,
+			      regional.sigma=NULL,
+                              correlated.sigma=NULL,
+			      pairwise.correlated.sigma=NULL,
+			      distance.correlated.sigma=NULL,
+                              one.dim.sigma=NULL,
+			      grouping.sigma=NULL,
+			      remove.sigma=NULL,
+			      differentiate.sigma=NULL,
+			      differentiate.pull=NULL,
+			      differentiate.mu=FALSE,
                               differentiate.lin.time=FALSE,
-                              init.0=FALSE, init.time=NULL, init.same.sites=FALSE,
-			      init.same.layers=FALSE, init.specified=NULL,
-			      allow.pos.pull=FALSE, period=NULL, 
+                              init.0=FALSE,
+			      init.time=NULL,
+			      init.same.sites=FALSE,
+			      init.same.layers=FALSE,
+			      init.specified=NULL,
+			      allow.pos.pull=FALSE,
+			      period=NULL, 
                               prior=layer.standard.prior)
 {
 ########################
@@ -673,6 +693,19 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
     ret$pairwise.correlated.sigma=pairwise.correlated.sigma
   }
   
+  if(!is.null(distance.correlated.sigma))
+  {
+    if(typeof(distance.correlated.sigma)!="integer" & typeof(distance.correlated.sigma)!="double" & typeof(distance.correlated.sigma)!="numeric")
+      stop("Distance correlated sigma indicator, 'distance.correlated.sigma', must be an integer vector specifying layers")
+    distance.correlated.sigma=as.integer(distance.correlated.sigma)
+    if(length(distance.correlated.sigma)>1 | distance.correlated.sigma[1]>0)
+    {
+      if(sum(distance.correlated.sigma>numlayers | distance.correlated.sigma<0)>0)
+        stop("Distance correlated sigma specification out of range!")
+    }
+    ret$distance.correlated.sigma=distance.correlated.sigma
+  }
+  
   if(!is.null(one.dim.sigma))
   {
     if(typeof(one.dim.sigma)!="integer" & typeof(one.dim.sigma)!="double" & typeof(one.dim.sigma)!="numeric")
@@ -882,6 +915,11 @@ layer.series.structure=function(timeseries, numlayers=1, lin.time=FALSE,
       prior$beta=c(-1,1)
     if(length(prior$beta)!=2)
       stop("Prior for 'beta' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'beta'!")
+    
+    if(is.null(prior$dist.corr.falloff))
+      prior$dist.corr.falloff=c(1e-6,1e+6)
+    if(length(prior$dist.corr.falloff)!=2)
+      stop("Prior for 'dist.corr.falloff' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'dist.corr.falloff'!")
     
     if(is.null(prior$obs) & is.null(timeseries$std.dev))
       stop("If prior is given and measurement-wise observational standard deviation is not given, the prior must contain the 95% prior credibility for the observational standard deviation, given as element 'obs'!")

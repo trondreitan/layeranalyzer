@@ -17,7 +17,7 @@
 
 # prior specification and representation routine:
 
-layer.prior=function(mu,dt,sigma,stat.sdev=NULL,init=NULL,lin=NULL, beta=NULL, obs=NULL, islog=0)
+layer.prior=function(mu,dt,sigma,stat.sdev=NULL,init=NULL,lin=NULL, beta=NULL, obs=NULL, dist.corr.falloff=NULL, islog=0)
 {
   if(is.null(mu))
     stop("If prior is given, it must contain the 95% prior credibility for expected value, given as element 'mu'!")
@@ -106,6 +106,20 @@ layer.prior=function(mu,dt,sigma,stat.sdev=NULL,init=NULL,lin=NULL, beta=NULL, o
    ret$beta=NULL
   }
 
+  if(!is.null(dist.corr.falloff))
+  {
+    if(length(dist.corr.falloff)!=2)
+     stop("Prior for 'dist.corr.falloff' must contain exactly two values, namely lower and upper limit for a 95% prior credibility band for 'beta'!")
+    if(dist.corr.falloff[1]>=dist.corr.falloff[2])
+      stop("First element of dist.corr.fallloff is the lower limit and must be smaller than the upper limit (second element)")
+    dist.corr.falloff=as.numeric(dist.corr.falloff)
+    ret$dist.corr.falloff=dist.corr.falloff
+  }
+  else
+  {
+   ret$dist.corr.falloff=NULL
+  }
+
   if(!is.null(obs))
   {
     if(length(obs)!=2)
@@ -174,9 +188,14 @@ layer.load.prior=function(filename)
   if(!is.null(tab$obs1) & !is.null(tab$obs2))
     buffer$obs=as.numeric(c(tab$obs1,tab$obs2))
   
+  if(!is.null(tab$dist1) & !is.null(tab$dist2))
+    buffer$dist=as.numeric(c(tab$dist1,tab$dist2))
+  
   ret=layer.prior(mu=buffer$mu, dt=buffer$dt, sigma=buffer$s,
   		  stat.sdev=buffer$stat.sdev,lin=buffer$lin,
-                  init=buffer$init, beta=buffer$beta, obs=buffer$obs, islog=buffer$is_log)
+                  init=buffer$init, beta=buffer$beta, obs=buffer$obs,
+		  dist.corr.falloff=buffer$dist.corr.falloff,
+		  islog=buffer$is_log)
 
   return(ret)
 }
@@ -188,19 +207,23 @@ layer.load.prior=function(filename)
 layer.standard.prior=layer.prior(mu=c(-10,10),dt=c(0.001,1000),
 				 sigma=c(0.001,100), stat.sdev=c(0.001, 10),
 	                         lin=c(-10,10),beta=c(-10,10),init=c(-100,100),
-                                 obs=c(0.001,10))
+                                 obs=c(0.001,10),
+				 dist.corr.falloff=c(1e-6,1e+6))
 
 layer.standard.log.prior=layer.prior(mu=c(-10,10),dt=c(0.001,1000),
 				     sigma=c(0.0001,100),stat.sdev=c(0.001,10),
                                      lin=c(-10,10),beta=c(-10,10),
 				     init=c(-100,100),
-                                     obs=c(0.001,10),islog=as.integer(1))
+                                     obs=c(0.001,10),
+				     dist.corr.falloff=c(1e-6,1e+6),
+				     islog=as.integer(1))
 
 
 layer.wide.prior=layer.prior(mu=c(-10000,10000),dt=c(0.000001,1000000),
                              sigma=c(0.001,1000),stat.sdev=c(0.00001,10000),
                              lin=c(-1000,1000),beta=c(-1000,1000),
                              init=c(-100000,100000),
-                             obs=c(0.00001,1000))
+                             obs=c(0.00001,1000),
+		             dist.corr.falloff=c(1e-20,1e+20))
 
 
