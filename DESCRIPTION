@@ -5,7 +5,7 @@ Version: 0.4.1
 Date: 2026-07-09
 Encoding: UTF-8
 Authors@R: c(
-    person(given="Trond", family="Reitan", email="trond.reitan@ibv.uio.no",
+    person(given="Trond", family="Reitan", email="trond.reitan@geo.uio.no",
                           role=c("aut","cre"), comment=c(ORCID="0000-0003-0793-8731")),
 	person(given="Lee Hsiang", family="Liow", role=c("ctb"), comment=c(ORCID="0000-0002-3732-6069")),
     person(given="Adam T.", family="Kocsis", role=c("ctb"), comment=c(ORCID="0000-0002-9028-665X")))
