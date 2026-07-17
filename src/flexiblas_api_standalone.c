@@ -1,3 +1,5 @@
+typedef int windows_placeholder; 
+
 #ifdef __linux__  
 
 //    SPDX-License-Identifier: LGPL-3.0-or-later
