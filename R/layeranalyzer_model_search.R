@@ -908,14 +908,14 @@ traverse.connections.layered=function(... ,
 # models are examined in a step-wise search.
 
 stepwise.connections.layered=function(... ,  
-  num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
-  do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
-  silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
-  talkative.traversal=TRUE, test.mode=FALSE,
-  id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
-  use.half.lives=FALSE, mcmc=FALSE, 
-  allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE,
-  first.is.nullhypothesis=FALSE,ML.IC="AIC")
+ num.MCMC=1000,spacing=10,burnin=10000,num.temp=1,
+ do.maximum.likelihood=FALSE,maximum.likelihood.numstart=10,
+ silent.mode=TRUE,talkative.burnin=FALSE,talkative.likelihood=FALSE,
+ talkative.traversal=TRUE, test.mode=FALSE,
+ id.strategy=2,use.stationary.stdev=TRUE,T.ground=1.5, # start.parameters=0,
+ use.half.lives=FALSE, mcmc=FALSE, 
+ allow.causal=TRUE, allow.correlation=TRUE, allow.direct.feedback=TRUE,
+ first.is.nullhypothesis=FALSE,ML.IC="AIC")
 {
  data.structure=list(...)
  n=length(data.structure)
@@ -1082,7 +1082,7 @@ stepwise.connections.layered=function(... ,
  if(do.maximum.likelihood)
    mode="ML-from-MCMC"
 
- nullmodel.conn=rep("none",np) 
+ nullmodel.conn=rep("0",np) 
  nullmodel=layer.analyzer.timeseries.list(data.structure,
 	        num.MCMC=num.MCMC, spacing=spacing, 
 		burnin=burnin, num.temp=num.temp,
@@ -1101,9 +1101,13 @@ stepwise.connections.layered=function(... ,
  models[[1]]=nullmodel
  nummodel=1
  model.conn=list(nullmodelconn=nullmodel.conn)
+ best.conn=rep("none",np) 
 
- while(null.prob<best.prob)
+ while(sum(best.conn!=nullmodel.conn)>0 & null.prob<best.prob)
  {
+   nullmodel.conn=best.conn
+   null.prob=best.prob
+
    # Try changing one connection at a time:
    for(i in 1:np)
    {
@@ -1222,14 +1226,13 @@ stepwise.connections.layered=function(... ,
    best.model=models[[best.model.index]]
    best.conn=model.conn[[best.model.index]]
 
-   if(best.prob>null.prob)
+   if(as.integer(best.model.index)>1) # best.prob>null.prob)
    {
      nullmodel=best.model
-     nullmodel.conn=best.conn
      models=list()
      models[[1]]=nullmodel
      nummodel=1
-     model.conn=list(nullmodelconn=nullmodel.conn)
+     model.conn=list(nullmodelconn=best.conn)
    }
  }
 
