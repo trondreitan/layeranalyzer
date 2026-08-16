@@ -38,9 +38,22 @@ See also layer.series.structure and layer.struct.name.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
+library(layeranalyzer)
+# Read an example dataset:
+X<-read.layer.data.series(
+  "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt",
+  "X")
+
+# Make a structure specification that happens to coincide with the way
+# the data was simulated, namely as 2 layers with OU as the lowest layer:
 struct=layer.series.structure(X,numlayers=2)
+
+# Show a description of the structure:
 print.layer.series.structure(struct)
+# Should output:
+# Timeseries: X, structure:
+# 2-layered: Layer 2: OU , Layer 1: OU-like tracking
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

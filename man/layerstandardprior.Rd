@@ -33,6 +33,9 @@ See also layer.prior and layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
+# Output the hyperparameters of the standard (default) prior
 layer.standard.prior
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

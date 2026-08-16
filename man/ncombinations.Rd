@@ -47,7 +47,12 @@ and traverse.connections.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
+# List the set of combinations up to (but not including) 2
+# of 3 elements (used by the model traversal algorithms):
 n.combinations(3,2)
+# This should be the output:
 #    [,1] [,2] [,3]
 #[1,]    0    0    0
 #[2,]    0    0    1

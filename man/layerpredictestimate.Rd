@@ -121,6 +121,8 @@ See also layer.analyzer, layer.predict.mcmc.list and layer.data.series.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 # Define time series (time points, values and in this case also
 # sample standard deviations and sample size, used for calculating
 # standard errors for each measurement). 

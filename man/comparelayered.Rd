@@ -86,18 +86,34 @@ See also layer.analyzer.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
-# Calculate Bayesian model likelihood for an OU model:
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
+library(layeranalyzer)
 
-# Calculate Bayesian model likelihood for a two-layered model:
-#res2=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr))
+# Read a simulated dataset with 2 layers:
+test.ex<-read.table("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt")
+names(test.ex)<-c("time","value")
+ts<-layer.data.series(time=test.ex$time, value=test.ex$value,name="X")
 
-# Calculate Bayesian model likelihood for a three-layered model:
-#res3=layer.analyzer(layer.series.structure(X,numlayers=3,prior=pr))
+# ML estimation for an OU model, low computer resources (including low pre-optimization MCMC)
+# to speed things up
+\donttest{
+res1<-layer.analyzer(layer.series.structure(ts,numlayers=1),
+  do.maximum.likelihood=TRUE,maximum.likelihood.numstart=20,
+  num.MCMC=40,burnin=400)
 
-#compare.layered(res1,res2,res3)
+# ML estimation for a two-layered model:
+res2<-layer.analyzer(layer.series.structure(ts,numlayers=2),
+  do.maximum.likelihood=TRUE,maximum.likelihood.numstart=20,
+  num.MCMC=40,burnin=400)
+
+# ML estimation for a three-layered model:
+res3<-layer.analyzer(layer.series.structure(ts,numlayers=3),
+  do.maximum.likelihood=TRUE,maximum.likelihood.numstart=20,
+  num.MCMC=40,burnin=400)
+
+# Compare using AIC (Akaike's Information Criterion):
+compare.layered(res1,res2,res3, ML.IC="AIC")
+}
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -107,7 +107,6 @@ See also layer.analyzer.
 # Define time series (time points, values and in this case also
 # sample standard deviations and sample size, used for calculating
 # standard errors for each measurement).
-# install.packages("../www_docs/R/layeranalyzer_0.2.1.tar.gz",type="source")
 library(layeranalyzer)
 X=layer.data.series(time.points=malta$Time.Year,
   value.points=malta$Mean..log.body.mass.,
@@ -117,9 +116,13 @@ X=layer.data.series(time.points=malta$Time.Year,
 # Define process structure for analysis purposes:
 ser=layer.series.structure(X,numlayers=1)
 
-# Perform Bayesian analysis:
-res=layer.analyzer(ser)
+# Perform Bayesian analysis, short run:
+res=layer.analyzer(ser,num.MCMC=100,burnin=1000) 
 
+# Check one specific parameter set, then the same without
+# mu (expected value), dt (characteristic time) and
+# stat-sdev (stationary standaard deviation) specified. (Unspecified
+# parameters are optimized over.)
 sets=rbind(c(2.4, 300, 0.04), c(NA, 300, 0.04), c(2.4, NA, 0.04), c(2.4,300,NA))
 lls=layer.param.logliks(res, sets, silent.mode=FALSE)
 

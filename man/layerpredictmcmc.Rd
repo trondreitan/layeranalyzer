@@ -113,36 +113,40 @@ See also layer.analyzer, layer.predict.mcmc.list and layer.data.series.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 # Define time series (time points, values and in this case also
 # sample standard deviations and sample size, used for calculating
 # standard errors for each measurement). 
-#X=layer.data.series(time.points=malta$Time.Year,
-#  value.points=malta$Mean..log.body.mass.,
-#  std.dev=sqrt(malta$Variance.calculated.from.the.data), 
-#  num.meas.per.value=malta$Sample.size,name="log.body.size")
+X<-layer.data.series(time.points=malta$Time.Year,
+  value.points=malta$Mean..log.body.mass.,
+  std.dev=sqrt(malta$Variance.calculated.from.the.data), 
+  num.meas.per.value=malta$Sample.size,name="log.body.size")
 
 # Define process structure for analysis purposes:
-#ser=layer.series.structure(X,numlayers=1)
+ser<-layer.series.structure(X,numlayers=1)
 
 # Perform analysis and make sure MCMC samples are returned:
-#res=layer.analyzer(ser,mcmc=TRUE)
+\donttest{
+res<-layer.analyzer(ser,mcmc=TRUE)
 
 # Now make up some new values much later:
-#t2=2100:2199
-#v2=rnorm(100,2+0.1*sin(2*pi*t2/50),0.02)
+t2<-2100:2199
+v2<-rnorm(100,2+0.1*sin(2*pi*t2/50),0.02)
 
-#X2=layer.data.series(time.points=t2,
-#   value.points=v2, std.dev=rep(0.02,100), num.meas.per.value=rep(1,100),
-#   name="log.body.size")
+X2<-layer.data.series(time.points=t2,
+   value.points=v2, std.dev=rep(0.02,100), num.meas.per.value=rep(1,100),
+   name="log.body.size")
 
 # Perform predictions:
-#p2=layer.predict.mcmc(X2, analysis=res,  smoothing.time.diff=0.25,
-#   smoothing.start=1500,smoothing.end=2800,
-#   num.smooth.per.mcmc=10, do.return.smoothing.samples=TRUE)
+p2<-layer.predict.mcmc(X2, analysis=res,  smoothing.time.diff=0.25,
+   smoothing.start=1500,smoothing.end=2800,
+   num.smooth.per.mcmc=10, do.return.smoothing.samples=TRUE)
 
 # Plot the results:
-#plot(p2$process.time.points,p2$process.mean[1,],type="l")
-#points(t2,v2)
+plot(p2$process.time.points,p2$process.mean[1,],type="l")
+points(t2,v2)
+}
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

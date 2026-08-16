@@ -38,10 +38,19 @@ See also layer.analyzer, logLik.layered and anova.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),do.maximum.likelihood=TRUE)
-# nobs(res1)
+library(layeranalyzer)
+# Read prior and data:
+pr=layer.load.prior("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_prior.txt")
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt",
+ name="X")
+
+# Do a very short analysis, jsut to get a "layered" object we can run
+# "nobs" on.
+res1<-layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),
+  num.MCMC=40,burnin=400,do.model.likelihood=FALSE)
+nobs(res1)
+# Output should be: 400.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

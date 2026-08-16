@@ -42,9 +42,29 @@ See also layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
-struct=layer.series.structure(X,numlayers=2)
-layer.struct.name(struct)
+library(layeranalyzer)
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt",
+ name="X")
+
+# Insert the data intro a structure specificatiion
+# with the default structure (OU):
+struct1=layer.series.structure(X) 
+layer.struct.name(struct1)
+# Output should be "OU"
+
+# Insert the data into a structure with 2 layers, where the
+# lowest layer has no pull (i.e. Brownian motion, here also called
+# "Random Walk" which is abbreviated to "RW"). Note that when the
+# lowest layer is Brownian, the processes are nonstationary and
+# need initial value treatment (init.0=TRUE).
+# The top layer is specified to have no stochasticity
+# (i.e. deterministic given the layer below it). 
+struct2=layer.series.structure(X,numlayers=2, no.pull=TRUE, no.sigma=1,
+   init.0=TRUE) 
+layer.struct.name(struct2)
+# Output should be "2-layered: Layer 2: RW , Layer 1: deterministic tracking"
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

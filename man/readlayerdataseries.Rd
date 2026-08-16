@@ -197,9 +197,13 @@ See also layer.data.series and layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
 
 # Read a simulated 2 layer data set from an external web site, call it "Xseries":
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","Xseries")
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt",
+ name="X")
+
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

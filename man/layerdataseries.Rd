@@ -52,6 +52,7 @@ See also read.layer.data.series and layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
 
 # Create a sample from the Ornstein-Uhlenbeck (OU) process with mu=0, 
 # characteristic time=50 and sigma=0.2:

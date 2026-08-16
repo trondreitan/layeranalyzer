@@ -78,6 +78,8 @@ layer.analyzer.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 # Creates two 2-layered structures based on the two hare/lynx datasets.
 # outputs the connection structure specified by the
 # alternative conenction specification array c(0,1,2,4)

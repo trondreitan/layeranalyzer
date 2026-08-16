@@ -38,14 +38,18 @@ See also layer.analyzer and anova.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
+library(layeranalyzer)
+pr=layer.load.prior("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_prior.txt")
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt",
+ name="X")
+
 # Calculate classic maximum likelihoods for an OU model, a 2 layered model
 # and a 3 layered model. Look at log-likelihoods:
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),do.maximum.likelihood=TRUE)
-#res2=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr),do.maximum.likelihood=TRUE)
-#res3=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr),do.maximum.likelihood=TRUE)
-# c(logLik(res1), logLik(res2), logLik(res3))
+\donttest{res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),do.maximum.likelihood=TRUE)}
+\donttest{res2=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr),do.maximum.likelihood=TRUE)}
+\donttest{res3=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr),do.maximum.likelihood=TRUE)}
+\donttest{c(logLik(res1), logLik(res2), logLik(res3))}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

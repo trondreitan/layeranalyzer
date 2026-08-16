@@ -120,8 +120,9 @@ X=layer.data.series(time.points=malta$Time.Year,
 ser=layer.series.structure(X,numlayers=1)
 
 # Perform Bayesian analysis:
-res=layer.analyzer(ser)
+res=layer.analyzer(ser,num.MCMC=100,burnin=1000)
 
+# Run with debug info:
 layer.param.loglik(res, silent.mode=FALSE)
 
 }

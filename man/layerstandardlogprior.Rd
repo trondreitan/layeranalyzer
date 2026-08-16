@@ -34,6 +34,10 @@ See also layer.prior, layer.standard.prior and layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
+# Output the hyperparameters of the standard prior for
+# log-transformed measurements
 layer.standard.log.prior
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

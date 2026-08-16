@@ -209,18 +209,30 @@ See also layer.analyzer and layer.data.series.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
-# Calculate Bayesian model likelihood for an OU model:
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
+library(layeranalyzer)
 
-# Calculate Bayesian model likelihood for a two-layered model:
-#res2=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr))
+# Will look at the structure of a single simulated
+# time series (simulated using a 2-layered model)
 
-# Calculate Bayesian model likelihood for a three-layered model:
-#res3=layer.analyzer(layer.series.structure(X,numlayers=3,prior=pr))
+# Read a simulated dataset with 2 layers:
+test.ex=read.table("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt")
+names(test.ex)<-c("time","value")
+ts<-layer.data.series(time=test.ex$time, value=test.ex$value,name="X")
 
-# The models can then be compared, see 'compare.layered'.
+# Look at 2 models, where the only difference is the structure
+# specified in 'layer.series.structure':
+
+# ML estimates for an OU model:
+\donttest{summary(layer.analyzer(layer.series.structure(ts,numlayers=1),
+  num.MCMC=40,burnin=400,
+  do.maximum.likelihood=TRUE,maximum.likelihood.numstart=20))}
+
+# ML estimates for an 2-layered model model:
+\donttest{summary(layer.analyzer(layer.series.structure(ts,numlayers=2),
+  num.MCMC=40,burnin=400,
+  do.maximum.likelihood=TRUE,maximum.likelihood.numstart=20))}
+
+# PS: The models can then be compared, see 'compare.layered'.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

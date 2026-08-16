@@ -49,11 +49,25 @@ See also layer.analyzer and summary.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
-# Calculate Bayesian model likelihood for an OU model:
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
-#summary(res1)
+library(layeranalyzer)
+
+# Read prior and data:
+pr<-layer.load.prior("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_prior.txt")
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_1layer.txt",
+ "X")
+
+# Calculate Bayesian model likelihood for an OU model.
+# (Devotes a large amount of computer resources in the form of MCMC
+# samples, in order to get a stable results).
+\donttest{
+res1<-layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),
+    num.MCMC=1200,burnin=12000)
+
+# Call for a print out of a summary:
+summary(res1)
+}
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

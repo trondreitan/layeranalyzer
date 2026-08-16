@@ -29,6 +29,7 @@ Annals of Applied Statistics, Volume 6 (4): 1531-1551.
 }
 \keyword{ package }
 \examples{
+library(layeranalyzer)
 
 # Create a sample from the Ornstein-Uhlenbeck (OU) process with mu=0, 
 # characteristic time=50 and sigma=0.2:
@@ -48,10 +49,10 @@ X=layer.data.series(time.points=t, value.points=y,name="X")
 # Specify layered structure. (In this case default structure, one layered=OU):
 X.struct=layer.series.structure(X)
 
-# Perform analysis:
-#res=layer.analyzer(X.struct)
+# Perform Bayesian analysis (low number of MCMCs):
+res<-layer.analyzer(X.struct, num.MCMC=40, burnin=400)
 
 # Show the results:
-#summary(res)
+summary(res)
 
 }

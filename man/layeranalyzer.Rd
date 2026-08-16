@@ -516,7 +516,8 @@ summary.layered and compare.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-# Create a sample from the Ornstein-Uhlenbeck (OU) process with mu=0, 
+library(layeranalyzer)
+# Simulated a sample from the Ornstein-Uhlenbeck (OU) process with mu=0, 
 # characteristic time=50 and sigma=0.2:
 n=1000
 x=rep(rnorm(1),n)
@@ -531,8 +532,17 @@ y=(x+rnorm(length(x),0,0.1))[t]
 # Create the data series object from the time points and "measurements":
 X=layer.data.series(time.points=t, value.points=y,name="X")
 
-#res=layer.analyzer(layer.series.structure(X,numlayers=1))
-#summary(res)
+# Run with few resources (since this is a test example).
+# PS: ML-based estimates (default is Bayesian)
+res=layer.analyzer(layer.series.structure(X,numlayers=1),
+  num.MCMC=40,burnin=400,
+  do.maximum.likelihood=TRUE,maximum.likelihood.numstart=20)
+
+# Look at the results:
+summary(res)
+# PS: Uncertainty estimates comes from Bayesian analysis and will
+# in this case not be very stable (since few resources).
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

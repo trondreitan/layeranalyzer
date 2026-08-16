@@ -71,6 +71,8 @@ layer.analyzer.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 # Creates two 2-layered structures based on the two hare/lynx datasets.
 # outputs the pairs and a description
 

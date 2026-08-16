@@ -38,6 +38,10 @@ See also layer.prior, layer.standard.prior and layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
+# Output the hyperparameters of a prior distribution we have used
+# for diversification rate datasets:
 lrate.pr
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

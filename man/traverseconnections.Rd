@@ -264,19 +264,25 @@ and anova.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 # Read data:
-X1=read.layer.data.series("http://folk.uio.no/trondr/R/test_cause.txt",name="cause")
-X2=read.layer.data.series("http://folk.uio.no/trondr/R/test_effect.txt",name="effect")
+X1<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_cause.txt",
+ name="cause")
+X2<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_effect.txt",
+ name="effect")
 
 # Set structure:
-X1struct=layer.series.structure(X1, numlayers=1)
-X2struct=layer.series.structure(X2, numlayers=1)
+X1struct<-layer.series.structure(X1, numlayers=1)
+X2struct<-layer.series.structure(X2, numlayers=1)
 
-# Perform traversal of analyses:
-#res=traverse.connections.layered(X1struct,X2struct, num.MCMC=100, burnin=1000)
+# Perform traversal of analyses (but note that this will take some time):
+\donttest{res<-traverse.connections.layered(X1struct,X2struct, num.MCMC=100, burnin=1000)}
 
 # Compare analyses:
-#compare.layered(res)
+\donttest{compare.layered(res)}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

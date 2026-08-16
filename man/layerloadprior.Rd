@@ -3,7 +3,8 @@
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{ Reading prior specification for the layer.analyzer from a file. }
 \description{
-The function reads a prior specification from a csv file with semi-colon-separated instances. 
+The function reads a prior specification by the way of hyperparameters
+from a csv file with semi-colon-separated instances. 
 }
 \usage{
 layer.load.prior(filename)
@@ -49,7 +50,8 @@ See also layer.prior.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
+library(layeranalyzer)
+pr=layer.load.prior("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_prior.txt")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
@@ -63,5 +65,6 @@ pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
 \concept{eigenvalue decomposition}
 \concept{Bayesian}
 \concept{prior}
+\concept{hyperparameters}
 
 

@@ -284,19 +284,30 @@ summary.layered and compare.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
 
-p=layer.prior(mu=c(-5,5),init=c(-100,100),dt=c(0.5,200),sigma=c(0.01,2),obs=c(0.01,1))
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
+# Specify the prior distribution by giving 95% credibility bands
+# for the parameter types:
+p<-layer.prior(mu=c(-5,5),init=c(-100,100),dt=c(0.5,200),sigma=c(0.01,2),obs=c(0.01,1))
 
-#models=traverse.standalone.layered(X, max.layers=2, 
-#  talkative=TRUE, allow.one.feedback.loop=FALSE, 
-#  just.stationary=FALSE, no.rw=FALSE,    
-#  time.integrals.possible=FALSE, 
-#  allow.deterministic.layers=TRUE,
-#  num.MCMC=200,spacing=10,burnin=2000, prior=p)
-#
-#compare.layered(models)
-#cat(models[[3]]$description)
+# Read the data, a simulated OU (1-layered) process:
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_1layer.txt",
+ "X")
+
+# Traverse the possible standalone models up to 2 layers:
+\donttest{
+models<-traverse.standalone.layered(X, max.layers=2, 
+  talkative=TRUE, allow.one.feedback.loop=FALSE, 
+  just.stationary=FALSE, no.rw=FALSE,    
+  time.integrals.possible=FALSE, 
+  allow.deterministic.layers=TRUE,
+  num.MCMC=200,spacing=10,burnin=2000, prior=p)
+
+compare.layered(models)
+cat(models[[1]]$description)
+}
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

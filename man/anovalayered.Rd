@@ -45,15 +45,18 @@ See also layer.analyzer.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_2layer.txt","X")
-# Calculate classic maximum likelihoods for an OU model, a 2 layered model
-# and a 3 layered model. Test the number of layers. The dataset itself
-# is simulated using 2 layers:
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),do.maximum.likelihood=TRUE)
-#res2=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr),do.maximum.likelihood=TRUE)
-#res3=layer.analyzer(layer.series.structure(X,numlayers=2,prior=pr),do.maximum.likelihood=TRUE)
-#anova(res1,res2,res3)
+library(layeranalyzer)
+
+# Read a simulated dataset with 2 layers:
+test.ex<-read.table("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_2layer.txt")
+names(test.ex)<-c("time","value")
+ts<-layer.data.series(time=test.ex$time, value=test.ex$value,name="X")
+
+# Calculate classic maximum likelihoods for an OU model and a 2 layered model.
+# Test the number of layers. The dataset itself is simulated using 2 layers:
+\donttest{res1<-layer.analyzer(layer.series.structure(ts,numlayers=1),do.maximum.likelihood=TRUE)}
+\donttest{res2<-layer.analyzer(layer.series.structure(ts,numlayers=2),do.maximum.likelihood=TRUE)}
+\donttest{anova(res1,res2)}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

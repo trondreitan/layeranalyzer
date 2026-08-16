@@ -237,19 +237,35 @@ and anova.layered.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 # Read data:
-X1=read.layer.data.series("http://folk.uio.no/trondr/R/test_cause.txt",name="cause")
-X2=read.layer.data.series("http://folk.uio.no/trondr/R/test_effect.txt",name="effect")
+X1<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_cause.txt",
+ name="cause")
+X2<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_effect.txt",
+ name="effect")
 
 # Set structure:
 X1struct=layer.series.structure(X1, numlayers=1)
 X2struct=layer.series.structure(X2, numlayers=1)
 
-# Perform traversal of analyses:
-#res=stepwise.connections.layered(X1struct,X2struct, num.MCMC=100, burnin=1000)
+# Perform traversal of analyses. (PS: this will take some time!)
+\donttest{res=stepwise.connections.layered(X1struct,X2struct, num.MCMC=100, burnin=1000)}
 
-# Compare analyses:
-#compare.layered(res)
+# PS: Since only the model of the last iteration is available,
+# model comparison is not a priority and the method simply returns
+# the best model according to the model selection criterion.
+
+# Show the estiamtes of the best model:
+\donttest{summary(res)}
+# Highlight of summary:
+# Causal links:
+#   cause->effect
+# As it should be.
+
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

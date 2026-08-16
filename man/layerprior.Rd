@@ -88,6 +88,8 @@ See also layer.load.prior and layer.series.structure.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+library(layeranalyzer)
+
 pr=layer.prior(mu=c(-10,10),dt=c(0.001,1000),sigma=c(0.01,10),
 	                         lin=c(-1,1),beta=c(-1,1),init=c(-10,10),
                                  obs=c(0.01,1),islog=0)

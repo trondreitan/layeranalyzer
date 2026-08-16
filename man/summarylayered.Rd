@@ -50,11 +50,23 @@ See also layer.analyzer.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-pr=layer.load.prior("http://folk.uio.no/trondr/R/test_prior.txt")
-X=read.layer.data.series("http://folk.uio.no/trondr/R/test_1layer.txt","X")
-# Calculate Bayesian model likelihood for an OU model:
-#res1=layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr))
-#summary(res1)
+library(layeranalyzer)
+
+# Read prior and dataset:
+pr=layer.load.prior("https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_prior.txt")
+X<-read.layer.data.series(
+ "https://github.com/trondreitan/layeranalyzer/raw/master/doc/test_1layer.txt",
+ "X")
+
+# Calculate Bayesian model likelihood for an OU model.
+# (PS: The MCMC is restricted, to save time in the example).
+res1<-layer.analyzer(layer.series.structure(X,numlayers=1,prior=pr),
+  num.MCMC=60,burnin=600)
+summary(res1)
+
+# PS: There will be moderately-sized numeric variation in the estimates
+# due to the randomness of the MCMC algorithm. A longer MCMC (or
+# multiple of them) would yield more stable results.
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
