@@ -2,7 +2,7 @@ Package: layeranalyzer
 Type: Package
 Title: Time Series Analysis Tool using Linear Layered SDEs
 Version: 0.4.1
-Date: 2026-07-09
+Date: 2026-08-16
 Encoding: UTF-8
 Authors@R: c(
     person(given="Trond", family="Reitan", email="trond.reitan@geo.uio.no",
@@ -28,7 +28,7 @@ LazyData: true
 ByteCompile: yes
 Biarch: no
 NeedsCompilation: yes
-Packaged: 2026-07-17 10:38:38 UTC; trondr
+Packaged: 2026-08-16 10:32:00 UTC; trond
 Author: Trond Reitan [aut, cre] (ORCID:
     <https://orcid.org/0000-0003-0793-8731>),
   Lee Hsiang Liow [ctb] (ORCID: <https://orcid.org/0000-0002-3732-6069>),
