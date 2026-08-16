@@ -7158,11 +7158,6 @@ void show_scatter(double *par1, double *par2, int N,
 
 
 
-#ifdef __linux__  
-//#include <flexiblas/flexiblas_api.h>
-#include "flexiblas_api.h"
-#endif // __linux__
-
 // *************************************************
 // Purging mechanism for global variables, so that
 // they can be reused.
@@ -7183,12 +7178,6 @@ void reset_global_variables(void)
 #endif // DETAILED_TIMERS
 
 
-#ifdef __linux__  
-  flexiblas_set_num_threads(1);
-  //mkl_set_num_threads(1);
-#endif // __linux__
-  
-  
   doubledelete(par_name,LARGE_ENOUGH_ARRAY);
   
   singledelete(obs_corr);
