@@ -1,7 +1,7 @@
 Package: layeranalyzer
 Type: Package
 Title: Time Series Analysis Tool using Linear Layered SDEs
-Version: 0.4.1
+Version: 0.4.2
 Date: 2026-08-16
 Encoding: UTF-8
 Authors@R: c(
