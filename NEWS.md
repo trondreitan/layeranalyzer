@@ -1,5 +1,10 @@
 # Change log of the R package 'layeranalyzer'
 
+## layeranalyzer 0.4.2 (2026-09-18)
+
+General cleanup of code (fixed memory leaks, use of uninitialized memory
+ due to an index variable bug and dangerous use of stncpy).
+
 ## layeranalyzer 0.4.1 (2026-07-09)
 
 Merging of code by Trond Reitan and Adam Kocsis. Adam has been working on making the code CRAN-compliant. Trond has updated layeranalyzer with internal IO logic. 
