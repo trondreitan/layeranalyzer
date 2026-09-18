@@ -135,60 +135,62 @@ X=layer.data.series(time.points=malta$Time.Year,
 ser=layer.series.structure(X,numlayers=1)
 
 # Perform Bayesian analysis:
-#res=layer.analyzer(ser,mcmc=TRUE)
+res=layer.analyzer(ser,mcmc=TRUE,num.MCMC=200,burnin=800)
 
 # Now make up some new values much later:
-t2=2100:2199
-v2=rnorm(100,2+0.1*sin(2*pi*t2/50),0.02)
+t2=2100:2140
+v2=rnorm(length(t2),2+0.1*sin(2*pi*t2/50),0.02)
 X2=layer.data.series(time.points=t2,
-   value.points=v2, std.dev=rep(0.02,100), num.meas.per.value=rep(1,100),
+   value.points=v2, std.dev=rep(0.02,length(t2)),
+   num.meas.per.value=rep(1,length(t2)),
    name="log.body.size")
 
-# Perform predictions:
-#p3=layer.predict.estimate(X2, analysis=res,  smoothing.time.diff=0.25,
-#   smoothing.start=1500,smoothing.end=2800)
+# Perform predictions (old data not conditioned on):
+p3=layer.predict.estimate(X2, analysis=res,  smoothing.time.diff=0.25,
+   smoothing.start=1900,smoothing.end=2300)
 
 # Fetch the results
-#t3=p3$process.time.points
-#m3=p3$process.mean[1,]
-#l3=p3$process.lower95[1,]
-#u3=p3$process.upper95[1,]
+t3=p3$process.time.points
+m3=p3$process.mean[1,]
+l3=p3$process.lower95[1,]
+u3=p3$process.upper95[1,]
 
 # Plot the results
-#plot(t3,m3,type="l",ylim=c(min(l3),max(u3)))
-#points(t2,v2)
-#lines(t3,l3,col="red")
-#lines(t3,u3,col="red")
+plot(t3,m3,type="l",ylim=c(min(l3),max(u3)))
+points(t2,v2)
+lines(t3,l3,col="red")
+lines(t3,u3,col="red")
 
-
+\donttest{
 # Perform ML analysis:
 # Do the same for ML estimate 
-#res.ml=layer.analyzer(ser,do.maximum.likelihood=TRUE,
-#  maximum.likelihood.numstart=100,do.model.likelihood=FALSE)
+res.ml=layer.analyzer(ser,do.maximum.likelihood=TRUE,
+  maximum.likelihood.numstart=100,do.model.likelihood=FALSE)
 
 # Now make up some new values much later:
 t2=2100:2199
-v2=rnorm(100,2+0.1*sin(2*pi*t2/50),0.02)
+v2=rnorm(length(t2),2+0.1*sin(2*pi*t2/50),0.02)
 X2=layer.data.series(time.points=t2,
-   value.points=v2, std.dev=rep(0.02,100), num.meas.per.value=rep(1,100),
+   value.points=v2, std.dev=rep(0.02,length(t2)),
+   num.meas.per.value=rep(1,length(t2)),
    name="log.body.size")
 
 # Perform the prediction:
-#p4=layer.predict.estimate(X2, analysis=res.ml,  smoothing.time.diff=0.025,
-#   smoothing.start=1500,smoothing.end=2800)
+p4=layer.predict.estimate(X2, analysis=res.ml,  smoothing.time.diff=0.025,
+   smoothing.start=1900,smoothing.end=2400)
 
 # Fetch the results:
-#t4=p4$process.time.points
-#m4=p4$process.mean[1,]
-#l4=p4$process.lower95[1,]
-#u4=p4$process.upper95[1,]
+t4=p4$process.time.points
+m4=p4$process.mean[1,]
+l4=p4$process.lower95[1,]
+u4=p4$process.upper95[1,]
 
 # Plot the results:
-#plot(t4,m4,type="l",ylim=c(min(c(l4,m4)),max(c(m4,u4))))
-#points(t2,v2)
-#lines(t4,l4,col="red")
-#lines(t4,u4,col="red")
-
+plot(t4,m4,type="l",ylim=c(min(c(l4,m4)),max(c(m4,u4))))
+ points(t2,v2)
+ lines(t4,l4,col="red")
+ lines(t4,u4,col="red")
+} 
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
