@@ -38,8 +38,6 @@ using namespace Rcpp;
 // LGPL licenced.
 //
 
-
-
 // *******************
 // *******************
 // Definitions:
@@ -75,9 +73,11 @@ struct double_2d
 // correlations, external timeseries regression coefficients and
 // indicator functions (for grouping sites together, not used in
 // the paper). 
-enum param_type {MU, LIN_T, DT, SIGMA, STAT_SDEV, CORR, PAIR_CORR,
-		 DISTANCE_CORR_FALLOFF, SERIES_CORR, 
-		 BETA, INIT, INDICATOR, OBS_SD, TRIG};
+enum layeranalyzer_param_type {LAYERANALYZER_MU, LAYERANALYZER_LIN_T, LAYERANALYZER_DT, LAYERANALYZER_SIGMA,
+			       LAYERANALYZER_STAT_SDEV, LAYERANALYZER_CORR, LAYERANALYZER_PAIR_CORR,
+			       LAYERANALYZER_DISTANCE_CORR_FALLOFF, LAYERANALYZER_SERIES_CORR, 
+			       LAYERANALYZER_BETA, LAYERANALYZER_INIT, LAYERANALYZER_INDICATOR,
+			       LAYERANALYZER_OBS_SD, LAYERANALYZER_TRIG};
 
 // Transformation types for parameters: linear (no transformation),
 // logarithmic, logarithm of the inverse, logistic and binary:
@@ -106,7 +106,7 @@ double meantime=0.0;
 
 // Parameter info:
 char **par_name=NULL; // parameter name
-param_type *par_type=NULL; // parameter type
+layeranalyzer_param_type *par_type=NULL; // parameter type
 int *par_layer=NULL;  // parameter belonging to which layer
 int *par_region=NULL; // parameter belonging to which site
 int *par_series=NULL; // parameter belonging to which series
@@ -694,9 +694,9 @@ CTime::CTime(hourType h, minuteType m, secondType s) {
 }
 
 CTime::CTime(const char *time) {
-    static char tem[3];
+    static char tem[7];
     static hourType hh = 0; static minuteType mm = 0; static secondType ss = 0;
-    tem[2] = '\0';
+    /* Do not know what this does. Doesn't seem right so I comment it out: tem[2] = '\0'; */
     hh = (hourType)atoi(strncpy(tem, time, 2));
     mm = (minuteType)atoi(strncpy(tem, time + 2, 2));
     ss = 0;
@@ -10452,7 +10452,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
       par_trans_type=new transform_type[LARGE_ENOUGH_ARRAY];
       if(par_type)
 	delete [] par_type;
-      par_type=new param_type[LARGE_ENOUGH_ARRAY];
+      par_type=new layeranalyzer_param_type[LARGE_ENOUGH_ARRAY];
       if(par_layer)
 	delete [] par_layer;
       par_layer=new int[LARGE_ENOUGH_ARRAY];
@@ -10508,7 +10508,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	for(i=0;i<numsites;i++) // traverse the sites
 	  {
 	    par_trans_type[i+numpar]=T_BINARY;
-	    par_type[i+numpar]=INDICATOR;
+	    par_type[i+numpar]=LAYERANALYZER_INDICATOR;
 	    par_layer[i+numpar]=ser[0].numlayers+1;
 	    par_region[i+numpar]=i;
 	    par_series[i+numpar]=0;
@@ -10541,7 +10541,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    // fill the global parameter arrays with
 		    // appropriate contents:
 		    par_trans_type[i+numpar]=T_LIN;
-		    par_type[i+numpar]=MU;
+		    par_type[i+numpar]=LAYERANALYZER_MU;
 		    par_layer[i+numpar]=ser[s].numlayers+1;
 		    par_region[i+numpar]=i;
 		    par_series[i+numpar]=s;
@@ -10569,7 +10569,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  for(i=0;i<2;i++)
 		    {
 		      par_trans_type[numpar+i]=T_LIN;
-		      par_type[numpar+i]=MU;
+		      par_type[numpar+i]=LAYERANALYZER_MU;
 		      par_layer[numpar+i]=ser[s].numlayers+1;
 		      par_region[numpar+i]=-1; // global
 		      par_series[numpar+i]=s;
@@ -10590,7 +10590,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  // fill the global parameter arrays with
 		  // appropriate contents:
 		  par_trans_type[numpar]=T_LIN;
-		  par_type[numpar]=MU;
+		  par_type[numpar]=LAYERANALYZER_MU;
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
@@ -10613,7 +10613,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    // fill the global parameter arrays with
 		    // appropriate contents:
 		    par_trans_type[i+numpar]=T_LIN;
-		    par_type[i+numpar]=LIN_T;
+		    par_type[i+numpar]=LAYERANALYZER_LIN_T;
 		    par_layer[i+numpar]=ser[s].numlayers+1;
 		    par_region[i+numpar]=i;
 		    par_series[i+numpar]=s;
@@ -10642,7 +10642,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  for(i=0;i<2;i++)
 		    {
 		      par_trans_type[numpar+i]=T_LIN;
-		      par_type[numpar+i]=LIN_T;
+		      par_type[numpar+i]=LAYERANALYZER_LIN_T;
 		      par_layer[numpar+i]=ser[s].numlayers+1;
 		      par_region[numpar+i]=-1;
 		      par_series[numpar+i]=s;
@@ -10664,7 +10664,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  // fill the global parameter arrays with
 		  // appropriate contents:
 		  par_trans_type[numpar]=T_LIN;
-		  par_type[numpar]=LIN_T;
+		  par_type[numpar]=LAYERANALYZER_LIN_T;
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
@@ -10711,7 +10711,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			    par_trans_type[i+numpar]=T_LOG_INV;
 			  else
 			    par_trans_type[i+numpar]=T_INV;
-			  par_type[i+numpar]=DT;
+			  par_type[i+numpar]=LAYERANALYZER_DT;
 			  par_layer[i+numpar]=l+1;
 			  par_region[i+numpar]=i;
 			  par_series[i+numpar]=s;
@@ -10752,7 +10752,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			      par_trans_type[numpar+i]=T_LOG_INV;
 			    else
 			      par_trans_type[numpar+i]=T_INV;
-			    par_type[numpar+i]=DT;
+			    par_type[numpar+i]=LAYERANALYZER_DT;
 			    par_layer[numpar+i]=l+1;
 			    par_region[numpar+i]=-1;
 			    par_series[numpar+i]=s;
@@ -10782,7 +10782,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			  par_trans_type[numpar]=T_LOG_INV;
 			else
 			  par_trans_type[numpar]=T_INV;
-			par_type[numpar]=DT;
+			par_type[numpar]=LAYERANALYZER_DT;
 			par_layer[numpar]=l+1;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
@@ -10816,7 +10816,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				  // fill the global parameter arrays with
 				  // appropriate contents:
 				  par_trans_type[i+numpar]=T_LOG;
-				  par_type[i+numpar]=SIGMA;
+				  par_type[i+numpar]=LAYERANALYZER_SIGMA;
 				  par_layer[i+numpar]=l+1;
 				  par_region[i+numpar]=i;
 				  par_series[i+numpar]=s;
@@ -10828,7 +10828,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				  // fill the global parameter arrays with
 				  // appropriate contents:
 				  par_trans_type[i+numpar]=T_LOG;
-				  par_type[i+numpar]=STAT_SDEV;
+				  par_type[i+numpar]=LAYERANALYZER_STAT_SDEV;
 				  par_layer[i+numpar]=l+1;
 				  par_region[i+numpar]=i;
 				  par_series[i+numpar]=s;
@@ -10874,7 +10874,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				    // fill the global parameter arrays with
 				    // appropriate contents:
 				    par_trans_type[numpar+i]=T_LOG;
-				    par_type[numpar+i]=SIGMA;
+				    par_type[numpar+i]=LAYERANALYZER_SIGMA;
 				    par_layer[numpar+i]=l+1;
 				    par_region[numpar+i]=-1;
 				    par_series[numpar+i]=s;
@@ -10887,7 +10887,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				    // fill the global parameter arrays with
 				    // appropriate contents:
 				    par_trans_type[numpar+i]=T_LOG;
-				    par_type[numpar+i]=STAT_SDEV;
+				    par_type[numpar+i]=LAYERANALYZER_STAT_SDEV;
 				    par_layer[numpar+i]=l+1;
 				    par_region[numpar+i]=-1;
 				    par_series[numpar+i]=s;
@@ -10920,7 +10920,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				// fill the global parameter arrays with
 				// appropriate contents:
 				par_trans_type[numpar]=T_LOG;
-				par_type[numpar]=SIGMA;
+				par_type[numpar]=LAYERANALYZER_SIGMA;
 				par_layer[numpar]=l+1;
 				par_region[numpar]=-1;
 				par_series[numpar]=s;
@@ -10933,7 +10933,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 				// fill the global parameter arrays with
 				// appropriate contents:
 				par_trans_type[numpar]=T_LOG;
-				par_type[numpar]=STAT_SDEV;
+				par_type[numpar]=LAYERANALYZER_STAT_SDEV;
 				par_layer[numpar]=l+1;
 				par_region[numpar]=-1;
 				par_series[numpar]=s;
@@ -11020,7 +11020,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			// fill the global parameter arrays with
 			// appropriate contents:
 			par_trans_type[numpar]=T_LOG;
-			par_type[numpar]=DISTANCE_CORR_FALLOFF;
+			par_type[numpar]=LAYERANALYZER_DISTANCE_CORR_FALLOFF;
 			par_layer[numpar]=l+1;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
@@ -11083,7 +11083,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			      // fill the global parameter arrays with
 			      // appropriate contents:
 			      par_trans_type[numpar]=T_LOGIST_PAIR;
-			      par_type[numpar]=PAIR_CORR;
+			      par_type[numpar]=LAYERANALYZER_PAIR_CORR;
 			      par_layer[numpar]=l+1;
 			      par_region[numpar]=i;
 			      par_series[numpar]=s;
@@ -11105,7 +11105,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 			// fill the global parameter arrays with
 			// appropriate contents:
 			par_trans_type[numpar]=T_LOGIST_GLOBAL;
-			par_type[numpar]=CORR;
+			par_type[numpar]=LAYERANALYZER_CORR;
 			par_layer[numpar]=l+1;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
@@ -11167,7 +11167,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      // fill the global parameter arrays with
 	      // appropriate contents:
 	      par_trans_type[numpar]=T_LOG;
-	      par_type[numpar]=OBS_SD;
+	      par_type[numpar]=LAYERANALYZER_OBS_SD;
 	      par_layer[numpar]=0;
 	      par_region[numpar]=-1;
 	      par_series[numpar]=s;
@@ -11194,7 +11194,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  // Set global parameter arrays with
 		  // appropriate contents:
 		  par_trans_type[numpar]=T_LIN;
-		  par_type[numpar]=TRIG;
+		  par_type[numpar]=LAYERANALYZER_TRIG;
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
@@ -11205,7 +11205,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		  // appropriate contents:
 		  
 		  par_trans_type[numpar]=T_LIN;
-		  par_type[numpar]=TRIG;
+		  par_type[numpar]=LAYERANALYZER_TRIG;
 		  par_layer[numpar]=ser[s].numlayers+1;
 		  par_region[numpar]=-1;
 		  par_series[numpar]=s;
@@ -11253,7 +11253,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	      // fill the global parameter arrays with
 	      // appropriate contents:
 	      par_trans_type[numpar]=T_LIN;
-	      par_type[numpar]=BETA;
+	      par_type[numpar]=LAYERANALYZER_BETA;
 	      par_layer[numpar]=l+1; // l goes from 0 to #numlayers-1
 	      par_region[numpar]=-1;
 	      par_series[numpar]=s; 
@@ -11287,7 +11287,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		      else
 			{
 			  par_trans_type[numpar]=T_LIN;
-			  par_type[numpar]=INIT;
+			  par_type[numpar]=LAYERANALYZER_INIT;
 			  par_layer[numpar]=l;
 			  par_region[numpar]=i;
 			  par_series[numpar]=s;
@@ -11310,7 +11310,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    else
 		      {
 			par_trans_type[numpar]=T_LIN;
-			par_type[numpar]=INIT;
+			par_type[numpar]=LAYERANALYZER_INIT;
 			par_layer[numpar]=0;
 			par_region[numpar]=i;
 			par_series[numpar]=s;
@@ -11333,7 +11333,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		    else
 		      {
 			par_trans_type[numpar]=T_LIN;
-			par_type[numpar]=INIT;
+			par_type[numpar]=LAYERANALYZER_INIT;
 			par_layer[numpar]=l;
 			par_region[numpar]=-1;
 			par_series[numpar]=s;
@@ -11355,7 +11355,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 		else
 		  {
 		    par_trans_type[numpar]=T_LIN;
-		    par_type[numpar]=INIT;
+		    par_type[numpar]=LAYERANALYZER_INIT;
 		    par_layer[numpar]=0;
 		    par_region[numpar]=-1;
 		    par_series[numpar]=s;
@@ -11388,7 +11388,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  // fill the global parameter arrays with
 	  // appropriate contents:
 	  par_trans_type[numpar]=T_LOGIST_PAIR;
-	  par_type[numpar]=SERIES_CORR;
+	  par_type[numpar]=LAYERANALYZER_SERIES_CORR;
 	  par_layer[numpar]=corr_from_layer[i];
 	  par_region[numpar]=-1;
 	  par_series[numpar]=corr_from_series[i];
@@ -11415,7 +11415,7 @@ double loglik(double *pars, int dosmooth, int do_realize,
 	  // fill the global parameter arrays with
 	  // appropriate contents:
 	  par_trans_type[numpar]=T_LIN;
-	  par_type[numpar]=BETA;
+	  par_type[numpar]=LAYERANALYZER_BETA;
 	  par_layer[numpar]=feed_to_layer[i];
 	  par_region[numpar]=-1;
 	  par_series[numpar]=feed_to_series[i];
@@ -16239,86 +16239,86 @@ double logprob(params &par,double T, int dosmooth, int do_realize, int doprint)
       // depending on the parameter type, update the prior density:
       switch(par_type[i])
 	{
-	case MU:
+	case LAYERANALYZER_MU:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(pr->mu_s) -
 	      0.5*(curr_val-pr->mu_m)*(curr_val-pr->mu_m)/pr->mu_s/pr->mu_s;
 	    break;
 	  }
-	case TRIG: // Use prior uncertainty as standard deviation plus
+	case LAYERANALYZER_TRIG: // Use prior uncertainty as standard deviation plus
 		   // expectancy of MU
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(pr->mu_s+pr->mu_m) -
 	      0.5*curr_val*curr_val/(pr->mu_s+pr->mu_m)/(pr->mu_s+pr->mu_m);
 	    break;
 	  }
-	case LIN_T:
+	case LAYERANALYZER_LIN_T:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(pr->lin_s) -
 	      0.5*(curr_val-pr->lin_m)*(curr_val-pr->lin_m)/pr->lin_s/pr->lin_s;
 	    break;
 	  }
-	case DT:
+	case LAYERANALYZER_DT:
 	  {
 	    break;
 	  }
-	case SIGMA:
+	case LAYERANALYZER_SIGMA:
 	  {
 	    prp+=  -0.5*log(2.0*M_PI) - log(pr->lsigma_s) -
 	      0.5*(curr_val-pr->lsigma_m)*(curr_val-pr->lsigma_m)/
 	      pr->lsigma_s/pr->lsigma_s;
 	    break;
 	  }
-	case STAT_SDEV:
+	case LAYERANALYZER_STAT_SDEV:
 	  {
 	    prp+=  -0.5*log(2.0*M_PI) - log(pr->lstat_sdev_s) -
 	      0.5*(curr_val-pr->lstat_sdev_m)*(curr_val-pr->lstat_sdev_m)/
 	      pr->lstat_sdev_s/pr->lstat_sdev_s;
 	    break;
 	  }
-	case OBS_SD:
+	case LAYERANALYZER_OBS_SD:
 	  {
 	    prp+=  -0.5*log(2.0*M_PI) - log(pr->los_s) -
 	      0.5*(curr_val - pr->los_m)*(curr_val - pr->los_m)/pr->los_s/pr->los_s;
 	    //cout << curr_val << " " << pr->los_m << " " << pr->los_s << endl;
 	    break;
 	  }
-	case CORR:
+	case LAYERANALYZER_CORR:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(2.0) -
 	      0.5*curr_val*curr_val/2.0/2.0;
 	    break;
 	  }
-	case PAIR_CORR:
+	case LAYERANALYZER_PAIR_CORR:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(2.0) -
 	      0.5*curr_val*curr_val/2.0/2.0;
 	    break;
 	  }
-	case DISTANCE_CORR_FALLOFF:
+	case LAYERANALYZER_DISTANCE_CORR_FALLOFF:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(pr->ldist_s) -
 	      0.5*(curr_val - pr->ldist_m)*(curr_val - pr->ldist_m)/pr->ldist_s/pr->ldist_s;
 	    break;
 	  }
-	case SERIES_CORR:
+	case LAYERANALYZER_SERIES_CORR:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(2.0) -
 	      0.5*curr_val*curr_val/2.0/2.0;
 	    break;
 	  }
-	case BETA:
+	case LAYERANALYZER_BETA:
 	  {
 	    prp += -0.5*log(2.0*M_PI) - log(pr->beta_s) -
 	      0.5*(curr_val-pr->beta_m)*(curr_val-pr->beta_m)/pr->beta_s/pr->beta_s;
 	    break;
 	  }
-	case INDICATOR:
+	case LAYERANALYZER_INDICATOR:
 	  {
 	    prp += log(0.5);
 	    break;
 	  }
-	case INIT:
+	case LAYERANALYZER_INIT:
 	  {
 	    prp +=  -0.5*log(2.0*M_PI) - log(pr->init_s) -
 	      0.5*(curr_val-pr->init_m)*(curr_val-pr->init_m)/pr->init_s/pr->init_s;
@@ -16477,30 +16477,30 @@ double init_par(int i) // i=parameter number
     {
       // fetch parameter suggestions according to 
       // the parameter type:
-    case INDICATOR:
+    case LAYERANALYZER_INDICATOR:
       ret=floor(2.0*drand());
       break;
-    case MU:
-    case LIN_T:
-    case TRIG:
+    case LAYERANALYZER_MU:
+    case LAYERANALYZER_LIN_T:
+    case LAYERANALYZER_TRIG:
       ret=-3.0+6.0*drand();
       break;
-    case DT:
-    case SIGMA:
-    case STAT_SDEV:
-    case OBS_SD:
-    case CORR:
-    case INIT:
+    case LAYERANALYZER_DT:
+    case LAYERANALYZER_SIGMA:
+    case LAYERANALYZER_STAT_SDEV:
+    case LAYERANALYZER_OBS_SD:
+    case LAYERANALYZER_CORR:
+    case LAYERANALYZER_INIT:
       ret=-4.0+8.0*drand();
       break;
-    case DISTANCE_CORR_FALLOFF:
+    case LAYERANALYZER_DISTANCE_CORR_FALLOFF:
       ret=-6.0+12.0*drand();
       break;
-    case PAIR_CORR:
-    case SERIES_CORR:
+    case LAYERANALYZER_PAIR_CORR:
+    case LAYERANALYZER_SERIES_CORR:
       ret=-0.1+0.2*drand();
       break;
-    case BETA:
+    case LAYERANALYZER_BETA:
       ret=-1.0+2.0*drand();
     }
 
@@ -16525,7 +16525,8 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
 		   double *model_dic1,double *eff_num_param1, 
 		   double *model_dic2,double *eff_num_param2)
 {
-  loglik(NULL); // gives us the global 'numpar', 
+  double *nullpars=NULL;
+  loglik(nullpars); // gives us the global 'numpar', 
   // number of parameters
   
   // Return array:
@@ -17253,6 +17254,13 @@ params *layer_mcmc(unsigned int numsamples, unsigned int burnin,
   
   if(x_)
     *x_=XX;
+  
+  singledelete(ll);
+  singledelete(lp);
+  singledelete(pars);
+  singledelete(T);
+  singledelete(log_prob);
+  singledelete(swaps);
   
   // return the samples:
   return ret;
@@ -18680,7 +18688,10 @@ RcppExport SEXP layeranalyzer(SEXP input,
   int num_lliks=0, num_lpriors=0;
   
   if(inpars_numpars>0 || inmcmc_numpars>0 || lmode==LAYERANALYZER_NUMPAR)
-    loglik(NULL); // gives us the global 'numpar', 
+    {
+      double *nullpars=NULL;
+      loglik(nullpars); // gives us the global 'numpar', 
+    }
   
   if(!silent)
     {
@@ -18875,12 +18886,22 @@ RcppExport SEXP layeranalyzer(SEXP input,
 		  for(j=0;(int)j<inpars_numpars;j++)
 		    partial_par[j]=transform_parameter(in_pars(k,j),
 						       par_trans_type[j]);
-		  List optres=optim(Rcpp::_["par"]= initpars,
-				    Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
-				    Rcpp::_["method"]="Nelder-Mead" /*
-				    Rcpp::_["method"]="L-BFGS-B",
-				    Rcpp::_["lower"]=-1e+20,
-				    Rcpp::_["upper"]=+1e+20  */ );
+		  List optres=List::create();
+		  if(num_missing>1)
+		    optres=optim(Rcpp::_["par"]= initpars,
+				 Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
+				 Rcpp::_["method"]="Nelder-Mead" );
+		  else
+		    optres=optim(Rcpp::_["par"]= initpars,
+				 Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
+				 Rcpp::_["method"]="BFGS" );
+		  /* old:
+		      optres=optim(Rcpp::_["par"]= initpars,
+				 Rcpp::_["fn"]=Rcpp::InternalFunction(partial_loglikwrapper),
+				 Rcpp::_["method"]="L-BFGS-B",
+				 Rcpp::_["lower"]=-1e+20,
+				 Rcpp::_["upper"]=+1e+20); */
+		  
 		  NumericVector outpars2=as<NumericVector>(optres["par"]);
 		  NumericVector outval=as<NumericVector>(optres["value"]);
 
@@ -19166,7 +19187,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
       strcpy(par_name_new[i],par_name_orig[i]);
       if(ser[s].pr->is_log)
 	{
-	  if(par_type[i]==MU)
+	  if(par_type[i]==LAYERANALYZER_MU)
 	    {
 	      snprintf(par_name_new[i],99,"exp(%s)",par_name_orig[i]);
 	      if(lmode==LAYERANALYZER_BAYESIAN ||
@@ -19175,7 +19196,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 		for(j=0;j<(int)numsamples;j++)
 		  parsample[i][j]=exp(parsample[i][j]);
 	    }
-	  if(par_type[i]==OBS_SD)
+	  if(par_type[i]==LAYERANALYZER_OBS_SD)
 	    {
 	      snprintf(par_name_new[i],99,"%s_origscale",par_name_orig[i]);
 	      if(lmode==LAYERANALYZER_BAYESIAN ||
@@ -19221,14 +19242,15 @@ RcppExport SEXP layeranalyzer(SEXP input,
 		      if(par_series[i]==(int)s && par_layer[i]==(int)(l+1) &&
 			 (par_region[i]==(int)j || par_region[i]<0))
 			{
-			  if(par_type[i]==SIGMA || par_type[i]==STAT_SDEV)
+			  if(par_type[i]==LAYERANALYZER_SIGMA ||
+			     par_type[i]==LAYERANALYZER_STAT_SDEV)
 			    {
 			      found_diffusion=true;
 			      index_diffusion=i;
 			      if(par_region[i]<0)
 				global_diffusion=true;
 			    }
-			  else if(par_type[i]==DT)
+			  else if(par_type[i]==LAYERANALYZER_DT)
 			    {
 			      found_pull=true;
 			      index_pull=i;
@@ -19251,7 +19273,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 			snprintf(s_name, 999,"stat_sdev_%s_%d_r%d", ser[s].name,l+1,j);
 		      strcpy(par_name_new[index_diffusion],s_name);
 		      
-		      if(par_type[i]==SIGMA)
+		      if(par_type[index_diffusion]==LAYERANALYZER_SIGMA)
 			for(i=0;i<numsamples;i++)
 			  parsample[index_diffusion][i]=
 			    parsample[index_diffusion][i]*
@@ -19411,6 +19433,7 @@ RcppExport SEXP layeranalyzer(SEXP input,
 				    Rcpp::_["upper"]=+1e+20  ); */
 	      List optres=optim(Rcpp::_["par"]= initpars,
 				Rcpp::_["fn"]=Rcpp::InternalFunction(loglikwrapper),
+
 				Rcpp::_["method"]="Nelder-Mead" 
 				/* Rcpp::_["method"]="L-BFGS-B" ,
 				Rcpp::_["lower"]=-1e+20,
@@ -19473,9 +19496,9 @@ RcppExport SEXP layeranalyzer(SEXP input,
 	      s=par_series[j];
 	      if(ser[s].pr->is_log)
 		{
-		  if(par_type[j]==MU)
+		  if(par_type[j]==LAYERANALYZER_MU)
 		    ml_pars[j]=exp(ml_pars[j]);
-		  if(par_type[j]==OBS_SD)
+		  if(par_type[j]==LAYERANALYZER_OBS_SD)
 		    ml_pars[j]=ser[s].mean_val*
 		      sqrt(exp(ml_pars[j]*ml_pars[j])-1.0)*
 		      exp(ml_pars[j]*ml_pars[j]/2.0);
@@ -19683,8 +19706,8 @@ RcppExport SEXP layeranalyzer(SEXP input,
       for(i=0;i<numpar;i++)
 	est_paramset(i)=est_pars[i];
       out["est.par"]=est_paramset;
-      delete [] est_pars;
     }
+  singledelete(est_pars);
   
   
   if(lmode==LAYERANALYZER_BAYESIAN ||
@@ -19983,8 +20006,8 @@ RcppExport SEXP layeranalyzer(SEXP input,
       for(i=0;i<numpar;i++)
 	est_origpar(i)=best_pars_repar[i];
       out["est.origpar"]=est_origpar;
-      delete [] best_pars_repar;
     }
+  singledelete(best_pars_repar);
   
   if(lmode==LAYERANALYZER_BAYESIAN ||
      lmode==LAYERANALYZER_ML_FROM_MCMC ||
@@ -20466,38 +20489,45 @@ int main(int argc, char **argv)
 	  argv++;
 	  break;
 	case 'a':
-	  loglik(NULL);
-	  startpar=new double[numpar];
-	  for(i=0;i<numpar;i++)
-	    {
-	      startpar[i]=transform_parameter(atof(argv[2]),par_trans_type[i]);
-	      argc--;
-	      argv++;
-	    }
-	  break;
+	  {
+	    double *nullpars=NULL;
+	    loglik(nullpars);
+	    startpar=new double[numpar];
+	    for(i=0;i<numpar;i++)
+	      {
+		startpar[i]=transform_parameter(atof(argv[2]),
+						par_trans_type[i]);
+		argc--;
+		argv++;
+	      }
+	    break;
+	  }
 	case 'S':
-	  if(num_series<=0)
-	    {
-	      cerr << "Simulation specification only possible if model and data\n"
-		"has already been specified!" << endl;
-	      exit(0);
-	    }
-	  loglik(NULL);
-	  do_simulations=true;
-	  strcpy(simulation_file_start, argv[2]);
-	  argc--;
-	  argv++;
-	  numsim=atoi(argv[2]);
-	  argc--;
-	  argv++;
-	  sim_param=new double[numpar];
-	  for(i=0;i<numpar;i++)
-	    {
-	      sim_param[i]=atof(argv[2]);
-	      argc--;
-	      argv++;
-	    }
-	  break;
+	  {
+	    double *nullpars=NULL;
+	    if(num_series<=0)
+	      {
+		cerr << "Simulation specification only possible if model and data\n"
+		  "has already been specified!" << endl;
+		exit(0);
+	      }
+	    loglik(nullpars);
+	    do_simulations=true;
+	    strcpy(simulation_file_start, argv[2]);
+	    argc--;
+	    argv++;
+	    numsim=atoi(argv[2]);
+	    argc--;
+	    argv++;
+	    sim_param=new double[numpar];
+	    for(i=0;i<numpar;i++)
+	      {
+		sim_param[i]=atof(argv[2]);
+		argc--;
+		argv++;
+	      }
+	    break;
+	  }
 	case 'n':
 	  nodata=true;
 	  break;
@@ -21441,7 +21471,8 @@ int main(int argc, char **argv)
   
   // read the number of parameters and also fill out the global
   // variables par_name and par_type:
-  loglik(NULL);
+  double *nullpars=NULL;
+  loglik(nullpars);
   
   // fetch sampling parameters:
   int numsamples=atoi(argv[1]);
@@ -21612,13 +21643,13 @@ int main(int argc, char **argv)
       s=par_series[i];
       if(ser[s].pr->is_log)
 	{
-	  if(par_type[i]==MU)
+	  if(par_type[i]==LAYERANALYZER_MU)
 	    {
 	      snprintf(par_name[i],99,"exp(%s)",par_name_orig[i]);
 	      for(j=0;(int)j<numsamples;j++)
 		parsample[i][j]=exp(parsample[i][j]);
 	    }
-	  if(par_type[i]==OBS_SD)
+	  if(par_type[i]==LAYERANALYZER_OBS_SD)
 	    {
 	      snprintf(par_name[i],99,"%s_origscale",par_name_orig[i]);
 	      for(j=0;(int)j<numsamples;j++)
@@ -21718,9 +21749,9 @@ int main(int argc, char **argv)
 	  s=par_series[j];
 	  if(ser[s].pr->is_log)
 	    {
-	      if(par_type[j]==MU)
+	      if(par_type[j]==LAYERANALYZER_MU)
 		best_pars[j]=exp(best_pars[j]);
-	      if(par_type[j]==OBS_SD)
+	      if(par_type[j]==LAYERANALYZER_OBS_SD)
 		best_pars[j]=ser[s].mean_val*
 		  sqrt(exp(best_pars[j]*best_pars[j])-1.0)*
 		  exp(best_pars[j]*best_pars[j]/2.0);
@@ -22246,14 +22277,14 @@ int main(int argc, char **argv)
 		      if(par_series[i]==(int)s && par_layer[i]==(int)(l+1) &&
 			 (par_region[i]==(int)j || par_region[i]<0))
 			{
-			  if(par_type[i]==SIGMA || par_type[i]==STAT_SDEV)
+			  if(par_type[i]==LAYERANALYZER_SIGMA || par_type[i]==LAYERANALYZER_STAT_SDEV)
 			    {
 			      found_diffusion=true;
 			      index_diffusion=i;
 			      if(par_region[i]<0)
 				global_diffusion=true;
 			    }
-			  else if(par_type[i]==DT)
+			  else if(par_type[i]==LAYERANALYZER_DT)
 			    {
 			      found_pull=true;
 			      index_pull=i;
@@ -22276,7 +22307,7 @@ int main(int argc, char **argv)
 		      else
 			snprintf(s_name,999, "stat_sdev_s%d_l%d_r%d", s+1,l+1,j);
 
-		      if(par_type[i]==SIGMA)
+		      if(par_type[i]==LAYERANALYZER_SIGMA)
 			for(i=0;(int)i<numsamples;i++)
 			  sd[i]=parsample[index_diffusion][i]*
 			    sqrt(parsample[index_pull][i]/2.0);
